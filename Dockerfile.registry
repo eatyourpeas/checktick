@@ -38,6 +38,9 @@ COPY CONTRIBUTING.md ./
 
 # Install the current project and build static assets
 RUN poetry install --only main --no-interaction --no-ansi
+
+# Cache busting for CSS build - change this comment to force rebuild
+# Build: 2025-11-02-15:00
 RUN npm run build:css
 
 # Create non-root user for security
