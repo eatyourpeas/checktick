@@ -29,11 +29,6 @@ COPY CONTRIBUTING.md ./
 RUN poetry install --only main --no-interaction --no-ansi
 RUN npm run build:css
 
-# Create a versioned copy of the CSS file with hash in filename
-RUN CSS_HASH=$(md5sum checktick_app/static/build/styles.css | cut -d' ' -f1 | cut -c1-8) && \
-    cp checktick_app/static/build/styles.css checktick_app/static/build/styles.$CSS_HASH.css && \
-    echo $CSS_HASH > /tmp/css_hash.txt
-
 RUN adduser --disabled-login --gecos "" appuser
 RUN mkdir -p /app/staticfiles /app/media && \
     chown -R appuser:appuser /app/staticfiles /app/media
@@ -44,4 +39,4 @@ ENV PORT=8000
 
 EXPOSE 8000
 
-CMD ["sh", "-lc", "python manage.py migrate --noinput && python manage.py collectstatic --noinput --clear && gunicorn checktick_app.wsgi:application --bind 0.0.0.0:${PORT} --workers 3"]
+CMD ["sh", "-lc", "python manage.py migrate --noinput && python manage.py collectstatic --noinput --clear && CSS_HASH=$(md5sum /app/staticfiles/build/styles.css | cut -d' ' -f1 | cut -c1-8) && cp /app/staticfiles/build/styles.css /app/staticfiles/build/styles.$CSS_HASH.css && echo $CSS_HASH > /tmp/css_hash.txt && gunicorn checktick_app.wsgi:application --bind 0.0.0.0:${PORT} --workers 4"]
