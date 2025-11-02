@@ -8,7 +8,7 @@ module.exports = {
   content: [
     "./checktick_app/templates/**/*.html",
     "./checktick_app/**/templates/**/*.html",
-  ], // Cache bust: 2025-11-02
+  ], // Cache bust: 2025-11-02 14:30 - Force manifest rebuild
   theme: {
     extend: {
       typography: ({ theme }) => ({
