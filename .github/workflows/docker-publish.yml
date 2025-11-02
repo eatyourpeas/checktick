@@ -80,3 +80,15 @@ jobs:
         with:
           name: checktick-deployment-${{ github.ref_name }}
           path: deployment-artifacts/
+
+      - name: Trigger Northflank deployment
+        if: github.ref == 'refs/heads/main'
+        env:
+          WEBHOOK_URL: ${{ secrets.NORTHFLANK_DEPLOY_WEBHOOK }}
+        run: |
+          if [ -n "$WEBHOOK_URL" ]; then
+            echo "Triggering Northflank deployment..."
+            curl -f -X POST "$WEBHOOK_URL" && echo "✓ Deployment triggered successfully" || echo "⚠ Webhook call failed"
+          else
+            echo "⊘ NORTHFLANK_DEPLOY_WEBHOOK not configured, skipping deployment trigger"
+          fi
