@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev:css": "tailwindcss -i ./checktick_app/static/css/daisyui_themes.css -o ./checktick_app/static/build/styles.css --watch",
-    "build:css": "tailwindcss -i ./checktick_app/static/css/daisyui_themes.css -o ./checktick_app/static/build/styles.css --minify"
+    "build:css": "TAILWIND_DISABLE_LIGHTNING_CSS=1 tailwindcss -i ./checktick_app/static/css/daisyui_themes.css -o ./checktick_app/static/build/styles.css --minify"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.18",
