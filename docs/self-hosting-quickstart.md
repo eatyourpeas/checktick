@@ -57,6 +57,14 @@ POSTGRES_PASSWORD=secure-database-password
 # Branding (OPTIONAL - has defaults)
 BRAND_TITLE=Your Survey Platform
 
+# Theme Configuration (OPTIONAL - has sensible defaults)
+# Set deployment-level default themes - org admins can override in Profile
+# Light theme: choose from 20 options (wireframe, cupcake, emerald, corporate, etc.)
+# Dark theme: choose from 12 options (business, dark, night, forest, etc.)
+# See docs/themes.md for full list and customization options
+BRAND_THEME_PRESET_LIGHT=wireframe
+BRAND_THEME_PRESET_DARK=business
+
 # Email Provider (REQUIRED for functionality)
 # Email is essential for user invitations, password resets, and notifications
 # CheckTick will start without email configured, but users cannot be invited or reset passwords
@@ -109,6 +117,7 @@ Visit `http://localhost:8000` (or your domain) and log in with your admin creden
 - [Production Setup](/docs/self-hosting-production/) - SSL, nginx, security hardening
 - [Database Options](/docs/self-hosting-database/) - External managed databases (AWS RDS, Azure, etc.)
 - [Configuration Guide](/docs/self-hosting-configuration/) - Branding, authentication, email providers
+- [Theming & UI Customization](/docs/themes/) - Theme presets, custom CSS, and daisyUI configuration
 - [Backup & Restore](/docs/self-hosting-backup/) - Database backups and disaster recovery
 
 ## Troubleshooting
