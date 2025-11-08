@@ -1,0 +1,42 @@
+# Production-like build for local testing
+# Usage: docker-compose -f docker-compose.prod-test.yml up --build
+
+services:
+  db-prod:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: checktick_prod
+      POSTGRES_USER: checktick
+      POSTGRES_PASSWORD: checktick_prod_pass
+    volumes:
+      - db_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U checktick"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5433:5432" # Different port to avoid conflict with dev
+
+  web-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile # Use production Dockerfile
+    environment:
+      DATABASE_URL: postgres://checktick:checktick_prod_pass@db-prod:5432/checktick_prod
+      SECRET_KEY: "production-test-secret-key-change-in-real-production"
+      ALLOWED_HOSTS: "localhost,127.0.0.1"
+      DEBUG: "False" # Production mode
+      EXTERNAL_DATASET_API_URL: ${EXTERNAL_DATASET_API_URL:-https://api.rcpch.ac.uk}
+      EXTERNAL_DATASET_API_KEY: ${EXTERNAL_DATASET_API_KEY:-}
+    ports:
+      - "8001:8000" # Run on port 8001 locally
+    depends_on:
+      db-prod:
+        condition: service_healthy
+    volumes:
+      - media_prod_data:/app/media
+
+volumes:
+  db_prod_data:
+  media_prod_data:

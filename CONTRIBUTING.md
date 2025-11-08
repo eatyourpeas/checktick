@@ -193,3 +193,61 @@ poetry run ggshield secret ignore add --sha <SECRET_SHA>
 ```
 
 Avoid broad path ignores. All ignores should be reviewed in PRs.
+
+## Testing in Production Mode
+
+To verify that themes and static assets work correctly in production builds (not just development), use the production test environment:
+
+### Quick Start
+
+```sh
+# Build and start production test environment (port 8001)
+docker-compose -f docker-compose.prod-test.yml up --build
+
+# Run in background
+docker-compose -f docker-compose.prod-test.yml up --build -d
+```
+
+Access at **http://localhost:8001** (development remains on port 8000)
+
+### What's Different from Development
+
+- Uses production Dockerfile (CSS built at image build time)
+- `DEBUG=False` with production Django settings
+- Static files collected to `/staticfiles`
+- Gunicorn WSGI server (4 workers)
+- Separate database on port 5433
+
+### Verifying Theme System
+
+```sh
+# Check CSS files built correctly
+docker-compose -f docker-compose.prod-test.yml exec web-prod ls -lh /app/staticfiles/build/
+
+# Verify all daisyUI themes included
+docker-compose -f docker-compose.prod-test.yml exec web-prod grep -o '\[data-theme=[^]]*\]' /app/staticfiles/build/styles.css | sort | uniq
+
+# View server logs
+docker-compose -f docker-compose.prod-test.yml logs -f web-prod
+```
+
+### Testing Checklist
+
+- [ ] All 32 daisyUI theme presets in CSS (20 light + 12 dark)
+- [ ] Default themes: wireframe (light), business (dark)
+- [ ] `data-theme` attribute on `<html>` element
+- [ ] Theme toggle button switches themes
+- [ ] Custom CSS overrides from SiteBranding appear
+- [ ] Static files load correctly (check DevTools Network tab)
+
+### Cleanup
+
+```sh
+# Stop containers
+docker-compose -f docker-compose.prod-test.yml down
+
+# Remove volumes (fresh database next time)
+docker-compose -f docker-compose.prod-test.yml down -v
+```
+
+**Important**: CSS changes require rebuilding the image since CSS is built at image build time, not runtime.
