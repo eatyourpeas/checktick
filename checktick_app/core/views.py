@@ -484,39 +484,44 @@ DOC_CATEGORIES = {
         "order": 2,
         "icon": "✨",
     },
+    "self-hosting": {
+        "title": "Self-Hosting",
+        "order": 3,
+        "icon": "🖥️",
+    },
     "configuration": {
         "title": "Configuration",
-        "order": 3,
+        "order": 4,
         "icon": "⚙️",
     },
     "security": {
         "title": "Security",
-        "order": 4,
+        "order": 5,
         "icon": "🔒",
     },
     "data-governance": {
         "title": "Data Governance",
-        "order": 5,
+        "order": 6,
         "icon": "🗂️",
     },
     "api": {
         "title": "API & Development",
-        "order": 6,
+        "order": 7,
         "icon": "🔧",
     },
     "testing": {
         "title": "Testing",
-        "order": 7,
+        "order": 8,
         "icon": "🧪",
     },
     "internationalization": {
         "title": "Internationalization",
-        "order": 8,
+        "order": 9,
         "icon": "🌍",
     },
     "advanced": {
         "title": "Advanced Topics",
-        "order": 9,
+        "order": 10,
         "icon": "🚀",
     },
     "other": {
@@ -532,6 +537,7 @@ DOC_CATEGORIES = {
 DOC_PAGE_OVERRIDES = {
     "index": {"file": "README.md", "category": None},  # Special: index page
     "contributing": {"file": REPO_ROOT / "CONTRIBUTING.md", "category": "other"},
+    "themes": {"file": "themes.md", "category": "api"},  # Developer guide for theme implementation
 }
 
 
@@ -592,6 +598,8 @@ def _discover_doc_pages():
             )
 
     # Auto-discover translation files in docs/languages/
+    # These are added to pages (accessible via URL) but NOT added to categorized (hidden from sidebar)
+    # i18n.md provides links to these pages
     languages_dir = DOCS_DIR / "languages"
     if languages_dir.exists():
         for md_file in sorted(languages_dir.glob("*.md")):
@@ -602,17 +610,8 @@ def _discover_doc_pages():
             if slug in pages:
                 continue
 
-            # Extract title from file (first H1) or use slug
-            title = _extract_title_from_file(md_file) or _doc_title(md_file.stem)
-
+            # Make page accessible via URL but don't add to sidebar navigation
             pages[slug] = md_file
-            categorized["internationalization"].append(
-                {
-                    "slug": slug,
-                    "title": title,
-                    "file": md_file,
-                }
-            )
 
     return pages, categorized
 
@@ -622,8 +621,22 @@ def _infer_category(slug: str) -> str:
     slug_lower = slug.lower()
 
     # Getting Started
-    if any(x in slug_lower for x in ["getting-started", "quickstart", "setup"]):
+    if any(x in slug_lower for x in ["getting-started", "quickstart"]):
         return "getting-started"
+
+    # Self-Hosting (check before Configuration since some keywords overlap)
+    if any(
+        x in slug_lower
+        for x in [
+            "self-hosting",
+            "deployment",
+            "production",
+            "backup",
+            "database",
+            "scheduled-tasks",
+        ]
+    ):
+        return "self-hosting"
 
     # Features
     if any(
@@ -642,6 +655,7 @@ def _infer_category(slug: str) -> str:
             "prefilled-datasets-setup",
             "email",
             "notifications",
+            "oidc",
         ]
     ):
         return "configuration"
