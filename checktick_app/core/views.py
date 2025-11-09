@@ -124,12 +124,72 @@ def profile(request):
                 defaults={"role": OrganizationMembership.Role.ADMIN},
             )
         messages.success(
-            request,
-            _(
-                "Organisation created. You are now an organisation admin and can host surveys and build a team."
-            ),
-        )
+                request,
+                _(
+                    "Organisation created. You are now an organisation admin and can host surveys and build a team."
+                ),
+            )
         return redirect("surveys:org_users", org_id=org.id)
+    if request.method == "POST" and request.POST.get("action") == "reset_org_theme":
+        # Handle organization theme reset (org owners only)
+        primary_owned_org = Organization.objects.filter(owner=request.user).first()
+        if primary_owned_org:
+            org = primary_owned_org
+            org.default_theme = ""
+            org.theme_preset_light = ""
+            org.theme_preset_dark = ""
+            org.theme_light_css = ""
+            org.theme_dark_css = ""
+            org.save()
+            logger.info(
+                f"Organization theme reset to defaults by {request.user.username} (org_id={org.id})"
+            )
+            messages.success(request, _("Organization theme reset to platform defaults."))
+        return redirect("core:profile")
+    if request.method == "POST" and request.POST.get("action") == "update_org_theme":
+        # Handle organization theme update (org owners only)
+        primary_owned_org = Organization.objects.filter(owner=request.user).first()
+        if primary_owned_org:
+            org = primary_owned_org
+            org.theme_preset_light = (
+                request.POST.get("org_theme_preset_light") or ""
+            ).strip()
+            org.theme_preset_dark = (
+                request.POST.get("org_theme_preset_dark") or ""
+            ).strip()
+
+            # Get custom CSS (optional - overrides preset if provided)
+            raw_light = request.POST.get("org_theme_light_css") or ""
+            raw_dark = request.POST.get("org_theme_dark_css") or ""
+
+            # Generate theme CSS from presets and custom overrides
+            if generate_theme_css_for_brand:
+                try:
+                    generated_light, generated_dark = generate_theme_css_for_brand(
+                        org.theme_preset_light or "wireframe",
+                        org.theme_preset_dark or "business",
+                        raw_light,
+                        raw_dark,
+                    )
+                    org.theme_light_css = generated_light
+                    org.theme_dark_css = generated_dark
+                except Exception as e:
+                    logger.error(f"Failed to generate org theme CSS: {e}")
+                    # Fall back to normalizing raw CSS
+                    org.theme_light_css = normalize_daisyui_builder_css(raw_light)
+                    org.theme_dark_css = normalize_daisyui_builder_css(raw_dark)
+            else:
+                # Fallback if theme generation not available
+                org.theme_light_css = normalize_daisyui_builder_css(raw_light)
+                org.theme_dark_css = normalize_daisyui_builder_css(raw_dark)
+
+            org.save()
+            logger.info(
+                f"Organization theme updated by {request.user.username} (org_id={org.id}, "
+                f"light={org.theme_preset_light}, dark={org.theme_preset_dark})"
+            )
+            messages.success(request, _("Organization theme saved."))
+        return redirect("core:profile")
     if request.method == "POST" and request.POST.get("action") == "update_branding":
         if not request.user.is_superuser:
             return redirect("core:profile")
@@ -178,6 +238,10 @@ def profile(request):
                 sb.theme_dark_css = normalize_daisyui_builder_css(raw_dark)
 
             sb.save()
+            logger.info(
+                f"Platform theme updated by {request.user.username} (superuser, "
+                f"theme={sb.default_theme}, light={sb.theme_preset_light}, dark={sb.theme_preset_dark})"
+            )
             messages.success(request, _("Project theme saved."))
         return redirect("core:profile")
     if SiteBranding is not None and sb is None:

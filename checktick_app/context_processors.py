@@ -1,11 +1,14 @@
 import os
 from pathlib import Path
 import subprocess
+import logging
 
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 
-from checktick_app.surveys.models import OrganizationMembership, SurveyMembership
+from checktick_app.surveys.models import OrganizationMembership, SurveyMembership, Organization
+
+logger = logging.getLogger(__name__)
 
 try:
     from importlib import metadata as _importlib_metadata  # Python 3.8+
@@ -224,6 +227,69 @@ def branding(request):
         except Exception:
             # During migrations or early setup, ignore DB failures
             pass
+
+    # Organization-level theme cascade (overrides platform defaults)
+    # Only apply if user is part of an organization
+    user_org = None
+    if user and user.is_authenticated:
+        try:
+            # Get user's primary organization (prefer owned, then first membership)
+            user_org = Organization.objects.filter(owner=user).first()
+            if not user_org:
+                membership = (
+                    OrganizationMembership.objects.filter(user=user)
+                    .select_related("organization")
+                    .first()
+                )
+                if membership:
+                    user_org = membership.organization
+        except Exception:
+            pass
+
+    if user_org and (user_org.default_theme or user_org.theme_preset_light or user_org.theme_preset_dark):
+        # Organization has custom theme settings - apply cascade
+        # Use org theme if set, otherwise fall back to platform default
+        preset_light = user_org.theme_preset_light or brand.get("theme_preset_light", "wireframe")
+        preset_dark = user_org.theme_preset_dark or brand.get("theme_preset_dark", "business")
+        
+        logger.debug(
+            f"Applying org theme cascade for org_id={user_org.id}: "
+            f"default_theme={user_org.default_theme}, "
+            f"preset_light={preset_light}, preset_dark={preset_dark}"
+        )
+
+        # Generate or use organization theme CSS
+        theme_css_light = brand["theme_css_light"]
+        theme_css_dark = brand["theme_css_dark"]
+
+        if generate_theme_css_for_brand:
+            try:
+                custom_css_light = user_org.theme_light_css or ""
+                custom_css_dark = user_org.theme_dark_css or ""
+
+                generated_light, generated_dark = generate_theme_css_for_brand(
+                    preset_light, preset_dark, custom_css_light, custom_css_dark
+                )
+                theme_css_light = generated_light
+                theme_css_dark = generated_dark
+            except Exception:
+                # Fall back to raw CSS if generation fails
+                theme_css_light = user_org.theme_light_css or brand["theme_css_light"]
+                theme_css_dark = user_org.theme_dark_css or brand["theme_css_dark"]
+        else:
+            # Fallback if themes module not available
+            theme_css_light = user_org.theme_light_css or brand["theme_css_light"]
+            theme_css_dark = user_org.theme_dark_css or brand["theme_css_dark"]
+
+        brand.update(
+            {
+                "theme_name": user_org.default_theme or brand["theme_name"],
+                "theme_preset_light": preset_light,
+                "theme_preset_dark": preset_dark,
+                "theme_css_light": theme_css_light,
+                "theme_css_dark": theme_css_dark,
+            }
+        )
 
     # Build/version metadata
     git = _get_git_info()
