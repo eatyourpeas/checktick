@@ -153,10 +153,10 @@ def get_preset_theme_reference(preset_name: str) -> str:
     Generate CSS to reference a daisyUI preset theme.
     Since we're using daisyUI's preset themes, we just need to set the color-scheme.
     The actual theme variables are inherited from the preset.
-    
+
     Args:
         preset_name: The daisyUI preset theme name (e.g., 'nord', 'business')
-    
+
     Returns:
         CSS string that references the preset theme
     """
