@@ -12,7 +12,7 @@ env = environ.Env(
     SECURE_SSL_REDIRECT=(bool, False),
     CSRF_TRUSTED_ORIGINS=(list, []),
     BRAND_TITLE=(str, "CheckTick"),
-    BRAND_ICON_URL=(str, "/static/icons/checktick-default.svg"),
+    BRAND_ICON_URL=(str, ""),  # Empty string falls back to checktick.html component
     BRAND_THEME=(str, "checktick-light"),
     BRAND_THEME_PRESET_LIGHT=(
         str,
