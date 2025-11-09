@@ -161,7 +161,9 @@ class TestUserAPI:
 
     def test_individual_user_cannot_create_user_in_survey(self, client):
         """Individual users cannot create users in their surveys (no sharing)."""
-        creator = User.objects.create_user(username="indiv_create", password=TEST_PASSWORD)
+        creator = User.objects.create_user(
+            username="indiv_create", password=TEST_PASSWORD
+        )
         # Create survey without organization
         survey = Survey.objects.create(owner=creator, name="IndivSC", slug="indivsc")
         hdrs = self.auth(client, "indiv_create", TEST_PASSWORD)
