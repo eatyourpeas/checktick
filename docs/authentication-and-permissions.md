@@ -7,6 +7,7 @@ This document explains how users authenticate and what they can access in the sy
 CheckTick supports multiple authentication methods for healthcare environments:
 
 ### Traditional Authentication
+
 - Web UI uses Django session authentication with CSRF protection.
 - API uses JWT (Bearer) authentication via SimpleJWT. Obtain a token pair using username/password, then include the access token in the `Authorization: Bearer <token>` header.
 - Anonymous users can access public participant survey pages (SSR) when a survey is live. They cannot access the builder or any API objects.
@@ -63,18 +64,27 @@ There are four key models in `checktick_app.surveys.models`:
 - SurveyMembership: links a user to a specific survey with a role.
   - Roles: CREATOR, EDITOR, VIEWER
 
+### Account Types
+
+There are two types of users in the system:
+
+- **Individual users**: Users who create surveys without an organization. Individual users can only create and manage their own surveys and **cannot share surveys or invite collaborators**.
+- **Organization users**: Users who belong to an organization. Organization users can collaborate on surveys within their organization, with permissions managed by organization admins.
+
 ### Organization Roles
 
 Organization-level role semantics:
 
 - **Owner**: The user who created the survey. Owners can view/edit their own surveys.
-- **Org ADMIN**: Can view/edit all surveys that belong to their organization.
+- **Org ADMIN**: Can view/edit all surveys that belong to their organization. Can manage organization members and survey collaborators.
 - **Org CREATOR or VIEWER**: No additional rights beyond their personal ownership. They cannot access other members' surveys.
 - **Participant** (no membership): Can only submit responses via public links; cannot access builder or API survey objects.
 
 ### Survey Collaboration Roles
 
-Individual surveys can have collaborators with specific roles through SurveyMembership:
+**Note**: Survey collaboration is only available for organization surveys. Individual users cannot share their surveys.
+
+Individual surveys within organizations can have collaborators with specific roles through SurveyMembership:
 
 | Role | Content Editing | User Management | Survey Creation |
 |------|----------------|-----------------|-----------------|
@@ -92,12 +102,15 @@ Single-organisation admin model:
 
 ### Survey Collaboration Features
 
-Survey creators can invite collaborators to work on specific surveys through the "Manage collaborators" feature:
+**Note**: These features are only available for organization surveys. Individual users cannot share their surveys or invite collaborators.
 
-- **Adding collaborators**: Survey CREATORs can add users by email address and assign roles
+Survey creators within organizations can invite collaborators to work on specific surveys through the "Manage collaborators" feature:
+
+- **Adding collaborators**: Survey CREATORs can add users by email address and assign roles (organization surveys only)
 - **Role management**: CREATORs can change collaborator roles or remove access
-- **Dashboard integration**: The survey dashboard shows a "Manage collaborators" button only to users who can manage survey users (CREATORs)
+- **Dashboard integration**: The survey dashboard shows a "Manage collaborators" button only for organization surveys and only to users who can manage survey users (CREATORs, organization admins, and survey owners)
 - **Permission boundaries**: EDITORs can modify survey content but cannot see or access user management features
+- **Individual user restriction**: Individual users (surveys without organization) will not see the "Manage collaborators" button and cannot access user management endpoints
 
 This enables teams to collaborate on survey design while maintaining clear boundaries between content editing and access control.
 
@@ -107,7 +120,7 @@ The central authorization checks live in `checktick_app/surveys/permissions.py`:
 
 - `can_view_survey(user, survey)` — True if user is the survey owner, an ADMIN of the survey's organization, or has survey membership (CREATOR, EDITOR, or VIEWER)
 - `can_edit_survey(user, survey)` — True if user is the survey owner, an ADMIN of the survey's organization, or has survey membership as CREATOR or EDITOR
-- `can_manage_survey_users(user, survey)` — True if user is the survey owner, an ADMIN of the survey's organization, or has survey membership as CREATOR (only CREATORs can manage collaborators)
+- `can_manage_survey_users(user, survey)` — True if the survey belongs to an organization AND user is the survey owner, an ADMIN of the survey's organization, or has survey membership as CREATOR. Returns False for individual user surveys (surveys without organization).
 - `require_can_view(user, survey)` — Raises 403 if not allowed
 - `require_can_edit(user, survey)` — Raises 403 if not allowed
 
@@ -122,12 +135,16 @@ The API mirrors the same rules using a DRF permission class and scoped querysets
 - **Create**: authenticated users can create surveys. The creator becomes the owner.
 - **Update/Delete/Custom actions**: allowed only if `can_edit_survey` is true (CREATOR and EDITOR roles for survey members).
 
-User management operations (adding/removing collaborators) require `can_manage_survey_users` permission, which is restricted to survey CREATORs, organization ADMINs, and survey owners.
+User management operations (adding/removing collaborators) require `can_manage_survey_users` permission, which is restricted to:
+
+- Organization surveys only (surveys with organization)
+- Survey CREATORs, organization ADMINs, and survey owners
+- **Individual users (surveys without organization) will receive 403 Forbidden when attempting to manage memberships**
 
 Error behavior:
 
 - 401 Unauthorized: missing/invalid/expired JWT
-- 403 Forbidden: logged in but insufficient permissions on the object
+- 403 Forbidden: logged in but insufficient permissions on the object (including individual users attempting to share surveys)
 
 Additional protections:
 

@@ -56,6 +56,9 @@ def can_manage_org_users(user, org: Organization) -> bool:
 
 
 def can_manage_survey_users(user, survey: Survey) -> bool:
+    # Individual users (surveys without organization) cannot share surveys
+    if not survey.organization_id:
+        return False
     # Only survey creators (not editors), org admins, or owner can manage users on a survey
     if survey.organization_id and is_org_admin(user, survey.organization):
         return True

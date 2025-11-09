@@ -188,40 +188,40 @@ def test_survey_editor_cannot_access_survey_users_view(client):
 
 
 @pytest.mark.django_db
-def test_survey_creator_cannot_escalate_their_own_survey_role(client):
+def test_individual_user_cannot_manage_survey_users(client):
     """
-    Test that a survey creator cannot change their own role or create multiple
-    memberships for themselves.
+    Test that individual users (surveys without organization) cannot share
+    surveys or manage survey memberships.
     """
-    # Create users
+    # Create individual user
     creator = User.objects.create_user(
         username="creator@test.com", email="creator@test.com", password=TEST_PASSWORD
     )
+    other_user = User.objects.create_user(
+        username="other@test.com", email="other@test.com", password=TEST_PASSWORD
+    )
 
-    # Create survey
+    # Create survey without organization (individual user)
     survey = Survey.objects.create(
         owner=creator, name="Test Survey", slug="test-survey"
     )
 
-    # Creator tries to add themselves as CREATOR via user management hub
-    # (This would be redundant but tests the boundary)
+    # Individual user tries to add another user via user management hub
     client.force_login(creator)
     resp = client.post(
         reverse("surveys:user_management_hub"),
         data={
             "scope": "survey",
             "slug": "test-survey",
-            "email": "creator@test.com",
-            "role": "creator",
+            "email": "other@test.com",
+            "role": "viewer",
         },
     )
-    # Should succeed (creator can manage survey users)
-    assert resp.status_code == 200
+    # Should fail - individual users cannot share surveys
+    assert resp.status_code == 403
 
-    # Verify only one membership exists for creator
-    memberships = SurveyMembership.objects.filter(survey=survey, user=creator)
-    assert memberships.count() == 1
-    assert memberships.first().role == SurveyMembership.Role.CREATOR
+    # Verify no membership was created
+    assert not SurveyMembership.objects.filter(survey=survey, user=other_user).exists()
 
 
 @pytest.mark.django_db

@@ -83,6 +83,24 @@ class TestUserAPI:
         assert r.status_code in (201, 200)
         assert SurveyMembership.objects.filter(survey=survey, user=viewer).exists()
 
+    def test_individual_user_cannot_manage_survey_memberships(self, client):
+        """Individual users (without organization) cannot share surveys via API."""
+        creator = User.objects.create_user(username="indiv_api", password=TEST_PASSWORD)
+        viewer = User.objects.create_user(username="viewer_api", password=TEST_PASSWORD)
+        # Create survey without organization (individual user)
+        survey = Survey.objects.create(owner=creator, name="IndivSurvey", slug="indiv")
+        hdrs = self.auth(client, "indiv_api", TEST_PASSWORD)
+
+        r = client.post(
+            "/api/survey-memberships/",
+            data=json.dumps({"survey": survey.id, "user": viewer.id, "role": "viewer"}),
+            content_type="application/json",
+            **hdrs,
+        )
+        # Should be forbidden - individual users cannot share
+        assert r.status_code == 403
+        assert not SurveyMembership.objects.filter(survey=survey, user=viewer).exists()
+
     def test_viewer_cannot_manage_survey_memberships(self, client):
         owner = User.objects.create_user(username="ownerz", password=TEST_PASSWORD)
         viewer = User.objects.create_user(username="viewerzz", password=TEST_PASSWORD)
@@ -140,6 +158,25 @@ class TestUserAPI:
         )
         assert r.status_code in (200, 201)
         assert User.objects.filter(username="newsurveyuser").exists()
+
+    def test_individual_user_cannot_create_user_in_survey(self, client):
+        """Individual users cannot create users in their surveys (no sharing)."""
+        creator = User.objects.create_user(
+            username="indiv_create", password=TEST_PASSWORD
+        )
+        # Create survey without organization
+        survey = Survey.objects.create(owner=creator, name="IndivSC", slug="indivsc")
+        hdrs = self.auth(client, "indiv_create", TEST_PASSWORD)
+        r = client.post(
+            f"/api/scoped-users/survey/{survey.id}/create/",
+            data=json.dumps(
+                {"username": "baduser", "password": "example-password-for-tests"}
+            ),
+            content_type="application/json",
+            **hdrs,
+        )
+        # Should be forbidden
+        assert r.status_code == 403
 
     def test_viewer_cannot_create_user_in_survey(self, client):
         owner = User.objects.create_user(username="owneru", password=TEST_PASSWORD)

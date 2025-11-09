@@ -2,6 +2,13 @@
 
 This document explains how organization- and survey-level user management works across SSR (server-rendered UI) and the API, including roles, permissions, endpoints, and security protections. The app follows a single-organisation admin model and enforces username=email.
 
+## Account Types
+
+There are two types of users in the system:
+
+- **Individual users**: Users who create surveys without an organization. Individual users can only create and manage their own surveys and **cannot share surveys or invite collaborators**.
+- **Organization users**: Users who belong to an organization. Organization users can collaborate on surveys within their organization, with permissions managed by organization admins.
+
 ## Roles and scopes
 
 There are two membership scopes with separate roles:
@@ -11,13 +18,13 @@ There are two membership scopes with separate roles:
   - creator: Can create and manage their own surveys; read-only visibility to organization content is up to app policy, but creators do NOT manage org members.
   - viewer: Read-only role for organization context where applicable; cannot manage org members.
 
-- Survey membership (SurveyMembership)
+- Survey membership (SurveyMembership) - **Only available for organization surveys**
   - creator: Can manage members for that specific survey and edit the survey.
   - viewer: Can view the survey content and results according to app policy; cannot manage survey members.
 
 Additional implicit authorities:
 
-- Survey owner: Always has full control over the survey, including member management for that survey.
+- Survey owner: For organization surveys, always has full control over the survey, including member management for that survey.
 - Organization admin: Has admin rights for surveys that belong to their organization, including member management.
 
 Single-organisation model:
@@ -27,15 +34,19 @@ Single-organisation model:
 ## Permission matrix (summary)
 
 - Manage org members (add/update/remove): Organization admin only
-- Manage survey members (add/update/remove): Survey owner, organization admin (if the survey belongs to their org), or survey creator for that survey
+- Manage survey members (add/update/remove): **Organization surveys only** - Survey owner, organization admin (if the survey belongs to their org), or survey creator for that survey
 - View survey: Owner, org admin (if applicable), any survey member (creator/viewer)
+- **Individual users**: Cannot share surveys or manage survey members
 
 Guardrails:
 
 - Organization admins cannot remove themselves from their own admin role via the SSR UI or the API. Attempts are rejected.
+- Individual users (surveys without organization) cannot access user management endpoints or share their surveys.
 - SSR UI supports email-based lookup and creation for convenience. The API endpoints expect explicit user IDs for membership resources; scoped user creation endpoints exist to create a user in a given org or survey.
 
 ## SSR management pages
+
+**Note**: User management pages are only accessible for organization surveys. Individual users cannot share their surveys or access these pages.
 
 - Organisation hub: `/surveys/manage/users/`
   - Shows the single organisation you manage, all its users, and users grouped by surveys.
@@ -48,6 +59,7 @@ Guardrails:
   - Actions are audit-logged.
 
 - Survey users: `/surveys/{slug}/users/`
+  - **Only available for organization surveys**. Individual users cannot access this page.
   - Owners, org admins (if the survey belongs to their org), and survey creators can add/update/remove survey members.
   - Survey viewers see a read-only list.
   - Actions are audit-logged.
@@ -76,6 +88,8 @@ Serializer fields:
 
 ### Survey memberships
 
+**Note**: Survey memberships are only available for organization surveys. Individual users cannot create or manage survey memberships.
+
 - List: GET /api/survey-memberships/
 - Create: POST /api/survey-memberships/
 - Update: PUT/PATCH /api/survey-memberships/{id}/
@@ -85,6 +99,7 @@ Scope and permissions:
 
 - Queryset contains only memberships for surveys the caller can view (owner, org-admin for the survey's org, or the caller is a member of the survey).
 - Create/Update/Delete require manage permission on the survey (owner, org admin for the survey's org, or survey creator).
+- **Individual users (surveys without organization) will receive 403 Forbidden when attempting to manage memberships.**
 - Unauthorized or out-of-scope access returns 403; missing/invalid JWT returns 401.
 
 Serializer fields:
@@ -100,6 +115,7 @@ To support flows where an admin/creator wants to add a person who may not yet ex
 
 - Create user within a survey context (survey owner/org admin/creator):
   - POST /api/scoped-users/survey/{survey_id}/create
+  - **Only available for organization surveys. Individual users will receive 403 Forbidden.**
 
 Request schema:
 

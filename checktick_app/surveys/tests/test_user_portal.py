@@ -36,7 +36,7 @@ def test_non_admin_cannot_access_org_users(client):
 
 
 @pytest.mark.django_db
-def test_survey_creator_can_manage_survey_users(client):
+def test_org_survey_creator_can_manage_survey_users(client):
     creator = User.objects.create_user(username="creator1", password=TEST_PASSWORD)
     org = Organization.objects.create(name="OrgZ", owner=creator)
     OrganizationMembership.objects.create(
@@ -58,6 +58,28 @@ def test_survey_creator_can_manage_survey_users(client):
     assert SurveyMembership.objects.filter(
         survey=survey, user=viewer, role=SurveyMembership.Role.VIEWER
     ).exists()
+
+
+@pytest.mark.django_db
+def test_individual_user_cannot_manage_survey_users(client):
+    """Individual users (without organization) cannot share surveys."""
+    creator = User.objects.create_user(username="indiv_creator", password=TEST_PASSWORD)
+    # Create survey without organization (individual user)
+    survey = Survey.objects.create(owner=creator, name="S", slug="indiv-s")
+
+    client.login(username="indiv_creator", password=TEST_PASSWORD)
+    url = reverse("surveys:survey_users", args=[survey.slug])
+    # Should not be able to access survey users page
+    resp = client.get(url)
+    assert resp.status_code == 404
+
+    # Try to add a viewer - should fail
+    viewer = User.objects.create_user(username="indiv_viewer", password=TEST_PASSWORD)
+    resp = client.post(
+        url, data={"action": "add", "user_id": viewer.id, "role": "viewer"}
+    )
+    assert resp.status_code == 404
+    assert not SurveyMembership.objects.filter(survey=survey, user=viewer).exists()
 
 
 @pytest.mark.django_db

@@ -580,6 +580,9 @@ class SurveyMembershipViewSet(viewsets.ModelViewSet):
         ).select_related("user", "survey")
 
     def _can_manage(self, survey: Survey) -> bool:
+        # Individual users (surveys without organization) cannot share surveys
+        if not survey.organization_id:
+            return False
         # org admin, owner, or survey creator can manage
         if survey.owner_id == self.request.user.id:
             return True
@@ -701,6 +704,10 @@ class ScopedUserViewSet(viewsets.ViewSet):
     def create_in_survey(self, request, survey_id=None):
         # Survey creators/admins/owner can create users within the survey context
         survey = Survey.objects.get(id=survey_id)
+
+        # Individual users (surveys without organization) cannot share surveys
+        if not survey.organization_id:
+            raise PermissionDenied("Individual users cannot share surveys")
 
         # Reuse the SurveyMembershipViewSet _can_manage logic inline
         def can_manage(user):
