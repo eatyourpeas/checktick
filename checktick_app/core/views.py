@@ -211,10 +211,12 @@ def profile(request):
 
             # Save theme presets
             sb.theme_preset_light = (
-                request.POST.get("theme_preset_light") or settings.BRAND_THEME_PRESET_LIGHT
+                request.POST.get("theme_preset_light")
+                or settings.BRAND_THEME_PRESET_LIGHT
             ).strip()
             sb.theme_preset_dark = (
-                request.POST.get("theme_preset_dark") or settings.BRAND_THEME_PRESET_DARK
+                request.POST.get("theme_preset_dark")
+                or settings.BRAND_THEME_PRESET_DARK
             ).strip()
 
             # Get custom CSS (optional - overrides preset if provided)
@@ -532,9 +534,26 @@ DOC_CATEGORIES = {
 # If a file isn't listed here, it will be auto-discovered
 # Format: "slug": {"file": "filename.md", "category": "category-key", "title": "Custom Title"}
 DOC_PAGE_OVERRIDES = {
-    "index": {"file": "README.md", "category": None, "standalone": True, "icon": "🏠", "order": 0, "title": "Welcome"},  # Landing page
-    "getting-help": {"file": "getting-help.md", "category": None, "standalone": True, "icon": "💬", "order": 0.5, "title": "Getting Help"},  # Standalone item
-    "contributing": {"file": REPO_ROOT / "CONTRIBUTING.md", "category": "getting-involved"},
+    "index": {
+        "file": "README.md",
+        "category": None,
+        "standalone": True,
+        "icon": "🏠",
+        "order": 0,
+        "title": "Welcome",
+    },  # Landing page
+    "getting-help": {
+        "file": "getting-help.md",
+        "category": None,
+        "standalone": True,
+        "icon": "💬",
+        "order": 0.5,
+        "title": "Getting Help",
+    },  # Standalone item
+    "contributing": {
+        "file": REPO_ROOT / "CONTRIBUTING.md",
+        "category": "getting-involved",
+    },
     "themes": {
         "file": "themes.md",
         "category": "api",
@@ -756,7 +775,17 @@ def _infer_category(slug: str) -> str:
         return "internationalization"
 
     # Getting Involved (contributing, documentation, etc.)
-    if any(x in slug_lower for x in ["advanced", "custom", "extend", "contributing", "documentation-system", "issues"]):
+    if any(
+        x in slug_lower
+        for x in [
+            "advanced",
+            "custom",
+            "extend",
+            "contributing",
+            "documentation-system",
+            "issues",
+        ]
+    ):
         return "getting-involved"
 
     # Default to features for uncategorized docs
@@ -795,13 +824,15 @@ def _nav_pages():
             file_path = config["file"]
             if isinstance(file_path, str):
                 file_path = DOCS_DIR / file_path
-            standalone_items.append({
-                "slug": slug,
-                "title": config.get("title") or _doc_title(slug),
-                "icon": config.get("icon", ""),
-                "order": config.get("order", 99),
-                "standalone": True,
-            })
+            standalone_items.append(
+                {
+                    "slug": slug,
+                    "title": config.get("title") or _doc_title(slug),
+                    "icon": config.get("icon", ""),
+                    "order": config.get("order", 99),
+                    "standalone": True,
+                }
+            )
 
     # Add categories with pages
     for cat_key, pages_list in DOC_CATEGORIES_WITH_PAGES.items():

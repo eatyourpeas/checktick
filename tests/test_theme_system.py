@@ -211,7 +211,7 @@ def test_custom_theme_css_injection():
     SiteBranding.objects.create(
         theme_preset_light="wireframe",
         theme_preset_dark="business",
-        theme_light_css=custom_css
+        theme_light_css=custom_css,
     )
 
     client = Client()
@@ -346,7 +346,6 @@ def test_environment_variable_light_preset():
     """Test that BRAND_THEME_PRESET_LIGHT environment variable can set defaults."""
     # Note: In practice, SiteBranding is often auto-created with defaults
     # This test documents that environment variables exist for configuration
-    from django.conf import settings
 
     assert settings.BRAND_THEME_PRESET_LIGHT == "corporate"
 
@@ -357,7 +356,6 @@ def test_environment_variable_dark_preset():
     """Test that BRAND_THEME_PRESET_DARK environment variable can set defaults."""
     # Note: In practice, SiteBranding is often auto-created with defaults
     # This test documents that environment variables exist for configuration
-    from django.conf import settings
 
     assert settings.BRAND_THEME_PRESET_DARK == "dracula"
 
@@ -550,8 +548,7 @@ def test_all_light_theme_presets_valid():
     for theme in LIGHT_THEMES[:5]:  # Test first 5 to keep test fast
         SiteBranding.objects.all().delete()
         SiteBranding.objects.create(
-            theme_preset_light=theme,
-            theme_preset_dark="business"
+            theme_preset_light=theme, theme_preset_dark="business"
         )
 
         client = Client()
@@ -562,7 +559,7 @@ def test_all_light_theme_presets_valid():
         # data-theme should always be the logical name
         assert 'data-theme="checktick-light"' in content
         # The preset should appear in the meta tag
-        assert f'{theme}' in content
+        assert f"{theme}" in content
 
 
 @pytest.mark.django_db
