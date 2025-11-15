@@ -1164,16 +1164,8 @@ def _parse_builder_question_form(data: QueryDict) -> dict[str, Any]:
 
             options.append(opt_dict)
 
-        # Check if this is a prefilled dataset (only for dropdown type)
-        prefilled_dataset = (data.get("prefilled_dataset") or "").strip()
-        if qtype == SurveyQuestion.Types.DROPDOWN and prefilled_dataset and options:
-            # Store prefilled metadata alongside the options
-            # This allows us to restore the dataset selection when editing
-            options = {
-                "type": "prefilled",
-                "dataset_key": prefilled_dataset,
-                "values": options,
-            }
+        # Prefilled dataset handling is now done via dataset_key return value
+        # Options remain as list for compatibility
     elif qtype == SurveyQuestion.Types.YESNO:
         # For Yes/No questions, check if either option should have follow-up text
         options = [{"label": "Yes", "value": "yes"}, {"label": "No", "value": "no"}]
@@ -1218,11 +1210,17 @@ def _parse_builder_question_form(data: QueryDict) -> dict[str, Any]:
     else:
         options = []
 
+    # Extract dataset key for dropdown questions
+    dataset_key = None
+    if qtype == SurveyQuestion.Types.DROPDOWN:
+        dataset_key = (data.get("prefilled_dataset") or "").strip() or None
+
     return {
         "text": text,
         "type": qtype,
         "required": required,
         "options": options,
+        "dataset_key": dataset_key,
     }
 
 
@@ -1424,7 +1422,11 @@ def _serialize_question_for_builder(
         payload["options"] = values
         if option_followup_config:
             payload["followup_config"] = option_followup_config
-        if prefilled_dataset:
+        # Include dataset key if linked to a dataset
+        if question.dataset:
+            payload["prefilled_dataset"] = question.dataset.key
+        elif prefilled_dataset:
+            # Backward compatibility for old metadata format
             payload["prefilled_dataset"] = prefilled_dataset
     elif question.type == SurveyQuestion.Types.YESNO:
         # For Yes/No questions, check for follow-up text config
@@ -4318,7 +4320,7 @@ def group_builder(request: HttpRequest, slug: str, gid: int) -> HttpResponse:
         "professional_ods_on": professional_ods_on,
         "professional_ods_pairs": professional_ods_pairs,
         "professional_field_datasets": PROFESSIONAL_FIELD_TO_DATASET,
-        "available_datasets": get_available_datasets(),
+        "available_datasets": get_available_datasets(organization=survey.organization),
     }
     if any(brand_overrides.values()):
         ctx["brand"] = {
@@ -4453,6 +4455,7 @@ def builder_question_create(request: HttpRequest, slug: str) -> HttpResponse:
     qtype = form_data["type"]
     required = form_data["required"]
     options = form_data["options"]
+    dataset_key = form_data.get("dataset_key")
     group_id = request.POST.get("group_id")
     group = (
         QuestionGroup.objects.filter(id=group_id, owner=request.user).first()
@@ -4460,6 +4463,18 @@ def builder_question_create(request: HttpRequest, slug: str) -> HttpResponse:
         else None
     )
     order = (survey.questions.aggregate(models.Max("order")).get("order__max") or 0) + 1
+
+    # Look up dataset if provided (with access control)
+    dataset = None
+    if dataset_key:
+        from .models import DataSet
+        from django.db.models import Q
+        dataset = DataSet.objects.filter(
+            Q(is_global=True) | Q(organization=survey.organization),
+            key=dataset_key,
+            is_active=True
+        ).first()
+
     SurveyQuestion.objects.create(
         survey=survey,
         group=group,
@@ -4468,6 +4483,7 @@ def builder_question_create(request: HttpRequest, slug: str) -> HttpResponse:
         options=options,
         required=required,
         order=order,
+        dataset=dataset,
     )
     questions_qs = survey.questions.select_related("group").all()
     questions = _prepare_question_rendering(survey, questions_qs)
@@ -4629,7 +4645,20 @@ def builder_group_question_create(
     qtype = form_data["type"]
     required = form_data["required"]
     options = form_data["options"]
+    dataset_key = form_data.get("dataset_key")
     order = (survey.questions.aggregate(models.Max("order")).get("order__max") or 0) + 1
+
+    # Look up dataset if provided (with access control)
+    dataset = None
+    if dataset_key:
+        from .models import DataSet
+        from django.db.models import Q
+        dataset = DataSet.objects.filter(
+            Q(is_global=True) | Q(organization=survey.organization),
+            key=dataset_key,
+            is_active=True
+        ).first()
+
     SurveyQuestion.objects.create(
         survey=survey,
         group=group,
@@ -4638,6 +4667,7 @@ def builder_group_question_create(
         options=options,
         required=required,
         order=order,
+        dataset=dataset,
     )
     questions_qs = survey.questions.select_related("group").filter(group=group)
     questions = _prepare_question_rendering(survey, questions_qs)
@@ -4972,12 +5002,26 @@ def builder_question_edit(request: HttpRequest, slug: str, qid: int) -> HttpResp
     q.type = form_data["type"]
     q.required = form_data["required"]
     q.options = form_data["options"]
+    dataset_key = form_data.get("dataset_key")
     group_id = request.POST.get("group_id")
     q.group = (
         QuestionGroup.objects.filter(id=group_id, owner=request.user).first()
         if group_id
         else None
     )
+
+    # Look up dataset if provided (with access control)
+    if dataset_key:
+        from .models import DataSet
+        from django.db.models import Q
+        q.dataset = DataSet.objects.filter(
+            Q(is_global=True) | Q(organization=survey.organization),
+            key=dataset_key,
+            is_active=True
+        ).first()
+    else:
+        q.dataset = None
+
     q.save()
     return _render_template_question_row(
         request,
@@ -5001,6 +5045,20 @@ def builder_group_question_edit(
     q.type = form_data["type"]
     q.required = form_data["required"]
     q.options = form_data["options"]
+    dataset_key = form_data.get("dataset_key")
+
+    # Look up dataset if provided (with access control)
+    if dataset_key:
+        from .models import DataSet
+        from django.db.models import Q
+        q.dataset = DataSet.objects.filter(
+            Q(is_global=True) | Q(organization=survey.organization),
+            key=dataset_key,
+            is_active=True
+        ).first()
+    else:
+        q.dataset = None
+
     q.save()
     return _render_template_question_row(
         request,

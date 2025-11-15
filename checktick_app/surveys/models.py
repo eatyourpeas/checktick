@@ -775,6 +775,14 @@ class SurveyQuestion(models.Model):
     options = models.JSONField(default=list, blank=True)
     required = models.BooleanField(default=False)
     order = models.PositiveIntegerField(default=0)
+    dataset = models.ForeignKey(
+        "DataSet",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="questions",
+        help_text="Optional link to a shared dataset for dropdown options",
+    )
 
     class Meta:
         ordering = ["order", "id"]
