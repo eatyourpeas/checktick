@@ -3828,8 +3828,6 @@ def _get_or_create_progress(
     """
     from datetime import timedelta
 
-    from .models import SurveyProgress
-
     total_questions = survey.questions.count()
     expires_at = timezone.now() + timedelta(days=30)
 

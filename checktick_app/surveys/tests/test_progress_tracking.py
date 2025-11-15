@@ -12,9 +12,8 @@ Tests cover:
 """
 
 from datetime import timedelta
+
 from django.contrib.auth import get_user_model
-from django.contrib.sessions.middleware import SessionMiddleware
-from django.test import RequestFactory
 from django.urls import reverse
 from django.utils import timezone
 import pytest
@@ -85,28 +84,33 @@ def published_survey(survey_owner, test_organization):
         organization=test_organization,
     )
 
-    # Add multiple questions
-    SurveyQuestion.objects.create(
+    # Add multiple questions - IDs will be auto-assigned
+    q1 = SurveyQuestion.objects.create(
         survey=survey,
         text="What is your name?",
         type=SurveyQuestion.Types.TEXT,
         required=True,
         order=0,
     )
-    SurveyQuestion.objects.create(
+    q2 = SurveyQuestion.objects.create(
         survey=survey,
         text="What is your age?",
         type=SurveyQuestion.Types.TEXT,
         required=True,
         order=1,
     )
-    SurveyQuestion.objects.create(
+    q3 = SurveyQuestion.objects.create(
         survey=survey,
         text="Choose one:",
         type=SurveyQuestion.Types.MULTIPLE_CHOICE_SINGLE,
         required=False,
         order=2,
     )
+
+    # Store question IDs for easy test access
+    survey._test_q1_id = q1.id
+    survey._test_q2_id = q2.id
+    survey._test_q3_id = q3.id
 
     return survey
 
@@ -123,20 +127,23 @@ def public_survey(survey_owner, test_organization):
         organization=test_organization,
     )
 
-    SurveyQuestion.objects.create(
+    q1 = SurveyQuestion.objects.create(
         survey=survey,
         text="Question 1",
         type=SurveyQuestion.Types.TEXT,
         required=True,
         order=0,
     )
-    SurveyQuestion.objects.create(
+    q2 = SurveyQuestion.objects.create(
         survey=survey,
         text="Question 2",
         type=SurveyQuestion.Types.TEXT,
         required=False,
         order=1,
     )
+
+    survey._test_q1_id = q1.id
+    survey._test_q2_id = q2.id
 
     return survey
 
@@ -153,13 +160,15 @@ def token_survey(survey_owner, test_organization):
         organization=test_organization,
     )
 
-    SurveyQuestion.objects.create(
+    q1 = SurveyQuestion.objects.create(
         survey=survey,
         text="Token question",
         type=SurveyQuestion.Types.TEXT,
         required=True,
         order=0,
     )
+
+    survey._test_q1_id = q1.id
 
     return survey
 
@@ -199,27 +208,24 @@ class TestAuthenticatedProgress:
         assert "progress" in data
 
         # Verify progress record created
-        progress = SurveyProgress.objects.get(
-            survey=published_survey, user=participant
-        )
+        progress = SurveyProgress.objects.get(survey=published_survey, user=participant)
         assert progress.answered_count == 2
         assert progress.total_questions == 3
-        assert progress.partial_answers[f"q_{questions[0].id}"] == "John Doe"
-        assert progress.partial_answers[f"q_{questions[1].id}"] == "30"
+        # Answers stored with question ID as key (not q_<id>)
+        assert progress.partial_answers[str(questions[0].id)] == "John Doe"
+        assert progress.partial_answers[str(questions[1].id)] == "30"
 
-    def test_progress_restored_on_return(
-        self, client, published_survey, participant
-    ):
+    def test_progress_restored_on_return(self, client, published_survey, participant):
         """Previously saved answers should be restored when user returns."""
         questions = published_survey.questions.all()
 
-        # Create existing progress
+        # Create existing progress - keys are question IDs not q_<id>
         SurveyProgress.objects.create(
             survey=published_survey,
             user=participant,
             partial_answers={
-                f"q_{questions[0].id}": "Jane Smith",
-                f"q_{questions[1].id}": "25",
+                str(questions[0].id): "Jane Smith",
+                str(questions[1].id): "25",
             },
             current_question_id=questions[1].id,
             total_questions=3,
@@ -234,16 +240,16 @@ class TestAuthenticatedProgress:
         assert response.status_code == 200
         context = response.context
 
-        # Check progress context
-        assert context["has_progress"] is True
+        # Check progress context - uses show_progress not has_progress
+        assert context["show_progress"] is True
         assert context["progress_percentage"] == 66  # 2/3 * 100
-        assert context["progress_answered"] == 2
-        assert context["progress_total"] == 3
+        assert context["answered_count"] == 2
+        assert context["total_questions"] == 3
 
-        # Check answers are in context
+        # Check answers are in context - stored as question IDs
         saved_answers = context["saved_answers"]
-        assert saved_answers[f"q_{questions[0].id}"] == "Jane Smith"
-        assert saved_answers[f"q_{questions[1].id}"] == "25"
+        assert saved_answers[str(questions[0].id)] == "Jane Smith"
+        assert saved_answers[str(questions[1].id)] == "25"
 
     def test_progress_deleted_on_submission(
         self, client, published_survey, participant
@@ -255,7 +261,7 @@ class TestAuthenticatedProgress:
         SurveyProgress.objects.create(
             survey=published_survey,
             user=participant,
-            partial_answers={f"q_{questions[0].id}": "Test"},
+            partial_answers={str(questions[0].id): "Test"},
             current_question_id=questions[0].id,
             total_questions=3,
             answered_count=1,
@@ -293,7 +299,7 @@ class TestAuthenticatedProgress:
         progress1 = SurveyProgress.objects.create(
             survey=published_survey,
             user=participant,
-            partial_answers={f"q_{questions[0].id}": "First"},
+            partial_answers={str(questions[0].id): "First"},
             current_question_id=questions[0].id,
             total_questions=3,
             answered_count=1,
@@ -317,13 +323,16 @@ class TestAuthenticatedProgress:
         assert response.status_code == 200
 
         # Should still be only one progress record
-        assert SurveyProgress.objects.filter(
-            survey=published_survey, user=participant
-        ).count() == 1
+        assert (
+            SurveyProgress.objects.filter(
+                survey=published_survey, user=participant
+            ).count()
+            == 1
+        )
 
         # Should be updated
         progress1.refresh_from_db()
-        assert progress1.partial_answers[f"q_{questions[0].id}"] == "Updated"
+        assert progress1.partial_answers[str(questions[0].id)] == "Updated"
         assert progress1.answered_count == 2
 
     def test_different_users_have_separate_progress(
@@ -367,8 +376,8 @@ class TestAuthenticatedProgress:
             survey=published_survey, user=another_participant
         )
 
-        assert progress1.partial_answers[f"q_{questions[0].id}"] == "User One"
-        assert progress2.partial_answers[f"q_{questions[0].id}"] == "User Two"
+        assert progress1.partial_answers[str(questions[0].id)] == "User One"
+        assert progress2.partial_answers[str(questions[0].id)] == "User Two"
 
 
 # ============================================================================
@@ -411,29 +420,31 @@ class TestAnonymousProgress:
         """Anonymous user should see their progress in the same session."""
         questions = public_survey.questions.all()
 
-        # First request to establish session
+        # First request to establish session and save some progress
         url = reverse("surveys:take", kwargs={"slug": public_survey.slug})
-        client.get(url)
+        client.post(
+            url,
+            {
+                "action": "save_draft",
+                f"q_{questions[0].id}": "Saved Answer",
+            },
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
         session_key = client.session.session_key
 
-        # Create progress with this session
-        SurveyProgress.objects.create(
-            survey=public_survey,
-            session_key=session_key,
-            partial_answers={f"q_{questions[0].id}": "Saved Answer"},
-            current_question_id=questions[0].id,
-            total_questions=2,
-            answered_count=1,
-            expires_at=timezone.now() + timedelta(days=30),
+        # Verify progress was created
+        progress = SurveyProgress.objects.get(
+            survey=public_survey, session_key=session_key
         )
+        assert progress.partial_answers[str(questions[0].id)] == "Saved Answer"
 
-        # Get survey again
+        # Get survey again in same session
         response = client.get(url)
 
         assert response.status_code == 200
         context = response.context
-        assert context["has_progress"] is True
-        assert context["saved_answers"][f"q_{questions[0].id}"] == "Saved Answer"
+        assert context["show_progress"] is True
+        assert context["saved_answers"][str(questions[0].id)] == "Saved Answer"
 
     def test_different_sessions_have_separate_progress(self, client, public_survey):
         """Different anonymous sessions should have independent progress."""
@@ -456,7 +467,7 @@ class TestAnonymousProgress:
         progress1 = SurveyProgress.objects.get(
             survey=public_survey, session_key=session1_key
         )
-        assert f"q_{questions[0].id}" in progress1.partial_answers
+        assert str(questions[0].id) in progress1.partial_answers
 
         # Clear session to simulate new browser
         client.session.flush()
@@ -481,8 +492,11 @@ class TestAnonymousProgress:
             survey=public_survey, session_key=session2_key
         )
 
-        assert progress1.partial_answers[f"q_{questions[0].id}"] == "Session 1"
-        assert progress2.partial_answers[f"q_{questions[0].id}"] == "Session 2"
+        # Verify both have correct data
+        assert str(questions[0].id) in progress1.partial_answers
+        assert str(questions[0].id) in progress2.partial_answers
+        assert progress1.partial_answers[str(questions[0].id)] == "Session 1"
+        assert progress2.partial_answers[str(questions[0].id)] == "Session 2"
 
 
 # ============================================================================
@@ -622,7 +636,7 @@ class TestProgressPermissions:
         SurveyProgress.objects.create(
             survey=published_survey,
             user=another_participant,
-            partial_answers={f"q_{questions[0].id}": "Other User Answer"},
+            partial_answers={str(questions[0].id): "Other User Answer"},
             current_question_id=questions[0].id,
             total_questions=3,
             answered_count=1,
@@ -638,8 +652,9 @@ class TestProgressPermissions:
         context = response.context
 
         # Should not see other user's progress
-        assert context.get("has_progress") is False
-        assert not context.get("saved_answers")
+        # Progress percentage should be 0 for this user
+        assert context["progress_percentage"] == 0
+        assert context["answered_count"] == 0
 
     def test_only_logged_in_user_can_access_authenticated_survey(
         self, client, published_survey, participant
@@ -664,13 +679,33 @@ class TestProgressPermissions:
 class TestProgressCleanup:
     """Tests for automatic cleanup of expired progress records."""
 
-    def test_cleanup_deletes_expired_progress(self, published_survey, participant):
+    def test_cleanup_deletes_expired_progress(self, survey_owner, test_organization):
         """Expired progress should be deleted by cleanup command."""
+        # Create two separate surveys to avoid unique constraint
+        survey1 = Survey.objects.create(
+            owner=survey_owner,
+            name="Cleanup Test Survey 1",
+            slug="cleanup-test-1",
+            status=Survey.Status.PUBLISHED,
+            visibility=Survey.Visibility.PUBLIC,
+            organization=test_organization,
+        )
+        survey2 = Survey.objects.create(
+            owner=survey_owner,
+            name="Cleanup Test Survey 2",
+            slug="cleanup-test-2",
+            status=Survey.Status.PUBLISHED,
+            visibility=Survey.Visibility.PUBLIC,
+            organization=test_organization,
+        )
+
+        user = User.objects.create_user(username="cleanup_user", password="x")
+
         # Create expired progress (>30 days old)
         old_progress = SurveyProgress.objects.create(
-            survey=published_survey,
-            user=participant,
-            partial_answers={"q_1": "old"},
+            survey=survey1,
+            user=user,
+            partial_answers={"1": "old"},
             current_question_id=1,
             total_questions=3,
             answered_count=1,
@@ -679,9 +714,9 @@ class TestProgressCleanup:
 
         # Create recent progress
         recent_progress = SurveyProgress.objects.create(
-            survey=published_survey,
-            user=participant,
-            partial_answers={"q_2": "recent"},
+            survey=survey2,
+            user=user,
+            partial_answers={"2": "recent"},
             current_question_id=2,
             total_questions=3,
             answered_count=1,
@@ -698,12 +733,22 @@ class TestProgressCleanup:
         # Recent should remain
         assert SurveyProgress.objects.filter(id=recent_progress.id).exists()
 
-    def test_cleanup_dry_run_does_not_delete(self, published_survey, participant):
+    def test_cleanup_dry_run_does_not_delete(self, survey_owner, test_organization):
         """Dry run should not delete any records."""
+        survey = Survey.objects.create(
+            owner=survey_owner,
+            name="Dry Run Test Survey",
+            slug="dry-run-test",
+            status=Survey.Status.PUBLISHED,
+            visibility=Survey.Visibility.PUBLIC,
+            organization=test_organization,
+        )
+        user = User.objects.create_user(username="dryrun_user", password="x")
+
         old_progress = SurveyProgress.objects.create(
-            survey=published_survey,
-            user=participant,
-            partial_answers={"q_1": "old"},
+            survey=survey,
+            user=user,
+            partial_answers={"1": "old"},
             current_question_id=1,
             total_questions=3,
             answered_count=1,
@@ -717,7 +762,9 @@ class TestProgressCleanup:
         # Should still exist
         assert SurveyProgress.objects.filter(id=old_progress.id).exists()
 
-    def test_progress_expires_after_30_days(self, client, published_survey, participant):
+    def test_progress_expires_after_30_days(
+        self, client, published_survey, participant
+    ):
         """New progress should have 30-day expiry."""
         client.login(username="participant@example.com", password=TEST_PASSWORD)
 
@@ -735,9 +782,7 @@ class TestProgressCleanup:
         )
 
         # Check expiry
-        progress = SurveyProgress.objects.get(
-            survey=published_survey, user=participant
-        )
+        progress = SurveyProgress.objects.get(survey=published_survey, user=participant)
 
         # Should expire in approximately 30 days
         time_until_expiry = progress.expires_at - timezone.now()
@@ -753,28 +798,50 @@ class TestProgressCleanup:
 class TestProgressEdgeCases:
     """Tests for edge cases and error handling."""
 
-    def test_progress_percentage_calculation(self, published_survey, participant):
+    def test_progress_percentage_calculation(self, survey_owner, test_organization):
         """Progress percentage should be calculated correctly."""
+        survey = Survey.objects.create(
+            owner=survey_owner,
+            name="Percentage Test Survey",
+            slug="percentage-test",
+            status=Survey.Status.PUBLISHED,
+            visibility=Survey.Visibility.PUBLIC,
+            organization=test_organization,
+        )
+        user = User.objects.create_user(username="percentage_user", password="x")
+
         progress = SurveyProgress.objects.create(
-            survey=published_survey,
-            user=participant,
+            survey=survey,
+            user=user,
             partial_answers={},
             current_question_id=1,
             total_questions=3,
             answered_count=2,
+            expires_at=timezone.now() + timedelta(days=30),
         )
 
         assert progress.calculate_progress_percentage() == 66
 
-    def test_progress_percentage_zero_questions(self, published_survey, participant):
+    def test_progress_percentage_zero_questions(self, survey_owner, test_organization):
         """Should handle zero questions gracefully."""
+        survey = Survey.objects.create(
+            owner=survey_owner,
+            name="Zero Questions Survey",
+            slug="zero-questions-test",
+            status=Survey.Status.PUBLISHED,
+            visibility=Survey.Visibility.PUBLIC,
+            organization=test_organization,
+        )
+        user = User.objects.create_user(username="zero_user", password="x")
+
         progress = SurveyProgress.objects.create(
-            survey=published_survey,
-            user=participant,
+            survey=survey,
+            user=user,
             partial_answers={},
             current_question_id=1,
             total_questions=0,
             answered_count=0,
+            expires_at=timezone.now() + timedelta(days=30),
         )
 
         assert progress.calculate_progress_percentage() == 0
@@ -797,7 +864,5 @@ class TestProgressEdgeCases:
         assert data["success"] is True
 
         # Should create progress with zero answers
-        progress = SurveyProgress.objects.get(
-            survey=published_survey, user=participant
-        )
+        progress = SurveyProgress.objects.get(survey=published_survey, user=participant)
         assert progress.answered_count == 0

@@ -39,9 +39,7 @@ class Command(BaseCommand):
         verbose = options["verbose"]
 
         self.stdout.write(
-            self.style.SUCCESS(
-                f"Starting survey progress cleanup at {timezone.now()}"
-            )
+            self.style.SUCCESS(f"Starting survey progress cleanup at {timezone.now()}")
         )
 
         if dry_run:
