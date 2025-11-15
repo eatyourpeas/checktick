@@ -1,8 +1,12 @@
 # Self-Hosting: Scheduled Tasks
 
-CheckTick requires scheduled tasks to process data governance operations including deletion warnings and automatic data cleanup. This guide explains how to set up these tasks on different hosting platforms.
+CheckTick requires scheduled tasks for data governance operations and housekeeping. This guide explains how to set up these tasks on different hosting platforms.
 
 ## Overview
+
+CheckTick uses two scheduled tasks:
+
+### 1. Data Governance (Required for GDPR)
 
 The `process_data_governance` management command runs daily to:
 
@@ -10,7 +14,16 @@ The `process_data_governance` management command runs daily to:
 2. **Soft-delete expired surveys** - Automatically soft-delete surveys that have reached their retention period
 3. **Hard-delete surveys** - Permanently delete surveys 30 days after soft deletion
 
-**Legal Requirement**: These tasks are required for GDPR compliance. Failure to run them may result in data being retained longer than legally allowed.
+**Legal Requirement**: This task is required for GDPR compliance. Failure to run it may result in data being retained longer than legally allowed.
+
+### 2. Survey Progress Cleanup (Recommended)
+
+The `cleanup_survey_progress` management command runs daily to:
+
+1. **Delete expired progress records** - Removes incomplete survey progress older than 30 days
+2. **Free up database storage** - Keeps the database lean by removing stale session data
+
+**Recommended**: While not legally required, this prevents database bloat and improves performance. Progress records are only needed while users are actively completing surveys.
 
 ## Prerequisites
 
@@ -26,7 +39,7 @@ The `process_data_governance` management command runs daily to:
 
 Northflank provides native cron job support, making this the simplest option.
 
-#### 1. Create a Cron Job Service
+#### 1. Create Data Governance Cron Job
 
 1. Go to your Northflank project
 2. Click **"Add Service"** → **"Cron Job"**
@@ -36,30 +49,41 @@ Northflank provides native cron job support, making this the simplest option.
    - **Schedule**: `0 2 * * *` (runs at 2 AM UTC daily)
    - **Command**: `python manage.py process_data_governance`
 
-#### 2. Copy Environment Variables
+#### 2. Create Survey Progress Cleanup Cron Job
 
-The cron job needs the same environment variables as your web service:
+1. Click **"Add Service"** → **"Cron Job"** again
+2. Configure the job:
+   - **Name**: `checktick-progress-cleanup`
+   - **Docker Image**: Use the same image as your web service
+   - **Schedule**: `0 3 * * *` (runs at 3 AM UTC daily, after data governance)
+   - **Command**: `python manage.py cleanup_survey_progress`
+
+#### 3. Copy Environment Variables
+
+Both cron jobs need the same environment variables as your web service:
 
 1. In Northflank, go to your web service → **Environment**
 2. Copy all environment variables
-3. Go to your cron job service → **Environment**
+3. Go to each cron job service → **Environment**
 4. Paste the variables
 
 **Critical variables needed:**
+
 - `DATABASE_URL`
 - `SECRET_KEY`
-- `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`
-- `DEFAULT_FROM_EMAIL`
-- `SITE_URL` (for email links)
+- `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` (for data governance)
+- `DEFAULT_FROM_EMAIL` (for data governance)
+- `SITE_URL` (for email links in data governance)
 
-#### 3. Deploy and Test
+#### 4. Deploy and Test
 
-1. Deploy the cron job service
-2. Test it manually via Northflank dashboard: **Jobs** → **Run Now**
+1. Deploy both cron job services
+2. Test them manually via Northflank dashboard: **Jobs** → **Run Now**
 3. Check logs to verify successful execution
 4. Monitor the **History** tab for scheduled runs
 
 **Northflank Advantages:**
+
 - ✅ No extra containers running 24/7
 - ✅ Easy manual testing via UI
 - ✅ Built-in logging and monitoring
@@ -71,7 +95,7 @@ The cron job needs the same environment variables as your web service:
 
 If you're self-hosting with Docker Compose on a VPS or dedicated server, use the system's cron.
 
-#### 1. Create a Cron Script
+#### 1. Create Cron Scripts
 
 Create `/usr/local/bin/checktick-data-governance.sh`:
 
@@ -90,10 +114,28 @@ docker compose exec -T web python manage.py process_data_governance >> /var/log/
 exit $?
 ```
 
-Make it executable:
+Create `/usr/local/bin/checktick-progress-cleanup.sh`:
+
+```bash
+#!/bin/bash
+# CheckTick Survey Progress Cleanup Cron Job
+# Runs daily at 3 AM UTC
+
+# Set working directory
+cd /path/to/your/checktick-app
+
+# Run the cleanup command
+docker compose exec -T web python manage.py cleanup_survey_progress >> /var/log/checktick/progress-cleanup.log 2>&1
+
+# Exit with the command's exit code
+exit $?
+```
+
+Make them executable:
 
 ```bash
 chmod +x /usr/local/bin/checktick-data-governance.sh
+chmod +x /usr/local/bin/checktick-progress-cleanup.sh
 ```
 
 #### 2. Add to System Crontab
@@ -102,11 +144,14 @@ chmod +x /usr/local/bin/checktick-data-governance.sh
 sudo crontab -e
 ```
 
-Add this line:
+Add these lines:
 
 ```cron
 # CheckTick Data Governance - Daily at 2 AM UTC
 0 2 * * * /usr/local/bin/checktick-data-governance.sh
+
+# CheckTick Survey Progress Cleanup - Daily at 3 AM UTC
+0 3 * * * /usr/local/bin/checktick-progress-cleanup.sh
 ```
 
 #### 3. Create Log Directory
@@ -116,14 +161,16 @@ sudo mkdir -p /var/log/checktick
 sudo chown $USER:$USER /var/log/checktick
 ```
 
-#### 4. Test the Script
+#### 4. Test the Scripts
 
 ```bash
-# Test manually
+# Test data governance
 /usr/local/bin/checktick-data-governance.sh
-
-# Check logs
 tail -f /var/log/checktick/data-governance.log
+
+# Test progress cleanup
+/usr/local/bin/checktick-progress-cleanup.sh
+tail -f /var/log/checktick/progress-cleanup.log
 ```
 
 ---
@@ -290,7 +337,7 @@ jobs:
 
 ## Command Reference
 
-### Basic Usage
+### Data Governance Command
 
 ```bash
 # Run data governance tasks
@@ -303,9 +350,9 @@ python manage.py process_data_governance --dry-run
 python manage.py process_data_governance --verbose
 ```
 
-### Example Output
+**Example Output:**
 
-```
+```text
 Starting data governance processing at 2024-10-26 02:00:00
 
 --- Deletion Warnings ---
@@ -323,11 +370,42 @@ Hard deleted: 0 surveys
 Data governance processing completed at 2024-10-26 02:00:15
 ```
 
+### Survey Progress Cleanup Command
+
+```bash
+# Clean up expired survey progress records
+python manage.py cleanup_survey_progress
+
+# Dry-run mode (show what would be deleted without making changes)
+python manage.py cleanup_survey_progress --dry-run
+
+# Verbose output (detailed logging)
+python manage.py cleanup_survey_progress --verbose
+```
+
+**Example Output:**
+
+```text
+Starting survey progress cleanup...
+Found 15 expired progress records (older than 30 days)
+Deleted 15 expired survey progress records
+Cleanup completed successfully
+```
+
+**What gets deleted:**
+
+- Anonymous user progress (session-based) older than 30 days
+- Authenticated user progress older than 30 days
+- Token-based progress older than 30 days
+- Only incomplete surveys (completed submissions are already deleted on submission)
+
 ---
 
 ## Testing
 
 ### Test in Development
+
+**Data Governance:**
 
 ```bash
 # Test with dry-run (safe, no changes)
@@ -337,14 +415,29 @@ docker compose exec web python manage.py process_data_governance --dry-run --ver
 docker compose exec web python manage.py process_data_governance --verbose
 ```
 
+**Survey Progress Cleanup:**
+
+```bash
+# Test with dry-run (safe, no changes)
+docker compose exec web python manage.py cleanup_survey_progress --dry-run --verbose
+
+# Test for real (only if you have test data)
+docker compose exec web python manage.py cleanup_survey_progress --verbose
+```
+
 ### Test in Production
 
 1. **First, use dry-run mode:**
+
    ```bash
+   # Data governance
    python manage.py process_data_governance --dry-run --verbose
+
+   # Progress cleanup
+   python manage.py cleanup_survey_progress --dry-run --verbose
    ```
 
-2. **Review the output** - it will show what surveys would be affected
+2. **Review the output** - it will show what surveys/progress records would be affected
 
 3. **Run for real** (on your scheduled platform)
 
@@ -357,19 +450,32 @@ docker compose exec web python manage.py process_data_governance --verbose
 ### Check Execution Logs
 
 **Northflank:**
+
 - Go to your cron job service → **History** → View logs
 
 **Docker Compose:**
+
 ```bash
+# Data governance logs
 tail -f /var/log/checktick/data-governance.log
+
+# Progress cleanup logs
+tail -f /var/log/checktick/progress-cleanup.log
 ```
 
 **Kubernetes:**
+
 ```bash
+# Data governance
 kubectl logs -l job-name=checktick-data-governance --tail=100
+
+# Progress cleanup
+kubectl logs -l job-name=checktick-progress-cleanup --tail=100
 ```
 
 ### Audit Trail
+
+**Survey Deletions:**
 
 All deletions are logged in the database. Check via Django admin:
 
@@ -391,6 +497,32 @@ Survey.objects.filter(
     deletion_date__lte=timezone.now() + timedelta(days=7),
     deleted_at__isnull=True
 ).values('name', 'deletion_date', 'retention_months')
+```
+
+**Progress Cleanup:**
+
+Monitor the SurveyProgress table size:
+
+```python
+# In Django shell
+from checktick_app.surveys.models import SurveyProgress
+from django.utils import timezone
+from datetime import timedelta
+
+# Count total progress records
+print(f"Total progress records: {SurveyProgress.objects.count()}")
+
+# Count expired records (ready for cleanup)
+expired = SurveyProgress.objects.filter(
+    expires_at__lt=timezone.now()
+)
+print(f"Expired records: {expired.count()}")
+
+# Count by type
+authenticated = SurveyProgress.objects.filter(user__isnull=False).count()
+anonymous = SurveyProgress.objects.filter(session_key__isnull=False).count()
+token_based = SurveyProgress.objects.filter(access_token__isnull=False).count()
+print(f"Authenticated: {authenticated}, Anonymous: {anonymous}, Token-based: {token_based}")
 ```
 
 ---
@@ -484,14 +616,42 @@ A: Typically **30-60 seconds** for most deployments. Scales with:
 **Q: Can I disable automatic deletion?**
 
 A: No - automatic deletion is **required for GDPR compliance**. However, you can:
+
 - Apply legal holds to prevent specific surveys from being deleted
 - Extend retention periods (up to 24 months)
 - Export data before deletion
+
+**Q: Why do I need the progress cleanup job?**
+
+A: The cleanup job prevents database bloat by removing old progress records. Without it:
+
+- Your database will grow indefinitely with incomplete survey sessions
+- Performance may degrade over time
+- Storage costs will increase
+
+The cleanup is safe because it only removes progress for incomplete surveys older than 30 days.
+
+**Q: What if someone was working on a survey and their progress gets deleted?**
+
+A: Progress records expire after 30 days of inactivity. This is intentional:
+
+- Most surveys are completed within hours or days, not months
+- After 30 days, the session is likely abandoned
+- Users can still start a new submission if needed
+- Only the progress draft is deleted, not any completed submissions
+
+**Q: Do both cron jobs need to run?**
+
+A:
+
+- **Data governance**: YES - legally required for GDPR compliance
+- **Progress cleanup**: RECOMMENDED - prevents database bloat, but not legally required
 
 ---
 
 ## Next Steps
 
+- [Survey Progress Tracking](./survey-progress-tracking.md) - Learn about the progress feature
 - [Data Governance Overview](./data-governance-overview.md) - Understand the retention policy
 - [Data Governance Retention](./data-governance-retention.md) - Learn about retention periods
 - [Self-Hosting Backup](./self-hosting-backup.md) - Set up automated backups
