@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+{% block title %}{% if is_create %}{% trans "Create Dataset" %}{% else %}{% trans "Edit Dataset" %} - {{ dataset.name }}{% endif %} - CheckTick{% endblock %}
+{% block content %}
+<div class="prose max-w-none">
+  {% include 'components/breadcrumbs.html' with crumb1_label='Surveys' crumb1_href='/surveys/' crumb2_label='Datasets' crumb2_href='/surveys/datasets/' crumb3_label=is_create|yesno:'Create,Edit' %}
+
+  <h1>{% if is_create %}{% trans "Create Dataset" %}{% else %}{% trans "Edit Dataset" %}{% endif %}</h1>
+
+  <form method="post" class="not-prose max-w-2xl">
+    {% csrf_token %}
+
+    <div class="form-control w-full">
+      <label class="label">
+        <span class="label-text">{% trans "Key" %} *</span>
+      </label>
+      <input
+        type="text"
+        name="key"
+        value="{{ form_data.key }}"
+        placeholder="my_custom_list"
+        class="input input-bordered w-full"
+        {% if not is_create %}readonly disabled{% endif %}
+        required
+      >
+      <label class="label">
+        <span class="label-text-alt">{% trans "Unique identifier (lowercase, alphanumeric, hyphens, underscores only)" %}</span>
+      </label>
+    </div>
+
+    <div class="form-control w-full">
+      <label class="label">
+        <span class="label-text">{% trans "Name" %} *</span>
+      </label>
+      <input
+        type="text"
+        name="name"
+        value="{{ form_data.name }}"
+        placeholder="My Custom List"
+        class="input input-bordered w-full"
+        required
+      >
+    </div>
+
+    <div class="form-control w-full">
+      <label class="label">
+        <span class="label-text">{% trans "Description" %}</span>
+      </label>
+      <textarea
+        name="description"
+        placeholder="Describe the purpose of this dataset..."
+        class="textarea textarea-bordered w-full h-24"
+      >{{ form_data.description }}</textarea>
+    </div>
+
+    <div class="form-control w-full">
+      <label class="label">
+        <span class="label-text">{% trans "Category" %} *</span>
+      </label>
+      <select name="category" class="select select-bordered w-full" {% if not is_create %}disabled{% endif %}>
+        {% for value, label in categories %}
+          <option value="{{ value }}" {% if form_data.category == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-control w-full">
+      <label class="label">
+        <span class="label-text">{% trans "Source Type" %} *</span>
+      </label>
+      <select name="source_type" class="select select-bordered w-full" {% if not is_create %}disabled{% endif %}>
+        {% for value, label in source_types %}
+          <option value="{{ value }}" {% if form_data.source_type == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-control w-full">
+      <label class="label">
+        <span class="label-text">{% trans "Organization" %} *</span>
+      </label>
+      <select name="organization" class="select select-bordered w-full" {% if not is_create %}disabled{% endif %} required>
+        <option value="">{% trans "Select organization..." %}</option>
+        {% for org in organizations %}
+          <option value="{{ org.id }}" {% if form_data.organization|stringformat:"s" == org.id|stringformat:"s" %}selected{% endif %}>{{ org.name }}</option>
+        {% endfor %}
+      </select>
+      <label class="label">
+        <span class="label-text-alt">{% trans "The organization that owns this dataset" %}</span>
+      </label>
+    </div>
+
+    <div class="form-control w-full">
+      <label class="label">
+        <span class="label-text">{% trans "Options" %} *</span>
+      </label>
+      <textarea
+        name="options"
+        placeholder="Option 1&#10;Option 2&#10;Option 3"
+        class="textarea textarea-bordered w-full font-mono text-sm h-64"
+        required
+      >{{ form_data.options }}</textarea>
+      <label class="label">
+        <span class="label-text-alt">{% trans "One option per line. Use consistent formatting (e.g., 'Name (Code)' or 'Code - Description')" %}</span>
+      </label>
+    </div>
+
+    <div class="form-control w-full">
+      <label class="label">
+        <span class="label-text">{% trans "Format Pattern" %}</span>
+      </label>
+      <input
+        type="text"
+        name="format_pattern"
+        value="{{ form_data.format_pattern }}"
+        placeholder="e.g., 'name (code)' or 'code - description'"
+        class="input input-bordered w-full"
+      >
+      <label class="label">
+        <span class="label-text-alt">{% trans "Optional: Document the formatting pattern used for options" %}</span>
+      </label>
+    </div>
+
+    <div class="flex gap-2 mt-6">
+      <button type="submit" class="btn btn-primary">
+        {% if is_create %}{% trans "Create Dataset" %}{% else %}{% trans "Save Changes" %}{% endif %}
+      </button>
+      <a href="{% if not is_create %}{% url 'surveys:dataset_detail' dataset_id=dataset.id %}{% else %}{% url 'surveys:dataset_list' %}{% endif %}" class="btn btn-ghost">
+        {% trans "Cancel" %}
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}

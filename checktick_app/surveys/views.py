@@ -5,6 +5,7 @@ import csv
 import io
 import json
 import logging
+import re
 import secrets
 from typing import Any, Iterable, Union
 
@@ -16,7 +17,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import DatabaseError, models, transaction
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
 from django.http import (
     Http404,
     HttpRequest,
@@ -38,6 +39,7 @@ from .models import (
     AuditLog,
     CollectionDefinition,
     CollectionItem,
+    DataSet,
     Organization,
     OrganizationMembership,
     QuestionGroup,
@@ -50,12 +52,16 @@ from .models import (
     SurveyResponse,
 )
 from .permissions import (
+    can_create_datasets,
+    can_edit_dataset,
     can_edit_survey,
     can_export_survey_data,
     can_manage_org_users,
     can_manage_survey_users,
     can_view_survey,
+    require_can_create_datasets,
     require_can_edit,
+    require_can_edit_dataset,
     require_can_view,
 )
 from .utils import verify_key
@@ -5521,3 +5527,325 @@ def _send_survey_closure_notification(survey: Survey, user: User) -> None:
         markdown_content=markdown_content,
         branding=branding,
     )
+
+
+# ==============================================================================
+# Dataset Management Views
+# ==============================================================================
+
+
+@login_required
+def dataset_list(request: HttpRequest) -> HttpResponse:
+    """List all datasets available to the user (global + their org datasets)."""
+    user = request.user
+
+    # Get organizations where user is a member
+    user_orgs = Organization.objects.filter(memberships__user=user)
+
+    # Build queryset: global datasets + datasets from user's organizations
+    datasets = DataSet.objects.filter(
+        Q(is_global=True) | Q(organization__in=user_orgs), is_active=True
+    ).select_related("organization", "created_by", "parent")
+
+    # Apply category filter if provided
+    category_filter = request.GET.get("category")
+    if category_filter:
+        datasets = datasets.filter(category=category_filter)
+
+    # Apply organization filter if provided
+    org_filter = request.GET.get("organization")
+    if org_filter:
+        if org_filter == "global":
+            datasets = datasets.filter(is_global=True)
+        else:
+            datasets = datasets.filter(organization_id=org_filter)
+
+    # Get user's organizations for create permission check
+    can_create = can_create_datasets(user)
+
+    # Get unique categories for filter dropdown
+    categories = DataSet.CATEGORY_CHOICES
+
+    # Get user's organizations for filter dropdown
+    organizations = list(user_orgs)
+
+    return render(
+        request,
+        "surveys/dataset_list.html",
+        {
+            "datasets": datasets.order_by("-created_at"),
+            "can_create": can_create,
+            "categories": categories,
+            "organizations": organizations,
+            "selected_category": category_filter,
+            "selected_org": org_filter,
+        },
+    )
+
+
+@login_required
+def dataset_detail(request: HttpRequest, dataset_id: int) -> HttpResponse:
+    """View details of a specific dataset."""
+    user = request.user
+
+    # Get user's organizations
+    user_orgs = Organization.objects.filter(memberships__user=user)
+
+    # Get dataset and check access
+    dataset = get_object_or_404(
+        DataSet.objects.filter(
+            Q(is_global=True) | Q(organization__in=user_orgs), is_active=True
+        ).select_related("organization", "created_by", "parent"),
+        id=dataset_id,
+    )
+
+    # Check if user can edit this dataset
+    user_can_edit = can_edit_dataset(user, dataset)
+
+    # Get questions using this dataset
+    questions_using = SurveyQuestion.objects.filter(dataset=dataset).select_related(
+        "question_group__survey"
+    )
+
+    return render(
+        request,
+        "surveys/dataset_detail.html",
+        {
+            "dataset": dataset,
+            "can_edit": user_can_edit,
+            "questions_using": questions_using,
+        },
+    )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def dataset_create(request: HttpRequest) -> HttpResponse:
+    """Create a new dataset."""
+    require_can_create_datasets(request.user)
+
+    # Get organizations where user is ADMIN or CREATOR
+    user_orgs = Organization.objects.filter(
+        memberships__user=request.user,
+        memberships__role__in=[
+            OrganizationMembership.Role.ADMIN,
+            OrganizationMembership.Role.CREATOR,
+        ],
+    )
+
+    if request.method == "POST":
+        # Extract form data
+        key = request.POST.get("key", "").strip()
+        name = request.POST.get("name", "").strip()
+        description = request.POST.get("description", "").strip()
+        category = request.POST.get("category", "user_created")
+        source_type = request.POST.get("source_type", "manual")
+        organization_id = request.POST.get("organization")
+        options_text = request.POST.get("options", "").strip()
+        format_pattern = request.POST.get("format_pattern", "").strip()
+
+        # Validate
+        errors = []
+
+        if not key:
+            errors.append("Key is required")
+        elif not re.match(r"^[a-z0-9_-]+$", key):
+            errors.append(
+                "Key must be lowercase alphanumeric with hyphens or underscores"
+            )
+        elif DataSet.objects.filter(key=key).exists():
+            errors.append("A dataset with this key already exists")
+
+        if not name:
+            errors.append("Name is required")
+
+        if not organization_id:
+            errors.append("Organization is required")
+        else:
+            org = get_object_or_404(Organization, id=organization_id)
+            # Verify user has permission in this org
+            if not user_orgs.filter(id=org.id).exists():
+                errors.append("You don't have permission in the selected organization")
+
+        # Parse options
+        options = []
+        if options_text:
+            options = [
+                line.strip() for line in options_text.split("\n") if line.strip()
+            ]
+
+        if not options:
+            errors.append("At least one option is required")
+
+        if errors:
+            messages.error(request, " | ".join(errors))
+            return render(
+                request,
+                "surveys/dataset_form.html",
+                {
+                    "organizations": user_orgs,
+                    "categories": DataSet.CATEGORY_CHOICES,
+                    "source_types": DataSet.SOURCE_TYPE_CHOICES,
+                    "form_data": request.POST,
+                    "is_create": True,
+                },
+            )
+
+        # Create dataset
+        dataset = DataSet.objects.create(
+            key=key,
+            name=name,
+            description=description,
+            category=category,
+            source_type=source_type,
+            organization=org,
+            is_global=False,  # Regular users cannot create global datasets
+            options=options,
+            format_pattern=format_pattern,
+            created_by=request.user,
+        )
+
+        messages.success(request, f"Dataset '{dataset.name}' created successfully")
+        return redirect("surveys:dataset_detail", dataset_id=dataset.id)
+
+    return render(
+        request,
+        "surveys/dataset_form.html",
+        {
+            "organizations": user_orgs,
+            "categories": DataSet.CATEGORY_CHOICES,
+            "source_types": DataSet.SOURCE_TYPE_CHOICES,
+            "is_create": True,
+        },
+    )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def dataset_edit(request: HttpRequest, dataset_id: int) -> HttpResponse:
+    """Edit an existing dataset."""
+    user = request.user
+
+    # Get user's organizations
+    user_orgs = Organization.objects.filter(
+        memberships__user=user,
+        memberships__role__in=[
+            OrganizationMembership.Role.ADMIN,
+            OrganizationMembership.Role.CREATOR,
+        ],
+    )
+
+    # Get dataset and check access
+    dataset = get_object_or_404(
+        DataSet.objects.filter(
+            Q(is_global=True) | Q(organization__in=user_orgs), is_active=True
+        ),
+        id=dataset_id,
+    )
+
+    require_can_edit_dataset(user, dataset)
+
+    if request.method == "POST":
+        # Extract form data
+        name = request.POST.get("name", "").strip()
+        description = request.POST.get("description", "").strip()
+        options_text = request.POST.get("options", "").strip()
+        format_pattern = request.POST.get("format_pattern", "").strip()
+
+        # Validate
+        errors = []
+
+        if not name:
+            errors.append("Name is required")
+
+        # Parse options
+        options = []
+        if options_text:
+            options = [
+                line.strip() for line in options_text.split("\n") if line.strip()
+            ]
+
+        if not options:
+            errors.append("At least one option is required")
+
+        if errors:
+            messages.error(request, " | ".join(errors))
+            return render(
+                request,
+                "surveys/dataset_form.html",
+                {
+                    "dataset": dataset,
+                    "organizations": user_orgs,
+                    "categories": DataSet.CATEGORY_CHOICES,
+                    "source_types": DataSet.SOURCE_TYPE_CHOICES,
+                    "form_data": request.POST,
+                    "is_create": False,
+                },
+            )
+
+        # Update dataset
+        dataset.name = name
+        dataset.description = description
+        dataset.options = options
+        dataset.format_pattern = format_pattern
+        dataset.increment_version()
+        dataset.save()
+
+        messages.success(request, f"Dataset '{dataset.name}' updated successfully")
+        return redirect("surveys:dataset_detail", dataset_id=dataset.id)
+
+    # Prepare initial form data
+    form_data = {
+        "key": dataset.key,
+        "name": dataset.name,
+        "description": dataset.description,
+        "category": dataset.category,
+        "source_type": dataset.source_type,
+        "organization": dataset.organization_id,
+        "options": "\n".join(dataset.options),
+        "format_pattern": dataset.format_pattern,
+    }
+
+    return render(
+        request,
+        "surveys/dataset_form.html",
+        {
+            "dataset": dataset,
+            "organizations": user_orgs,
+            "categories": DataSet.CATEGORY_CHOICES,
+            "source_types": DataSet.SOURCE_TYPE_CHOICES,
+            "form_data": form_data,
+            "is_create": False,
+        },
+    )
+
+
+@login_required
+@require_http_methods(["POST"])
+def dataset_delete(request: HttpRequest, dataset_id: int) -> HttpResponse:
+    """Soft delete a dataset (set is_active=False)."""
+    user = request.user
+
+    # Get user's organizations where they can edit
+    user_orgs = Organization.objects.filter(
+        memberships__user=user,
+        memberships__role__in=[
+            OrganizationMembership.Role.ADMIN,
+            OrganizationMembership.Role.CREATOR,
+        ],
+    )
+
+    # Get dataset and check access
+    dataset = get_object_or_404(
+        DataSet.objects.filter(organization__in=user_orgs, is_active=True),
+        id=dataset_id,
+    )
+
+    require_can_edit_dataset(user, dataset)
+
+    # Soft delete
+    dataset.is_active = False
+    dataset.save(update_fields=["is_active"])
+
+    messages.success(request, f"Dataset '{dataset.name}' deleted successfully")
+    return redirect("surveys:dataset_list")

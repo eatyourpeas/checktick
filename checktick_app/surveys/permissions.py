@@ -86,6 +86,58 @@ def user_has_org_membership(user) -> bool:
     return OrganizationMembership.objects.filter(user=user).exists()
 
 
+def can_create_datasets(user) -> bool:
+    """Check if user can create datasets (ADMIN or CREATOR in at least one org)."""
+    if not user.is_authenticated:
+        return False
+    return OrganizationMembership.objects.filter(
+        user=user,
+        role__in=[
+            OrganizationMembership.Role.ADMIN,
+            OrganizationMembership.Role.CREATOR,
+        ],
+    ).exists()
+
+
+def can_edit_dataset(user, dataset) -> bool:
+    """Check if user can edit a specific dataset."""
+    if not user.is_authenticated:
+        return False
+
+    # NHS DD datasets are read-only
+    if dataset.category == "nhs_dd" and not dataset.is_custom:
+        return False
+
+    # Global datasets can only be edited by superusers
+    if dataset.is_global and not user.is_superuser:
+        return False
+
+    # User must be ADMIN or CREATOR in the dataset's organization
+    if dataset.organization:
+        return OrganizationMembership.objects.filter(
+            user=user,
+            organization=dataset.organization,
+            role__in=[
+                OrganizationMembership.Role.ADMIN,
+                OrganizationMembership.Role.CREATOR,
+            ],
+        ).exists()
+
+    return False
+
+
+def require_can_create_datasets(user) -> None:
+    if not can_create_datasets(user):
+        raise PermissionDenied(
+            "You must be an ADMIN or CREATOR in an organization to create datasets."
+        )
+
+
+def require_can_edit_dataset(user, dataset) -> None:
+    if not can_edit_dataset(user, dataset):
+        raise PermissionDenied("You do not have permission to edit this dataset.")
+
+
 # ============================================================================
 # Data Governance Permissions
 # ============================================================================

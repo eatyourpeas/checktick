@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+{% block title %}{% trans "Datasets" %} - CheckTick{% endblock %}
+{% block content %}
+<div class="prose max-w-none">
+  {% include 'components/breadcrumbs.html' with crumb1_label='Surveys' crumb1_href='/surveys/' crumb2_label='Datasets' crumb2_href='/surveys/datasets/' %}
+
+  <h1 class="inline-flex items-center gap-2">
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+    </svg>
+    <span>{% trans "Datasets" %}</span>
+  </h1>
+
+  {% if can_create %}
+    <p><a class="btn btn-primary not-prose" href="{% url 'surveys:dataset_create' %}">{% trans "Create Dataset" %}</a></p>
+  {% endif %}
+
+  <!-- Filters -->
+  <div class="not-prose mb-4">
+    <form method="get" class="flex flex-wrap gap-2 items-end">
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text">{% trans "Category" %}</span>
+        </label>
+        <select name="category" class="select select-bordered select-sm">
+          <option value="">{% trans "All categories" %}</option>
+          {% for value, label in categories %}
+            <option value="{{ value }}" {% if selected_category == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text">{% trans "Organization" %}</span>
+        </label>
+        <select name="organization" class="select select-bordered select-sm">
+          <option value="">{% trans "All organizations" %}</option>
+          <option value="global" {% if selected_org == 'global' %}selected{% endif %}>{% trans "Global (Platform-wide)" %}</option>
+          {% for org in organizations %}
+            <option value="{{ org.id }}" {% if selected_org|stringformat:"s" == org.id|stringformat:"s" %}selected{% endif %}>{{ org.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-sm btn-secondary">{% trans "Filter" %}</button>
+      {% if selected_category or selected_org %}
+        <a href="{% url 'surveys:dataset_list' %}" class="btn btn-sm btn-ghost">{% trans "Clear" %}</a>
+      {% endif %}
+    </form>
+  </div>
+
+  {% if datasets %}
+    <div class="not-prose overflow-x-auto">
+      <table class="table table-zebra w-full">
+        <thead>
+          <tr>
+            <th>{% trans "Name" %}</th>
+            <th>{% trans "Key" %}</th>
+            <th>{% trans "Category" %}</th>
+            <th>{% trans "Organization" %}</th>
+            <th>{% trans "Options" %}</th>
+            <th>{% trans "Version" %}</th>
+            <th>{% trans "Actions" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for dataset in datasets %}
+            <tr>
+              <td>
+                <a href="{% url 'surveys:dataset_detail' dataset_id=dataset.id %}" class="link link-accent font-medium">
+                  {{ dataset.name }}
+                </a>
+                {% if dataset.category == 'nhs_dd' and not dataset.is_custom %}
+                  <span class="badge badge-info badge-sm ml-1">{% trans "NHS DD" %}</span>
+                {% endif %}
+                {% if dataset.is_global %}
+                  <span class="badge badge-success badge-sm ml-1">{% trans "Global" %}</span>
+                {% endif %}
+              </td>
+              <td><code class="text-xs">{{ dataset.key }}</code></td>
+              <td>
+                <span class="badge badge-outline badge-sm">
+                  {{ dataset.get_category_display }}
+                </span>
+              </td>
+              <td>
+                {% if dataset.organization %}
+                  {{ dataset.organization.name }}
+                {% else %}
+                  <span class="text-gray-500">—</span>
+                {% endif %}
+              </td>
+              <td class="text-sm text-gray-600">
+                {{ dataset.options|length }} {% trans "item" %}{{ dataset.options|length|pluralize }}
+              </td>
+              <td><span class="badge badge-ghost badge-sm">v{{ dataset.version }}</span></td>
+              <td>
+                <div class="flex gap-1">
+                  <a href="{% url 'surveys:dataset_detail' dataset_id=dataset.id %}" class="btn btn-xs btn-ghost">
+                    {% trans "View" %}
+                  </a>
+                  {% if dataset.is_editable and dataset.organization %}
+                    <a href="{% url 'surveys:dataset_edit' dataset_id=dataset.id %}" class="btn btn-xs btn-secondary">
+                      {% trans "Edit" %}
+                    </a>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p>{% trans "No datasets found." %}</p>
+    {% if can_create %}
+      <p>{% trans "Create your first dataset to get started." %}</p>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}
