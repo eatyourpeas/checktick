@@ -5604,7 +5604,7 @@ def dataset_detail(request: HttpRequest, dataset_id: int) -> HttpResponse:
 
     # Get questions using this dataset
     questions_using = SurveyQuestion.objects.filter(dataset=dataset).select_related(
-        "question_group__survey"
+        "survey", "group"
     )
 
     return render(
@@ -5735,10 +5735,11 @@ def dataset_edit(request: HttpRequest, dataset_id: int) -> HttpResponse:
         ],
     )
 
-    # Get dataset and check access
+    # Get dataset - check if accessible first
+    all_user_orgs = Organization.objects.filter(memberships__user=user)
     dataset = get_object_or_404(
         DataSet.objects.filter(
-            Q(is_global=True) | Q(organization__in=user_orgs), is_active=True
+            Q(is_global=True) | Q(organization__in=all_user_orgs), is_active=True
         ),
         id=dataset_id,
     )
@@ -5826,18 +5827,12 @@ def dataset_delete(request: HttpRequest, dataset_id: int) -> HttpResponse:
     """Soft delete a dataset (set is_active=False)."""
     user = request.user
 
-    # Get user's organizations where they can edit
-    user_orgs = Organization.objects.filter(
-        memberships__user=user,
-        memberships__role__in=[
-            OrganizationMembership.Role.ADMIN,
-            OrganizationMembership.Role.CREATOR,
-        ],
-    )
-
-    # Get dataset and check access
+    # Get dataset - check if accessible first
+    all_user_orgs = Organization.objects.filter(memberships__user=user)
     dataset = get_object_or_404(
-        DataSet.objects.filter(organization__in=user_orgs, is_active=True),
+        DataSet.objects.filter(
+            Q(is_global=True) | Q(organization__in=all_user_orgs), is_active=True
+        ),
         id=dataset_id,
     )
 
