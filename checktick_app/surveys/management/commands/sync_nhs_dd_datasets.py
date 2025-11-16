@@ -88,7 +88,9 @@ class Command(BaseCommand):
                 d for d in dataset_definitions if d["key"] == dataset_key
             ]
             if not dataset_definitions:
-                raise CommandError(f"Dataset '{dataset_key}' not found in markdown file")
+                raise CommandError(
+                    f"Dataset '{dataset_key}' not found in markdown file"
+                )
 
         total = len(dataset_definitions)
         self.stdout.write(f"📊 Found {total} dataset(s) to sync\n")
@@ -154,7 +156,11 @@ class Command(BaseCommand):
                             scraped_count += 1
                         else:
                             # Save scraped data
-                            old_count = len(dataset_obj.options) if isinstance(dataset_obj.options, dict) else 0
+                            old_count = (
+                                len(dataset_obj.options)
+                                if isinstance(dataset_obj.options, dict)
+                                else 0
+                            )
                             dataset_obj.options = options
                             dataset_obj.last_scraped = timezone.now()
                             dataset_obj.version += 1
