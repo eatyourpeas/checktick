@@ -203,7 +203,7 @@ python manage.py scrape_nhs_dd_datasets --dry-run
 
 **When to use:**
 
-- Initial setup (after `seed_nhs_datasets`)
+- Initial setup (creates datasets from markdown and scrapes them)
 - Scheduled weekly sync
 - After NHS DD publishes updates
 - Manual refresh of specific dataset
