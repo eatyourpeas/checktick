@@ -42,9 +42,9 @@ The `sync_external_datasets` management command runs daily to:
 python manage.py sync_external_datasets
 ```
 
-### 4. NHS Data Dictionary Scraping (Recommended)
+### 4. NHS Data Dictionary Sync (Recommended)
 
-The `scrape_nhs_dd_datasets` management command runs weekly to:
+The `sync_nhs_dd_datasets` management command runs weekly to:
 
 1. **Scrape standardized lists** - Fetches codes and values from NHS Data Dictionary website
 2. **Update existing datasets** - Keeps NHS DD datasets current with official sources
@@ -52,27 +52,24 @@ The `scrape_nhs_dd_datasets` management command runs weekly to:
 
 **Recommended**: Run this weekly to keep NHS DD datasets fresh. See [NHS Data Dictionary Datasets](nhs-data-dictionary-datasets.md) for the full list of scraped datasets.
 
-**Initial Setup Required**:
+**Initial Setup**: Just run the sync command once to populate datasets (creates records automatically):
 
 ```bash
-# One-time: Create NHS DD dataset records
-python manage.py seed_nhs_datasets
-
-# One-time: Initial scraping (can take 1-2 minutes)
-python manage.py scrape_nhs_dd_datasets
+# One-time: Create datasets and scrape data (takes 1-2 minutes)
+python manage.py sync_nhs_dd_datasets
 ```
 
 **Maintenance**:
 
 ```bash
-# Check which datasets need scraping
-python manage.py scrape_nhs_dd_datasets --dry-run
+# Check which datasets would be synced
+python manage.py sync_nhs_dd_datasets --dry-run
 
-# Force re-scrape all datasets
-python manage.py scrape_nhs_dd_datasets --force
+# Force re-scrape all datasets (even if recently scraped)
+python manage.py sync_nhs_dd_datasets --force
 
-# Scrape a single dataset
-python manage.py scrape_nhs_dd_datasets --dataset smoking_status_code
+# Sync a single dataset
+python manage.py sync_nhs_dd_datasets --dataset smoking_status_code
 ```
 
 ## Prerequisites
@@ -117,14 +114,14 @@ Northflank provides native cron job support, making this the simplest option.
    - **Schedule**: `0 4 * * *` (runs at 4 AM UTC daily)
    - **Command**: `python manage.py sync_external_datasets`
 
-#### 4. Create NHS DD Scraping Cron Job
+#### 4. Create NHS DD Sync Cron Job
 
 1. Click **"Add Service"** → **"Cron Job"** again
 2. Configure the job:
-   - **Name**: `checktick-nhs-dd-scrape`
+   - **Name**: `checktick-nhs-dd-sync`
    - **Docker Image**: Use the same image as your web service
    - **Schedule**: `0 5 * * 0` (runs at 5 AM UTC every Sunday - weekly)
-   - **Command**: `python manage.py scrape_nhs_dd_datasets`
+   - **Command**: `python manage.py sync_nhs_dd_datasets`
 
 #### 5. Copy Environment Variables
 

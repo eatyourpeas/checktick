@@ -16,16 +16,13 @@ All datasets are stored in the database for fast access and offline capability.
 
 Run these commands once when first setting up your CheckTick instance.
 
-### 1. Seed NHS Data Dictionary Datasets
+### 1. Sync NHS Data Dictionary Datasets
 
-Create NHS DD dataset records and scrape initial data:
+Create NHS DD dataset records and scrape initial data in one command:
 
 ```bash
-# Create dataset records
-docker compose exec web python manage.py seed_nhs_datasets
-
-# Scrape data from NHS DD website (takes 1-2 minutes)
-docker compose exec web python manage.py scrape_nhs_dd_datasets
+# Create datasets and scrape data from NHS DD website (takes 1-2 minutes)
+docker compose exec web python manage.py sync_nhs_dd_datasets
 ```
 
 This creates 48 NHS DD datasets including:
@@ -67,7 +64,7 @@ CheckTick uses **two automated cron jobs** to keep datasets up-to-date:
 
 Both commands automatically create dataset records on first run, then update them on subsequent runs. No separate seeding commands needed.
 
-### NHS Data Dictionary Scraping
+### NHS Data Dictionary Sync
 
 **Recommended schedule:** Weekly (Sundays at 5 AM UTC)
 
@@ -79,16 +76,16 @@ Both commands automatically create dataset records on first run, then update the
 - Updates options with latest codes and descriptions
 
 ```cron
-0 5 * * 0 cd /app && python manage.py scrape_nhs_dd_datasets
+0 5 * * 0 cd /app && python manage.py sync_nhs_dd_datasets
 ```
 
 **Northflank setup:**
 
 1. Create a new Cron Job service
 2. Configure:
-   - **Name**: `checktick-nhs-dd-scrape`
+   - **Name**: `checktick-nhs-dd-sync`
    - **Schedule**: `0 5 * * 0` (weekly)
-   - **Command**: `python manage.py scrape_nhs_dd_datasets`
+   - **Command**: `python manage.py sync_nhs_dd_datasets`
 3. Copy environment variables from web service
 4. Deploy
 
@@ -122,61 +119,33 @@ See [Self-hosting Scheduled Tasks](/docs/self-hosting-scheduled-tasks/) for full
 
 ## Management Commands
 
-### seed_nhs_datasets
+### sync_nhs_dd_datasets
 
-**One-time setup command** - Reads dataset definitions from `docs/nhs-data-dictionary-datasets.md` and creates database records.
-
-```bash
-# Create all NHS DD dataset records from markdown
-python manage.py seed_nhs_datasets
-
-# Clear existing and re-seed
-python manage.py seed_nhs_datasets --clear
-```
-
-**What it does:**
-
-- Parses markdown table in `docs/nhs-data-dictionary-datasets.md`
-- Creates dataset records with metadata (name, URL, categories)
-- Sets `source_type="scrape"` and `reference_url` fields
-- Options initially set to `{"PENDING": "Awaiting scrape"}`
-- Preserves existing options if dataset already exists
-
-**When to use:**
-
-- Initial setup
-- After database reset
-- Manually triggering dataset creation (though `scrape_nhs_dd_datasets` does this automatically)
-
-**Note:** You typically don't need to run this manually - `scrape_nhs_dd_datasets` automatically creates missing datasets from the markdown file before scraping.
-
-### scrape_nhs_dd_datasets
-
-Scrape NHS Data Dictionary datasets from the NHS DD website. **Automatically creates missing datasets** from `docs/nhs-data-dictionary-datasets.md` before scraping.
+**Combined seed + scrape command** - Reads dataset definitions from `docs/nhs-data-dictionary-datasets.md`, creates/updates records, and scrapes data from NHS DD website.
 
 ```bash
-# Scrape all datasets that need updating
-python manage.py scrape_nhs_dd_datasets
+# Sync all datasets (create records + scrape data)
+python manage.py sync_nhs_dd_datasets
 
-# Scrape a specific dataset
-python manage.py scrape_nhs_dd_datasets --dataset smoking_status_code
+# Sync a specific dataset
+python manage.py sync_nhs_dd_datasets --dataset smoking_status_code
 
 # Force re-scrape all datasets
-python manage.py scrape_nhs_dd_datasets --force
+python manage.py sync_nhs_dd_datasets --force
 
-# Preview what would be scraped (dry-run)
-python manage.py scrape_nhs_dd_datasets --dry-run
+# Preview what would be synced (dry-run)
+python manage.py sync_nhs_dd_datasets --dry-run
 ```
 
 **Options:**
 
-- `--dataset KEY` - Scrape only a specific dataset
-- `--force` - Re-scrape even if recently updated
+- `--dataset KEY` - Sync only a specific dataset
+- `--force` - Re-scrape even if recently updated (default: skips if scraped within 7 days)
 - `--dry-run` - Preview changes without saving
 
 **What it does:**
 
-1. Reads `docs/nhs-data-dictionary-datasets.md` and creates any missing dataset records
+1. Reads `docs/nhs-data-dictionary-datasets.md` and creates/updates dataset records
 2. Fetches HTML from NHS DD website for each dataset
 3. Parses tables/lists to extract codes and descriptions
 4. Updates dataset options in database
@@ -353,7 +322,7 @@ tags = JSONField(default=list)
    curl https://www.datadictionary.nhs.uk/data_elements/smoking_status_code.html
    ```
 
-2. Update scraper parsing strategies in `scrape_nhs_dd_datasets.py`
+2. Update scraper parsing strategies in `sync_nhs_dd_datasets.py`
 
 3. Report issue to development team
 
@@ -501,14 +470,11 @@ This happens during the next scheduled cron job run (see [Scheduled Tasks](self-
 
 ### Manual Trigger (Optional)
 
-To immediately scrape the new dataset without waiting for the cron job:
+To immediately sync the new dataset without waiting for the cron job:
 
 ```bash
-# Seed the new dataset record
-docker compose exec web python manage.py seed_nhs_datasets
-
-# Scrape the data
-docker compose exec web python manage.py scrape_nhs_dd_datasets
+# Sync the new dataset (creates record + scrapes data)
+docker compose exec web python manage.py sync_nhs_dd_datasets
 ```
 
 ### Scraping Requirements
@@ -556,7 +522,7 @@ After scraping:
 
 **Problem:** Dataset created but options are empty
 
-**Solution:** The scraping logic may need updating for this page's specific HTML structure. Check `checktick_app/surveys/management/commands/scrape_nhs_dd_datasets.py` and add custom handling if needed.
+**Solution:** The scraping logic may need updating for this page's specific HTML structure. Check `checktick_app/surveys/management/commands/sync_nhs_dd_datasets.py` and add custom handling if needed.
 
 **Problem:** Duplicate dataset entries
 

@@ -94,31 +94,32 @@ Datasets are tagged with one or more categories to aid discovery:
 
 ## Technical Details
 
-### Scraping Process
+### Sync Process
 
-The NHS DD scraper:
+The NHS DD sync command (`sync_nhs_dd_datasets`):
 
-1. Reads dataset definitions from `seed_nhs_datasets.py`
-2. For datasets marked with `source_type="scrape"`:
+1. Reads dataset definitions from `docs/nhs-data-dictionary-datasets.md`
+2. Creates or updates dataset records in the database
+3. For each dataset:
    - Fetches the HTML from the NHS DD URL
    - Parses tables containing codes and descriptions
    - Extracts key-value pairs
    - Updates the dataset options in the database
-3. Records the last scraped timestamp
-4. Logs any errors or changes
+4. Records the last scraped timestamp
+5. Logs any errors or changes
 
 ### Scheduling
 
-The scraper runs on a scheduled basis (configured in the deployment) to keep datasets up-to-date with NHS DD changes.
+The sync runs on a scheduled basis (configured in the deployment) to keep datasets up-to-date with NHS DD changes.
 
 ### Manual Sync
 
 Administrators can manually trigger a sync:
 
 ```bash
-python manage.py scrape_nhs_dd_datasets
-python manage.py scrape_nhs_dd_datasets --dataset accommodation_status_code  # Single dataset
-python manage.py scrape_nhs_dd_datasets --force  # Force re-scrape all
+python manage.py sync_nhs_dd_datasets
+python manage.py sync_nhs_dd_datasets --dataset accommodation_status_code  # Single dataset
+python manage.py sync_nhs_dd_datasets --force  # Force re-sync all
 ```
 
 ## Data Governance
