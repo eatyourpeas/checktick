@@ -35,7 +35,7 @@ Notes:
 
 ### Dataset permissions
 
-The DataSet API (`/api/datasets-v2/`) manages shared dropdown option lists for surveys.
+The DataSet API (`/api/datasets-v2/`) manages shared dropdown option lists for surveys. See the [Dataset API Reference](api-datasets.md) for detailed endpoint documentation.
 
 - **Anonymous users**
   - List/Retrieve: only global datasets (is_global=True)
