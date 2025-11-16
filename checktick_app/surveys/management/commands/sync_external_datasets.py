@@ -24,17 +24,17 @@ import logging
 
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
+import requests
 
-from checktick_app.surveys.models import DataSet
 from checktick_app.surveys.external_datasets import (
     AVAILABLE_DATASETS,
     DatasetFetchError,
-    _get_api_url,
     _get_api_key,
+    _get_api_url,
     _get_endpoint_for_dataset,
     _transform_response_to_options,
 )
-import requests
+from checktick_app.surveys.models import DataSet
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +65,9 @@ class Command(BaseCommand):
         dry_run = options.get("dry_run", False)
 
         if dry_run:
-            self.stdout.write(self.style.WARNING("DRY RUN MODE - No changes will be made"))
+            self.stdout.write(
+                self.style.WARNING("DRY RUN MODE - No changes will be made")
+            )
 
         # Determine which datasets to sync
         if dataset_key:
@@ -131,7 +133,7 @@ class Command(BaseCommand):
                     dataset_obj = DataSet.objects.create(
                         key=key,
                         name=name,
-                        description=f"External dataset from RCPCH NHS Organisations API",
+                        description="External dataset from RCPCH NHS Organisations API",
                         category="rcpch",
                         source_type="api",
                         is_custom=False,
@@ -152,9 +154,7 @@ class Command(BaseCommand):
                 synced_count += 1
 
             except DatasetFetchError as e:
-                self.stderr.write(
-                    self.style.ERROR(f"❌ Failed to sync '{name}': {e}")
-                )
+                self.stderr.write(self.style.ERROR(f"❌ Failed to sync '{name}': {e}"))
                 error_count += 1
                 logger.error(f"Failed to sync dataset {key}: {e}")
 
@@ -168,9 +168,9 @@ class Command(BaseCommand):
         # Summary
         self.stdout.write("\n" + "=" * 60)
         if dry_run:
-            self.stdout.write(self.style.SUCCESS(f"DRY RUN COMPLETE"))
+            self.stdout.write(self.style.SUCCESS("DRY RUN COMPLETE"))
         else:
-            self.stdout.write(self.style.SUCCESS(f"SYNC COMPLETE"))
+            self.stdout.write(self.style.SUCCESS("SYNC COMPLETE"))
 
         self.stdout.write(f"  Synced: {synced_count}")
         self.stdout.write(f"  Skipped: {skipped_count}")

@@ -5,7 +5,7 @@ Tests successful sync, API errors, dataset creation/updates, and idempotency.
 """
 
 from io import StringIO
-from unittest.mock import patch, Mock
+from unittest.mock import Mock, patch
 
 from django.core.management import call_command
 from django.core.management.base import CommandError
@@ -13,8 +13,6 @@ from django.test import TestCase
 from django.utils import timezone
 
 from checktick_app.surveys.models import DataSet
-from checktick_app.surveys.external_datasets import DatasetFetchError
-
 
 # Mock API responses for each dataset type
 MOCK_RESPONSES = {
@@ -98,7 +96,9 @@ class SyncExternalDatasetsCommandTests(TestCase):
                 return self._mock_api_response("london_boroughs")
             elif "nhs_england_regions" in url.lower() or "regions" in url.lower():
                 return self._mock_api_response("nhs_england_regions")
-            elif "paediatric_diabetes_units" in url.lower() or "pz_codes" in url.lower():
+            elif (
+                "paediatric_diabetes_units" in url.lower() or "pz_codes" in url.lower()
+            ):
                 return self._mock_api_response("paediatric_diabetes_units")
             elif "integrated_care_boards" in url.lower() or "icb" in url.lower():
                 return self._mock_api_response("integrated_care_boards")
@@ -232,7 +232,14 @@ class SyncExternalDatasetsCommandTests(TestCase):
         self.existing_dataset.save()
 
         # Create all other datasets and mark them as recently synced too
-        for key in ["nhs_trusts", "welsh_lhbs", "london_boroughs", "nhs_england_regions", "paediatric_diabetes_units", "integrated_care_boards"]:
+        for key in [
+            "nhs_trusts",
+            "welsh_lhbs",
+            "london_boroughs",
+            "nhs_england_regions",
+            "paediatric_diabetes_units",
+            "integrated_care_boards",
+        ]:
             DataSet.objects.create(
                 key=key,
                 name=key.replace("_", " ").title(),
@@ -279,7 +286,9 @@ class SyncExternalDatasetsCommandTests(TestCase):
             self.assertNotIn("Skipping", output)
 
             self.existing_dataset.refresh_from_db()
-            self.assertIn("ADDENBROOKE'S HOSPITAL (RGT01)", self.existing_dataset.options)
+            self.assertIn(
+                "ADDENBROOKE'S HOSPITAL (RGT01)", self.existing_dataset.options
+            )
 
     def test_single_dataset_flag(self):
         """Test syncing only a specific dataset."""
@@ -391,7 +400,9 @@ class SyncExternalDatasetsCommandTests(TestCase):
 
             # Should have same data (not duplicated)
             self.assertEqual(len(self.existing_dataset.options), 2)
-            self.assertIn("ADDENBROOKE'S HOSPITAL (RGT01)", self.existing_dataset.options)
+            self.assertIn(
+                "ADDENBROOKE'S HOSPITAL (RGT01)", self.existing_dataset.options
+            )
 
             # Version should be 3 (starts at 1, incremented twice)
             self.assertEqual(self.existing_dataset.version, 3)

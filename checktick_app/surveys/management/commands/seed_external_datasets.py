@@ -13,12 +13,12 @@ Usage:
 
 from django.core.management.base import BaseCommand
 
-from checktick_app.surveys.models import DataSet
 from checktick_app.surveys.external_datasets import (
     AVAILABLE_DATASETS,
     _get_api_url,
     _get_endpoint_for_dataset,
 )
+from checktick_app.surveys.models import DataSet
 
 
 class Command(BaseCommand):
@@ -40,7 +40,9 @@ class Command(BaseCommand):
                 )
             )
 
-        self.stdout.write(f"Seeding {len(AVAILABLE_DATASETS)} external dataset records...")
+        self.stdout.write(
+            f"Seeding {len(AVAILABLE_DATASETS)} external dataset records..."
+        )
 
         created_count = 0
         exists_count = 0
@@ -50,7 +52,7 @@ class Command(BaseCommand):
                 key=key,
                 defaults={
                     "name": name,
-                    "description": f"External dataset from RCPCH NHS Organisations API",
+                    "description": "External dataset from RCPCH NHS Organisations API",
                     "category": "rcpch",
                     "source_type": "api",
                     "is_custom": False,

@@ -158,7 +158,9 @@ def test_dataset_list_hides_other_org_datasets(
 
 
 @pytest.mark.django_db
-def test_dataset_list_category_filter(client, users, org1, global_dataset, org1_dataset):
+def test_dataset_list_category_filter(
+    client, users, org1, global_dataset, org1_dataset
+):
     """Test filtering datasets by category."""
     admin, creator, viewer, outsider = users
     client.force_login(creator)
@@ -219,7 +221,9 @@ def test_dataset_list_can_create_flag_viewer(client, users, org1):
 @pytest.mark.django_db
 def test_dataset_detail_requires_login(client, org1_dataset):
     """Test that dataset detail requires authentication."""
-    res = client.get(reverse("surveys:dataset_detail", kwargs={"dataset_id": org1_dataset.id}))
+    res = client.get(
+        reverse("surveys:dataset_detail", kwargs={"dataset_id": org1_dataset.id})
+    )
     assert res.status_code == 302  # Redirect to login
 
 
@@ -228,7 +232,9 @@ def test_dataset_detail_shows_dataset(client, users, org1, org1_dataset):
     """Test that dataset detail shows dataset information."""
     admin, creator, viewer, outsider = users
     client.force_login(viewer)
-    res = client.get(reverse("surveys:dataset_detail", kwargs={"dataset_id": org1_dataset.id}))
+    res = client.get(
+        reverse("surveys:dataset_detail", kwargs={"dataset_id": org1_dataset.id})
+    )
     assert res.status_code == 200
     assert res.context["dataset"].id == org1_dataset.id
     assert "Option A" in str(res.content)
@@ -239,7 +245,9 @@ def test_dataset_detail_blocks_other_org(client, users, org2_dataset):
     """Test that users cannot view datasets from other organizations."""
     admin, creator, viewer, outsider = users
     client.force_login(viewer)  # Member of org1, not org2
-    res = client.get(reverse("surveys:dataset_detail", kwargs={"dataset_id": org2_dataset.id}))
+    res = client.get(
+        reverse("surveys:dataset_detail", kwargs={"dataset_id": org2_dataset.id})
+    )
     assert res.status_code == 404
 
 
@@ -248,7 +256,9 @@ def test_dataset_detail_can_edit_flag_admin(client, users, org1, org1_dataset):
     """Test that ADMIN users can edit org datasets."""
     admin, creator, viewer, outsider = users
     client.force_login(admin)
-    res = client.get(reverse("surveys:dataset_detail", kwargs={"dataset_id": org1_dataset.id}))
+    res = client.get(
+        reverse("surveys:dataset_detail", kwargs={"dataset_id": org1_dataset.id})
+    )
     assert res.status_code == 200
     assert res.context["can_edit"] is True
 
@@ -258,7 +268,9 @@ def test_dataset_detail_can_edit_flag_creator(client, users, org1, org1_dataset)
     """Test that CREATOR users can edit org datasets."""
     admin, creator, viewer, outsider = users
     client.force_login(creator)
-    res = client.get(reverse("surveys:dataset_detail", kwargs={"dataset_id": org1_dataset.id}))
+    res = client.get(
+        reverse("surveys:dataset_detail", kwargs={"dataset_id": org1_dataset.id})
+    )
     assert res.status_code == 200
     assert res.context["can_edit"] is True
 
@@ -268,7 +280,9 @@ def test_dataset_detail_can_edit_flag_viewer(client, users, org1, org1_dataset):
     """Test that VIEWER users cannot edit org datasets."""
     admin, creator, viewer, outsider = users
     client.force_login(viewer)
-    res = client.get(reverse("surveys:dataset_detail", kwargs={"dataset_id": org1_dataset.id}))
+    res = client.get(
+        reverse("surveys:dataset_detail", kwargs={"dataset_id": org1_dataset.id})
+    )
     assert res.status_code == 200
     assert res.context["can_edit"] is False
 
@@ -278,7 +292,9 @@ def test_dataset_detail_cannot_edit_nhs_dd(client, users, org1, global_dataset):
     """Test that NHS DD datasets cannot be edited even by admins."""
     admin, creator, viewer, outsider = users
     client.force_login(admin)
-    res = client.get(reverse("surveys:dataset_detail", kwargs={"dataset_id": global_dataset.id}))
+    res = client.get(
+        reverse("surveys:dataset_detail", kwargs={"dataset_id": global_dataset.id})
+    )
     assert res.status_code == 200
     assert res.context["can_edit"] is False
 
@@ -427,6 +443,7 @@ def test_dataset_create_post_wrong_org(client, users, org1, org2):
     assert res.status_code == 200
     assert "don&#x27;t have permission" in str(res.content)
 
+
 # ==============================================================================
 # Dataset Edit View Tests
 # ==============================================================================
@@ -435,7 +452,9 @@ def test_dataset_create_post_wrong_org(client, users, org1, org2):
 @pytest.mark.django_db
 def test_dataset_edit_requires_login(client, org1_dataset):
     """Test that dataset edit requires authentication."""
-    res = client.get(reverse("surveys:dataset_edit", kwargs={"dataset_id": org1_dataset.id}))
+    res = client.get(
+        reverse("surveys:dataset_edit", kwargs={"dataset_id": org1_dataset.id})
+    )
     assert res.status_code == 302  # Redirect to login
 
 
@@ -444,7 +463,9 @@ def test_dataset_edit_blocks_viewer(client, users, org1, org1_dataset):
     """Test that VIEWER users cannot edit datasets."""
     admin, creator, viewer, outsider = users
     client.force_login(viewer)
-    res = client.get(reverse("surveys:dataset_edit", kwargs={"dataset_id": org1_dataset.id}))
+    res = client.get(
+        reverse("surveys:dataset_edit", kwargs={"dataset_id": org1_dataset.id})
+    )
     assert res.status_code == 403
 
 
@@ -453,7 +474,9 @@ def test_dataset_edit_allows_admin(client, users, org1, org1_dataset):
     """Test that ADMIN users can edit datasets."""
     admin, creator, viewer, outsider = users
     client.force_login(admin)
-    res = client.get(reverse("surveys:dataset_edit", kwargs={"dataset_id": org1_dataset.id}))
+    res = client.get(
+        reverse("surveys:dataset_edit", kwargs={"dataset_id": org1_dataset.id})
+    )
     assert res.status_code == 200
     assert "Edit Dataset" in str(res.content)
 
@@ -463,7 +486,9 @@ def test_dataset_edit_allows_creator(client, users, org1, org1_dataset):
     """Test that CREATOR users can edit datasets."""
     admin, creator, viewer, outsider = users
     client.force_login(creator)
-    res = client.get(reverse("surveys:dataset_edit", kwargs={"dataset_id": org1_dataset.id}))
+    res = client.get(
+        reverse("surveys:dataset_edit", kwargs={"dataset_id": org1_dataset.id})
+    )
     assert res.status_code == 200
 
 
@@ -472,7 +497,9 @@ def test_dataset_edit_blocks_nhs_dd(client, users, org1, global_dataset):
     """Test that NHS DD datasets cannot be edited."""
     admin, creator, viewer, outsider = users
     client.force_login(admin)
-    res = client.get(reverse("surveys:dataset_edit", kwargs={"dataset_id": global_dataset.id}))
+    res = client.get(
+        reverse("surveys:dataset_edit", kwargs={"dataset_id": global_dataset.id})
+    )
     assert res.status_code == 403
 
 
@@ -489,7 +516,8 @@ def test_dataset_edit_post_success(client, users, org1, org1_dataset):
         "format_pattern": "updated",
     }
     res = client.post(
-        reverse("surveys:dataset_edit", kwargs={"dataset_id": org1_dataset.id}), data=data
+        reverse("surveys:dataset_edit", kwargs={"dataset_id": org1_dataset.id}),
+        data=data,
     )
     assert res.status_code == 302  # Redirect on success
 
@@ -511,7 +539,8 @@ def test_dataset_edit_post_missing_name(client, users, org1, org1_dataset):
         "options": "Option 1\nOption 2",
     }
     res = client.post(
-        reverse("surveys:dataset_edit", kwargs={"dataset_id": org1_dataset.id}), data=data
+        reverse("surveys:dataset_edit", kwargs={"dataset_id": org1_dataset.id}),
+        data=data,
     )
     assert res.status_code == 200
     assert "Name is required" in str(res.content)
@@ -522,7 +551,9 @@ def test_dataset_edit_blocks_other_org(client, users, org2_dataset):
     """Test that users cannot edit datasets from other organizations."""
     admin, creator, viewer, outsider = users
     client.force_login(creator)  # Member of org1, not org2
-    res = client.get(reverse("surveys:dataset_edit", kwargs={"dataset_id": org2_dataset.id}))
+    res = client.get(
+        reverse("surveys:dataset_edit", kwargs={"dataset_id": org2_dataset.id})
+    )
     assert res.status_code == 404
 
 
@@ -534,7 +565,9 @@ def test_dataset_edit_blocks_other_org(client, users, org2_dataset):
 @pytest.mark.django_db
 def test_dataset_delete_requires_login(client, org1_dataset):
     """Test that dataset delete requires authentication."""
-    res = client.post(reverse("surveys:dataset_delete", kwargs={"dataset_id": org1_dataset.id}))
+    res = client.post(
+        reverse("surveys:dataset_delete", kwargs={"dataset_id": org1_dataset.id})
+    )
     assert res.status_code == 302  # Redirect to login
 
 
@@ -543,7 +576,9 @@ def test_dataset_delete_requires_post(client, users, org1, org1_dataset):
     """Test that dataset delete requires POST method."""
     admin, creator, viewer, outsider = users
     client.force_login(admin)
-    res = client.get(reverse("surveys:dataset_delete", kwargs={"dataset_id": org1_dataset.id}))
+    res = client.get(
+        reverse("surveys:dataset_delete", kwargs={"dataset_id": org1_dataset.id})
+    )
     assert res.status_code == 405  # Method not allowed
 
 
@@ -552,7 +587,9 @@ def test_dataset_delete_blocks_viewer(client, users, org1, org1_dataset):
     """Test that VIEWER users cannot delete datasets."""
     admin, creator, viewer, outsider = users
     client.force_login(viewer)
-    res = client.post(reverse("surveys:dataset_delete", kwargs={"dataset_id": org1_dataset.id}))
+    res = client.post(
+        reverse("surveys:dataset_delete", kwargs={"dataset_id": org1_dataset.id})
+    )
     assert res.status_code == 403
 
 
@@ -561,7 +598,9 @@ def test_dataset_delete_allows_admin(client, users, org1, org1_dataset):
     """Test that ADMIN users can delete datasets."""
     admin, creator, viewer, outsider = users
     client.force_login(admin)
-    res = client.post(reverse("surveys:dataset_delete", kwargs={"dataset_id": org1_dataset.id}))
+    res = client.post(
+        reverse("surveys:dataset_delete", kwargs={"dataset_id": org1_dataset.id})
+    )
     assert res.status_code == 302  # Redirect on success
 
     # Verify soft delete
@@ -574,7 +613,9 @@ def test_dataset_delete_allows_creator(client, users, org1, org1_dataset):
     """Test that CREATOR users can delete datasets."""
     admin, creator, viewer, outsider = users
     client.force_login(creator)
-    res = client.post(reverse("surveys:dataset_delete", kwargs={"dataset_id": org1_dataset.id}))
+    res = client.post(
+        reverse("surveys:dataset_delete", kwargs={"dataset_id": org1_dataset.id})
+    )
     assert res.status_code == 302
 
     org1_dataset.refresh_from_db()
@@ -586,7 +627,9 @@ def test_dataset_delete_blocks_nhs_dd(client, users, org1, global_dataset):
     """Test that NHS DD datasets cannot be deleted."""
     admin, creator, viewer, outsider = users
     client.force_login(admin)
-    res = client.post(reverse("surveys:dataset_delete", kwargs={"dataset_id": global_dataset.id}))
+    res = client.post(
+        reverse("surveys:dataset_delete", kwargs={"dataset_id": global_dataset.id})
+    )
     assert res.status_code == 403
 
 
@@ -595,5 +638,7 @@ def test_dataset_delete_blocks_other_org(client, users, org2_dataset):
     """Test that users cannot delete datasets from other organizations."""
     admin, creator, viewer, outsider = users
     client.force_login(creator)  # Member of org1, not org2
-    res = client.post(reverse("surveys:dataset_delete", kwargs={"dataset_id": org2_dataset.id}))
+    res = client.post(
+        reverse("surveys:dataset_delete", kwargs={"dataset_id": org2_dataset.id})
+    )
     assert res.status_code == 404

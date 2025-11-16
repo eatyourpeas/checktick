@@ -21,7 +21,7 @@ from django.contrib.auth import get_user_model
 import pytest
 from rest_framework.test import APIClient
 
-from checktick_app.surveys.models import DataSet, Organization, OrganizationMembership
+from checktick_app.surveys.models import DataSet
 
 User = get_user_model()
 TEST_PASSWORD = "testpass123"
