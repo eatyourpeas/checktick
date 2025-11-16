@@ -10,7 +10,7 @@ This document covers the Dataset API endpoints for programmatic access to datase
 
 ## Authentication
 
-All write operations require JWT authentication. See [API Documentation](api.md) for authentication details.
+All write operations require JWT authentication. See [API Documentation](/docs/api/) for authentication details.
 
 ```http
 Authorization: Bearer <your_jwt_token>
@@ -423,6 +423,6 @@ curl -X POST https://checktick.example.com/api/datasets/specialty_codes_cardiolo
 
 ## Related Documentation
 
-- [Datasets User Guide](datasets.md) - Using datasets in surveys
-- [API Overview](api.md) - Authentication and general API info
-- [Self-hosting Datasets](self-hosting-datasets.md) - Setup and sync commands
+- [Datasets and Dropdowns](/docs/datasets-and-dropdowns/) - User guide for using datasets in surveys
+- [API Overview](/docs/api/) - Authentication and general API info
+- [Self-hosting Datasets](/docs/self-hosting-datasets/) - Setup and sync commands

@@ -436,7 +436,135 @@ AuditLog.objects.filter(
 
 ## Related Documentation
 
-- [Datasets User Guide](datasets.md) - Using datasets in surveys
-- [Dataset API Reference](api-datasets.md) - API endpoints
-- [NHS DD Dataset Reference](nhs-data-dictionary-datasets.md) - Complete NHS DD list
-- [Scheduled Tasks](self-hosting-scheduled-tasks.md) - Cron job setup
+- [Datasets and Dropdowns](/docs/datasets-and-dropdowns/) - User guide for using datasets in surveys
+- [Dataset API Reference](/docs/api-datasets/) - API endpoints for developers
+- [NHS DD Dataset Reference](/docs/nhs-data-dictionary-datasets/) - Complete NHS DD list
+- [Scheduled Tasks](/docs/self-hosting-scheduled-tasks/) - Cron job setup
+
+## Developer Guide: Adding New NHS DD Datasets
+
+### Process Overview
+
+To add a new NHS Data Dictionary dataset, you only need to add an entry to the markdown table in `nhs-data-dictionary-datasets.md`. The automated scraping process handles everything else.
+
+### Step-by-Step Process
+
+1. **Locate the NHS DD page** for the dataset you want to add
+   - Visit [NHS Data Dictionary](https://www.datadictionary.nhs.uk/)
+   - Find the specific data element or supporting information page
+   - Copy the full URL
+
+2. **Add entry to the markdown table**
+   - Open `docs/nhs-data-dictionary-datasets.md`
+   - Add a new row to the table under "Available NHS DD Datasets"
+   - Format: `| Dataset Name | NHS DD URL | Categories | Date Added | Last Scraped | NHS DD Published |`
+
+3. **Example entry:**
+
+   ```markdown
+   | Patient Discharge Method | [Link](https://www.datadictionary.nhs.uk/data_elements/patient_discharge_method_code.html) | administrative, clinic | 2025-11-16 | Pending | - |
+   ```
+
+4. **Choosing categories/tags:**
+   - Use existing tags for consistency: `medical`, `administrative`, `demographic`, `clinic`, `paediatric`, etc.
+   - Separate multiple tags with commas
+   - Keep tags lowercase for consistency
+
+5. **Commit your changes:**
+
+   ```bash
+   git add docs/nhs-data-dictionary-datasets.md
+   git commit -m "Add [Dataset Name] to NHS DD datasets"
+   git push
+   ```
+
+### What Happens Next
+
+The automated sync process will:
+
+1. **Detect the new entry** in the markdown file
+2. **Create a database record** for the dataset
+3. **Scrape the NHS DD page** to extract options
+4. **Populate the dataset** with codes and descriptions
+5. **Make it available** to all users immediately
+
+This happens during the next scheduled cron job run (see [Scheduled Tasks](self-hosting-scheduled-tasks.md)).
+
+### Manual Trigger (Optional)
+
+To immediately scrape the new dataset without waiting for the cron job:
+
+```bash
+# Seed the new dataset record
+docker compose exec web python manage.py seed_nhs_datasets
+
+# Scrape the data
+docker compose exec web python manage.py scrape_nhs_dd_datasets
+```
+
+### Scraping Requirements
+
+For successful scraping, the NHS DD page must:
+
+- ✅ Be a standard data element or supporting information page
+- ✅ Contain a table with codes and descriptions
+- ✅ Use consistent NHS DD table structure
+- ⚠️ Pages with non-standard formats may require custom scraping logic
+
+If scraping fails, check the logs:
+
+```bash
+docker compose logs web | grep "scrape_nhs_dd"
+```
+
+### Testing Your Addition
+
+After scraping:
+
+1. **Via Web UI:**
+   - Navigate to Datasets page
+   - Filter by `nhs_dd` source type
+   - Verify your new dataset appears
+   - Check that options are populated correctly
+
+2. **Via Django Admin:**
+
+   ```text
+   /admin/surveys/dataset/
+   ```
+
+   - Find your dataset
+   - Verify `options` field has data
+   - Check `last_scraped` timestamp
+
+3. **Via API:**
+
+   ```bash
+   curl https://checktick.example.com/api/datasets/?category=nhs_dd
+   ```
+
+### Common Issues
+
+**Problem:** Dataset created but options are empty
+
+**Solution:** The scraping logic may need updating for this page's specific HTML structure. Check `checktick_app/surveys/management/commands/scrape_nhs_dd_datasets.py` and add custom handling if needed.
+
+**Problem:** Duplicate dataset entries
+
+**Solution:** The seed command is idempotent. It won't create duplicates if a dataset with the same key already exists.
+
+**Problem:** Dataset not appearing in UI
+
+**Solution:**
+
+- Verify `is_active=True` in database
+- Check that `category` is set to `nhs_dd`
+- Ensure `is_global=True`
+
+### Contributing Back
+
+After successfully adding and testing a new dataset:
+
+1. **Update this documentation** if you encountered any edge cases
+2. **Submit a PR** with your changes
+3. **Share in GitHub Discussions** to let the community know about the new dataset
