@@ -271,7 +271,7 @@ class SyncExternalDatasetsCommandTests(TestCase):
         """Test that --force flag syncs even recently synced datasets."""
         # Mark as recently synced
         self.existing_dataset.last_synced_at = timezone.now()
-        self.existing_dataset.options = ["Old data"]
+        self.existing_dataset.options = {"OLD_CODE": "Old data"}
         self.existing_dataset.save()
 
         with patch(
@@ -293,8 +293,10 @@ class SyncExternalDatasetsCommandTests(TestCase):
             self.assertNotIn("Skipping", output)
 
             self.existing_dataset.refresh_from_db()
-            self.assertIn(
-                "ADDENBROOKE'S HOSPITAL (RGT01)", self.existing_dataset.options
+            # Options are now a dict: {code: name}
+            self.assertIn("RGT01", self.existing_dataset.options)
+            self.assertEqual(
+                self.existing_dataset.options["RGT01"], "ADDENBROOKE'S HOSPITAL"
             )
 
     def test_single_dataset_flag(self):

@@ -147,17 +147,15 @@ class TestCreateCustomVersion:
     def test_member_cannot_create_custom_version(
         self, api_client, member_user, org_member_membership, global_dataset
     ):
-        """MEMBER/VIEWER can now create custom version (as individual user without org)."""
+        """VIEWER role cannot create custom versions."""
         api_client.force_authenticate(user=member_user)
 
         response = api_client.post(
             f"/api/datasets/{global_dataset.key}/create-custom/", {}
         )
 
-        # Now succeeds - creates as individual user dataset
-        assert response.status_code == 201
-        assert response.data["organization"] is None  # Individual dataset
-        assert response.data["created_by_username"] == member_user.username
+        # Forbidden - VIEWER role is read-only
+        assert response.status_code == 403
 
     def test_cannot_create_custom_from_non_global(
         self, api_client, admin_user, org_admin_membership, org_dataset

@@ -89,10 +89,34 @@ def user_has_org_membership(user) -> bool:
 def can_create_datasets(user) -> bool:
     """Check if user can create datasets.
 
-    TODO: In future, restrict to pro individual accounts.
-    Currently all authenticated users can create datasets.
+    Allowed:
+    - Individual users (not part of any organization)
+    - Organization members with ADMIN, CREATOR, or EDITOR roles
+
+    Not allowed:
+    - VIEWER role members (read-only, cannot create anything)
+    - Unauthenticated users
+
+    Future: Will restrict individual users to pro accounts only.
     """
-    return user.is_authenticated
+    if not user.is_authenticated:
+        return False
+
+    from .models import OrganizationMembership
+
+    # Check user's organization memberships
+    memberships = OrganizationMembership.objects.filter(user=user)
+
+    # If user has no org memberships, they're an individual user - allow
+    if not memberships.exists():
+        return True
+
+    # If user has ANY non-VIEWER role in any org, allow
+    if memberships.exclude(role=OrganizationMembership.Role.VIEWER).exists():
+        return True
+
+    # User only has VIEWER roles - deny (read-only)
+    return False
 
 
 def can_edit_dataset(user, dataset) -> bool:

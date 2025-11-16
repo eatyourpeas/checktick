@@ -134,7 +134,7 @@ def seed_test_datasets(db):
 
 @pytest.mark.django_db
 def test_list_datasets_requires_authentication(client):
-    """Anonymous users cannot list datasets."""
+    """Anonymous users cannot list datasets (requires authentication)."""
     resp = client.get("/api/datasets/")
     assert resp.status_code in (401, 403)
 
@@ -146,7 +146,7 @@ def test_get_dataset_allows_anonymous_access(client):
     # Datasets are available without auth for public surveys
     assert resp.status_code == 200
     data = resp.json()
-    assert data["dataset_key"] == "hospitals_england_wales"
+    assert data["key"] == "hospitals_england_wales"
     assert len(data["options"]) == 3
 
 
@@ -158,7 +158,7 @@ def test_list_datasets_authenticated_allowed(client, authenticated_user):
 
     assert resp.status_code == 200
     data = resp.json()
-    assert "datasets" in data
+    assert isinstance(data, list)
 
 
 @pytest.mark.django_db
@@ -169,7 +169,7 @@ def test_get_dataset_authenticated_allowed(client, authenticated_user):
 
     assert resp.status_code == 200
     data = resp.json()
-    assert data["dataset_key"] == "hospitals_england_wales"
+    assert data["key"] == "hospitals_england_wales"
 
 
 # ============================================================================
@@ -185,7 +185,7 @@ def test_list_datasets_returns_all_datasets(client, authenticated_user):
 
     data = resp.json()
     assert resp.status_code == 200
-    assert len(data["datasets"]) == 7  # All seeded datasets
+    assert len(data) == 7  # All seeded datasets
 
 
 @pytest.mark.django_db
@@ -195,12 +195,11 @@ def test_list_datasets_response_structure(client, authenticated_user):
     resp = client.get("/api/datasets/", **hdrs)
 
     data = resp.json()
-    assert isinstance(data, dict)
-    assert "datasets" in data
-    assert isinstance(data["datasets"], list)
+    assert isinstance(data, list)
+    assert len(data) > 0
 
     # Check first dataset structure
-    dataset = data["datasets"][0]
+    dataset = data[0]
     assert "key" in dataset
     assert "name" in dataset
     assert isinstance(dataset["key"], str)
@@ -220,7 +219,7 @@ def test_get_dataset_returns_options_from_database(client, authenticated_user):
 
     assert resp.status_code == 200
     data = resp.json()
-    assert data["dataset_key"] == "hospitals_england_wales"
+    assert data["key"] == "hospitals_england_wales"
     assert "options" in data
     assert len(data["options"]) == 3
     # Verify format from database
@@ -263,9 +262,9 @@ def test_get_dataset_response_structure(client, authenticated_user):
 
     data = resp.json()
     assert isinstance(data, dict)
-    assert "dataset_key" in data
+    assert "key" in data
     assert "options" in data
-    assert data["dataset_key"] == "nhs_trusts"
+    assert data["key"] == "nhs_trusts"
     assert isinstance(data["options"], list)
     # All options should be strings
     for option in data["options"]:
@@ -278,28 +277,28 @@ def test_get_dataset_response_structure(client, authenticated_user):
 
 
 @pytest.mark.django_db
-def test_get_dataset_invalid_key_returns_502(client, authenticated_user):
-    """Invalid dataset key returns 502."""
+def test_get_dataset_invalid_key_returns_404(client, authenticated_user):
+    """Invalid dataset key returns 404."""
     hdrs = auth_hdr(client, "testuser", TEST_PASSWORD)
     resp = client.get("/api/datasets/invalid_key_that_does_not_exist/", **hdrs)
 
-    assert resp.status_code == 502
+    assert resp.status_code == 404
     data = resp.json()
-    assert "error" in data
+    assert "detail" in data
 
 
 @pytest.mark.django_db
-def test_get_dataset_not_found_returns_502(client, authenticated_user):
-    """Dataset key not in database returns 502."""
+def test_get_dataset_not_found_returns_404(client, authenticated_user):
+    """Dataset key not in database returns 404."""
     hdrs = auth_hdr(client, "testuser", TEST_PASSWORD)
 
     # Delete all datasets to simulate not found
     DataSet.objects.all().delete()
 
     resp = client.get("/api/datasets/hospitals_england_wales/", **hdrs)
-    assert resp.status_code == 502
+    assert resp.status_code == 404
     data = resp.json()
-    assert "error" in data
+    assert "detail" in data
 
 
 # ============================================================================
@@ -314,7 +313,7 @@ def test_list_datasets_with_force_authenticate(api_client, authenticated_user):
     resp = api_client.get("/api/datasets/")
 
     assert resp.status_code == 200
-    assert "datasets" in resp.data
+    assert isinstance(resp.data, list)
 
 
 @pytest.mark.django_db
@@ -352,9 +351,9 @@ def test_inactive_datasets_not_returned(client, authenticated_user):
 
     # Should not appear in list
     resp_list = client.get("/api/datasets/", **hdrs)
-    dataset_keys = [d["key"] for d in resp_list.json()["datasets"]]
+    dataset_keys = [d["key"] for d in resp_list.json()]
     assert "inactive_dataset" not in dataset_keys
 
-    # Should return 502 when trying to get directly (inactive = not found)
+    # Should return 404 when trying to get directly (inactive = not found)
     resp_get = client.get("/api/datasets/inactive_dataset/", **hdrs)
-    assert resp_get.status_code == 502
+    assert resp_get.status_code == 404

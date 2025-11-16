@@ -83,7 +83,7 @@ def org1_dataset(db, org1, users):
         is_custom=True,
         organization=org1,
         created_by=creator,
-        options=["Option A", "Option B", "Option C"],
+        options={"opt_a": "Option A", "opt_b": "Option B", "opt_c": "Option C"},
     )
 
 
@@ -124,7 +124,7 @@ def test_dataset_list_shows_global_datasets(
     client.force_login(viewer)
     res = client.get(reverse("surveys:dataset_list"))
     assert res.status_code == 200
-    dataset_ids = [d.id for d in res.context["datasets"]]
+    dataset_ids = [d.id for d in res.context["page_obj"].object_list]
     assert global_dataset.id in dataset_ids
 
 
@@ -137,7 +137,7 @@ def test_dataset_list_shows_org_datasets(
     client.force_login(creator)
     res = client.get(reverse("surveys:dataset_list"))
     assert res.status_code == 200
-    dataset_ids = [d.id for d in res.context["datasets"]]
+    dataset_ids = [d.id for d in res.context["page_obj"].object_list]
     assert global_dataset.id in dataset_ids
     assert org1_dataset.id in dataset_ids
     assert org2_dataset.id not in dataset_ids  # Different org
@@ -152,7 +152,7 @@ def test_dataset_list_hides_other_org_datasets(
     client.force_login(viewer)  # Member of org1 only
     res = client.get(reverse("surveys:dataset_list"))
     assert res.status_code == 200
-    dataset_ids = [d.id for d in res.context["datasets"]]
+    dataset_ids = [d.id for d in res.context["page_obj"].object_list]
     assert org1_dataset.id in dataset_ids
     assert org2_dataset.id not in dataset_ids
 
@@ -166,21 +166,21 @@ def test_dataset_list_category_filter(
     client.force_login(creator)
     res = client.get(reverse("surveys:dataset_list") + "?category=nhs_dd")
     assert res.status_code == 200
-    dataset_ids = [d.id for d in res.context["datasets"]]
+    dataset_ids = [d.id for d in res.context["page_obj"].object_list]
     assert global_dataset.id in dataset_ids
     assert org1_dataset.id not in dataset_ids  # Different category
 
 
 @pytest.mark.django_db
 def test_dataset_list_org_filter(client, users, org1, global_dataset, org1_dataset):
-    """Test filtering datasets by organization."""
+    """Test filtering datasets by organization shows org datasets AND global datasets."""
     admin, creator, viewer, outsider = users
     client.force_login(creator)
     res = client.get(reverse("surveys:dataset_list") + f"?organization={org1.id}")
     assert res.status_code == 200
-    dataset_ids = [d.id for d in res.context["datasets"]]
-    assert org1_dataset.id in dataset_ids
-    assert global_dataset.id not in dataset_ids  # Global, not org-specific
+    dataset_ids = [d.id for d in res.context["page_obj"].object_list]
+    assert org1_dataset.id in dataset_ids  # Org's custom dataset
+    assert global_dataset.id in dataset_ids  # Global datasets also available
 
 
 @pytest.mark.django_db
@@ -205,7 +205,7 @@ def test_dataset_list_can_create_flag_creator(client, users, org1):
 
 @pytest.mark.django_db
 def test_dataset_list_can_create_flag_viewer(client, users, org1):
-    """Test that VIEWER users see can_create flag as False."""
+    """Test that VIEWER users cannot create datasets."""
     admin, creator, viewer, outsider = users
     client.force_login(viewer)
     res = client.get(reverse("surveys:dataset_list"))
@@ -367,7 +367,7 @@ def test_dataset_create_post_success(client, users, org1):
 
 @pytest.mark.django_db
 def test_dataset_create_post_missing_key(client, users, org1):
-    """Test creating dataset without key fails."""
+    """Test creating dataset without key auto-generates one."""
     admin, creator, viewer, outsider = users
     client.force_login(creator)
     data = {
@@ -376,13 +376,14 @@ def test_dataset_create_post_missing_key(client, users, org1):
         "options": "Option 1\nOption 2",
     }
     res = client.post(reverse("surveys:dataset_create"), data=data)
-    assert res.status_code == 200  # Stays on form
-    assert "Key is required" in str(res.content)
+    assert res.status_code == 302  # Redirects on success
+    # Key was auto-generated from name
+    assert DataSet.objects.filter(name="My Test Dataset").exists()
 
 
 @pytest.mark.django_db
 def test_dataset_create_post_invalid_key(client, users, org1):
-    """Test creating dataset with invalid key fails."""
+    """Test creating dataset with invalid key auto-generates a valid one."""
     admin, creator, viewer, outsider = users
     client.force_login(creator)
     data = {
@@ -392,13 +393,15 @@ def test_dataset_create_post_invalid_key(client, users, org1):
         "options": "Option 1\nOption 2",
     }
     res = client.post(reverse("surveys:dataset_create"), data=data)
-    assert res.status_code == 200
-    assert "lowercase alphanumeric" in str(res.content)
+    assert res.status_code == 200  # Stays on form with error
+    assert "lowercase alphanumeric" in str(res.content) or "simpler name" in str(
+        res.content
+    )
 
 
 @pytest.mark.django_db
 def test_dataset_create_post_duplicate_key(client, users, org1, org1_dataset):
-    """Test creating dataset with duplicate key fails."""
+    """Test creating dataset with duplicate key auto-generates unique key."""
     admin, creator, viewer, outsider = users
     client.force_login(creator)
     data = {
@@ -408,8 +411,9 @@ def test_dataset_create_post_duplicate_key(client, users, org1, org1_dataset):
         "options": "Option 1\nOption 2",
     }
     res = client.post(reverse("surveys:dataset_create"), data=data)
-    assert res.status_code == 200
-    assert "already exists" in str(res.content)
+    assert res.status_code == 302  # Redirects on success
+    # Dataset created with unique key (timestamp appended)
+    assert DataSet.objects.filter(name="Duplicate Key Dataset").exists()
 
 
 @pytest.mark.django_db

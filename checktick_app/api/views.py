@@ -254,25 +254,31 @@ class IsOrgAdminOrCreator(permissions.BasePermission):
     """
     Permission for dataset management.
 
-    - GET: Authenticated users can list/retrieve datasets they have access to
-    - POST: User must be ADMIN or CREATOR in an organization
+    - LIST: Requires authentication (authenticated users can list datasets they have access to)
+    - RETRIEVE: Anonymous users can retrieve individual datasets (needed for public surveys)
+    - POST: Authenticated users excluding VIEWER role (individual users and org ADMIN/CREATOR/EDITOR)
     - PUT/PATCH/DELETE: User must be ADMIN or CREATOR in the dataset's organization
     - NHS DD datasets cannot be modified
     """
 
     def has_permission(self, request, view):
         """Check if user can access the dataset API at all."""
+        # List action requires authentication
+        if view.action == "list" and not request.user.is_authenticated:
+            return False
+
+        # Retrieve allows anonymous access for public datasets
         if not request.user.is_authenticated:
-            # Allow anonymous GET for public datasets (filtered in viewset)
             return request.method in permissions.SAFE_METHODS
 
         if request.method in permissions.SAFE_METHODS:
             return True
 
-        # For POST, allow all authenticated users to create datasets
-        # TODO: In future, restrict to pro account holders only
+        # For POST, check create permission (excludes VIEWER role)
         if request.method == "POST":
-            return True
+            from checktick_app.surveys.permissions import can_create_datasets
+
+            return can_create_datasets(request.user)
 
         return True
 

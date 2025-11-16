@@ -159,13 +159,10 @@ class TestDataSetListAPI:
     def test_anonymous_user_sees_only_global_datasets(
         self, api_client, global_dataset, org1_dataset
     ):
-        """Anonymous users should only see global datasets."""
+        """Anonymous users cannot list datasets (requires authentication)."""
         response = api_client.get("/api/datasets/")
 
-        assert response.status_code == 200
-        data = response.json()
-        assert len(data) == 1
-        assert data[0]["key"] == "global_dataset"
+        assert response.status_code == 401
 
     def test_admin_user_sees_global_and_org_datasets(
         self, api_client, admin_user, global_dataset, org1_dataset, org2_dataset
