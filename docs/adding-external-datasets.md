@@ -63,8 +63,9 @@ docker compose exec web python manage.py sync_external_datasets
 
 Custom lists created by organizations:
 - **Editable** - Can be modified as needed
-- **Organization-specific** - Optionally shared across organizations
-- **Based on NHS DD** - Can use NHS DD datasets as templates
+- **Organization-specific** or **Globally published** - Can be private to your organization or shared with all users
+- **Based on any global dataset** - Can use NHS DD datasets, external API datasets, or other published datasets as templates
+- **Taggable** - Can add tags for easy discovery and filtering
 
 ## Quick Start: Creating a Custom List
 
@@ -107,6 +108,128 @@ custom.options = custom.options[:20]  # Keep only first 20
 custom.description = "Our hospital's specialty codes"
 custom.save()
 ```
+
+## Dataset Sharing and Publishing
+
+### Creating Custom Versions from Global Datasets
+
+Any global dataset (NHS DD, external API, or published by another organization) can be used as a template for your custom list:
+
+**Via API:**
+
+```bash
+# Create custom version of any global dataset
+curl -X POST https://your-domain/api/datasets-v2/{dataset_key}/create-custom/ \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Our Custom Hospital List",
+    "organization": 123
+  }'
+```
+
+**Via Django Shell:**
+
+```python
+from checktick_app.surveys.models import DataSet, Organization
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+# Get any global dataset (NHS DD, external API, or published)
+global_dataset = DataSet.objects.get(key='hospitals_england_wales')
+
+# Create custom version
+user = User.objects.get(username='your_username')
+org = Organization.objects.get(name='Your Hospital')
+
+custom = global_dataset.create_custom_version(
+    user=user,
+    organization=org,
+    custom_name="Our Preferred Hospitals"
+)
+
+# Customize as needed
+custom.options = custom.options[:50]  # Keep only first 50
+custom.tags = ["curated", "local"]
+custom.save()
+```
+
+**Key benefits:**
+- Start with high-quality, maintained data
+- Customize for your specific needs
+- Independent from the source - your changes don't affect others
+- Can be further published for others to use
+
+### Publishing Datasets Globally
+
+Organization ADMINs and CREATORs can publish their custom lists to make them available to all CheckTick users:
+
+**Via API:**
+
+```bash
+# Publish your organization's dataset globally
+curl -X POST https://your-domain/api/datasets-v2/{your_dataset_key}/publish/ \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+**Via Django Shell:**
+
+```python
+from checktick_app.surveys.models import DataSet
+
+# Get your organization's dataset
+dataset = DataSet.objects.get(key='our_specialty_codes')
+
+# Publish it globally
+dataset.publish()
+
+# Now available to all users!
+# Your organization attribution is preserved
+```
+
+**What happens when you publish:**
+
+1. ✅ **Global availability**: All users can now see and use your dataset
+2. ✅ **Attribution preserved**: Your organization remains as the creator
+3. ✅ **Continued control**: Your organization can still edit the dataset
+4. ⚠️ **Deletion protection**: If others create custom versions, you cannot delete it (prevents breaking dependencies)
+
+### Tags and Discovery
+
+Add tags to make datasets easier to find:
+
+```python
+dataset.tags = ["pediatrics", "cardiology", "NHS"]
+dataset.save()
+```
+
+**Filter by tags via API:**
+
+```bash
+# Find all datasets with specific tags (AND logic)
+curl https://your-domain/api/datasets-v2/?tags=pediatrics,NHS \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+# Search by name or description
+curl https://your-domain/api/datasets-v2/?search=hospital \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+# Get tag counts for faceted filtering
+curl https://your-domain/api/datasets-v2/available-tags/ \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Best Practices
+
+1. **Use templates**: Start from NHS DD or external API datasets when applicable
+2. **Add tags**: Help others discover your published datasets
+3. **Meaningful names**: Use clear, descriptive names for published datasets
+4. **Test before publishing**: Verify your dataset works correctly before making it global
+5. **Document changes**: Use the description field to explain customizations
+6. **Consider versioning**: If making major changes to a published dataset, consider creating a new version instead
+
+For complete API reference and examples, see [Dataset Sharing and Customization](dataset-sharing-and-customization.md).
 
 ## Management Commands
 

@@ -1722,6 +1722,20 @@ class DataSet(models.Model):
         default=1, help_text="Version number, incremented on updates"
     )
 
+    # Publishing tracking
+    published_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this dataset was published globally (if applicable)",
+    )
+
+    # Tags for discovery and filtering
+    tags = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of tags for categorization and filtering (e.g., ['medical', 'NHS', 'England'])",
+    )
+
     # Active flag for soft deletion
     is_active = models.BooleanField(
         default=True,
@@ -1737,6 +1751,7 @@ class DataSet(models.Model):
             models.Index(fields=["is_global", "is_active"]),
             models.Index(fields=["last_synced_at"]),
             models.Index(fields=["is_custom"]),
+            models.Index(fields=["published_at"]),
         ]
         constraints = [
             # NHS DD lists must be global and not have an organization
@@ -1744,10 +1759,15 @@ class DataSet(models.Model):
                 check=~models.Q(category="nhs_dd", organization__isnull=False),
                 name="nhs_dd_must_be_global",
             ),
-            # Global datasets cannot have an organization
+            # Platform global datasets (not published) cannot have an organization
+            # Published datasets CAN have organization for attribution
             models.CheckConstraint(
-                check=~models.Q(is_global=True, organization__isnull=False),
-                name="global_datasets_no_org",
+                check=~models.Q(
+                    is_global=True,
+                    organization__isnull=False,
+                    published_at__isnull=True,
+                ),
+                name="platform_global_datasets_no_org",
             ),
         ]
 
@@ -1776,32 +1796,107 @@ class DataSet(models.Model):
         return timezone.now() >= next_sync
 
     def create_custom_version(
-        self, user: User, organization: Organization
+        self, user: User, organization: Organization, custom_name: str = None
     ) -> "DataSet":
         """
         Create a customized version of this dataset.
 
-        Only allowed for NHS DD datasets. Creates a copy that user can edit.
-        """
-        if self.is_custom:
-            raise ValueError("Can only create custom versions of standard datasets")
+        Allowed for any global dataset. Creates a copy that user can edit.
 
-        custom_key = f"{self.key}_custom_{organization.id}_{user.id}"
+        Args:
+            user: User creating the custom version
+            organization: Organization to own the custom version (can be None for individual users)
+            custom_name: Optional custom name (defaults to "{name} (Custom)")
+
+        Returns:
+            New DataSet instance as a custom version
+
+        Raises:
+            ValueError: If this dataset is not global
+        """
+        if not self.is_global:
+            raise ValueError("Can only create custom versions of global datasets")
+
+        # Generate unique key for custom version
+        import time
+
+        if organization:
+            custom_key = f"{self.key}_custom_{organization.id}_{int(time.time())}"
+        else:
+            # Individual user custom version
+            custom_key = f"{self.key}_custom_u{user.id}_{int(time.time())}"
 
         return DataSet.objects.create(
             key=custom_key,
-            name=f"{self.name} (Custom)",
-            description=f"Customized version of {self.name}",
+            name=custom_name or f"{self.name} (Custom)",
+            description=f"Customized version of {self.name}\n\n{self.description}",
             category="user_created",  # Custom versions are always user_created
             source_type="manual",
             is_custom=True,
             parent=self,
-            organization=organization,
+            organization=organization,  # Can be None for individual users
             is_global=False,
             options=self.options.copy(),  # Start with parent's options
             format_pattern=self.format_pattern,
+            tags=self.tags.copy() if self.tags else [],  # Inherit tags
             created_by=user,
         )
+
+    def publish(self) -> None:
+        """
+        Publish this dataset globally.
+
+        Makes a dataset available to all users.
+        Can be called on organization-owned or individual user datasets.
+        Sets published_at timestamp and makes dataset global.
+
+        Raises:
+            ValueError: If dataset is already global or is NHS DD
+        """
+        from django.utils import timezone
+
+        if self.is_global:
+            raise ValueError("Dataset is already published globally")
+
+        if self.category == "nhs_dd":
+            raise ValueError("NHS Data Dictionary datasets cannot be published")
+
+        # Make global and track when published
+        self.is_global = True
+        self.published_at = timezone.now()
+        # Keep organization reference for attribution (can be None for individual users)
+        self.save(update_fields=["is_global", "published_at", "updated_at"])
+
+    def has_dependents(self) -> bool:
+        """
+        Check if other users/organizations have created custom versions from this dataset.
+
+        Returns True if there are any custom versions created by different users/organizations,
+        indicating that others depend on this dataset.
+
+        Returns:
+            bool: True if dependents exist, False otherwise
+        """
+        if not self.is_global:
+            return False
+
+        # Get all custom versions
+        dependents = DataSet.objects.filter(
+            parent=self,
+            is_active=True,
+        )
+
+        # Exclude dependents from the same organization (if org-owned)
+        # or created by the same user (if individual)
+        if self.organization:
+            dependents = dependents.exclude(organization=self.organization)
+        else:
+            # Individual user dataset - exclude versions by same user
+            dependents = dependents.exclude(
+                created_by=self.created_by, organization__isnull=True
+            )
+
+        return dependents.count() > 0
 
     def increment_version(self) -> None:
         """Increment version number when dataset is updated."""

@@ -717,7 +717,7 @@ def _infer_category(slug: str) -> str:
     # Features
     if any(
         x in slug_lower
-        for x in ["surveys", "collections", "groups", "import", "publish"]
+        for x in ["surveys", "collections", "groups", "import", "publish", "dataset"]
     ):
         return "features"
 

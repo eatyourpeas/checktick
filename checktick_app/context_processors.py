@@ -117,14 +117,9 @@ def branding(request):
                 user=user, role=SurveyMembership.Role.CREATOR
             ).exists()
         )
-        # Check if user can create datasets (ADMIN or CREATOR in any org)
-        can_create_datasets_flag = OrganizationMembership.objects.filter(
-            user=user,
-            role__in=[
-                OrganizationMembership.Role.ADMIN,
-                OrganizationMembership.Role.CREATOR,
-            ],
-        ).exists()
+        # TODO: In future, restrict dataset creation to pro individual accounts
+        # All authenticated users can create datasets (individual or organization-based)
+        can_create_datasets_flag = True
 
     # Defaults from settings
     brand = {

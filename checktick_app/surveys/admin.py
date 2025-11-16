@@ -22,19 +22,29 @@ class DataSetAdmin(admin.ModelAdmin):
         "category",
         "organization",
         "is_global",
+        "published_at",
         "is_active",
         "version",
         "created_at",
     )
-    list_filter = ("category", "is_global", "is_active", "is_custom", "created_at")
-    search_fields = ("name", "key", "description")
+    list_filter = (
+        "category",
+        "is_global",
+        "is_active",
+        "is_custom",
+        "created_at",
+        "published_at",
+    )
+    search_fields = ("name", "key", "description", "tags")
     readonly_fields = (
         "created_at",
         "updated_at",
         "version",
         "created_by",
         "last_synced_at",
+        "published_at",
     )
+    actions = ["publish_datasets", "create_custom_version_action"]
     fieldsets = (
         (
             "Basic Information",
@@ -62,8 +72,10 @@ class DataSetAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "is_global",
+                    "published_at",
                     "organization",
                     "is_active",
+                    "tags",
                 )
             },
         ),
@@ -109,6 +121,99 @@ class DataSetAdmin(admin.ModelAdmin):
                 )
             },
         ),
+    )
+
+    def publish_datasets(self, request, queryset):
+        """Admin action to publish selected datasets globally."""
+        published_count = 0
+        errors = []
+
+        for dataset in queryset:
+            try:
+                if dataset.is_global:
+                    errors.append(f"{dataset.name}: Already published")
+                elif not dataset.organization:
+                    errors.append(f"{dataset.name}: No organization (cannot publish)")
+                elif dataset.category == "nhs_dd":
+                    errors.append(
+                        f"{dataset.name}: NHS DD datasets cannot be published"
+                    )
+                else:
+                    dataset.publish()
+                    published_count += 1
+            except Exception as e:
+                errors.append(f"{dataset.name}: {str(e)}")
+
+        if published_count > 0:
+            self.message_user(
+                request,
+                f"Successfully published {published_count} dataset(s) globally.",
+                level="success",
+            )
+
+        if errors:
+            self.message_user(
+                request,
+                f"Errors: {'; '.join(errors)}",
+                level="warning",
+            )
+
+    publish_datasets.short_description = "Publish selected datasets globally"
+
+    def create_custom_version_action(self, request, queryset):
+        """Admin action to create custom versions of selected datasets."""
+        if queryset.count() != 1:
+            self.message_user(
+                request,
+                "Please select exactly one dataset to create a custom version from.",
+                level="error",
+            )
+            return
+
+        dataset = queryset.first()
+
+        if not dataset.is_global:
+            self.message_user(
+                request,
+                f"Cannot create custom version: {dataset.name} is not a global dataset.",
+                level="error",
+            )
+            return
+
+        # Check if user has an organization
+        user_orgs = request.user.org_memberships.filter(
+            role__in=["admin", "creator"]
+        ).select_related("organization")
+
+        if not user_orgs.exists():
+            self.message_user(
+                request,
+                "You must be an ADMIN or CREATOR in an organization to create custom versions.",
+                level="error",
+            )
+            return
+
+        # Use first organization
+        org = user_orgs.first().organization
+
+        try:
+            custom = dataset.create_custom_version(
+                user=request.user,
+                organization=org,
+                custom_name=f"{dataset.name} (Custom - {org.name})",
+            )
+            self.message_user(
+                request,
+                f"Successfully created custom version: {custom.name} (key: {custom.key})",
+                level="success",
+            )
+        except Exception as e:
+            self.message_user(
+                request, f"Error creating custom version: {str(e)}", level="error"
+            )
+
+    create_custom_version_action.short_description = (
+        "Create custom version from selected dataset"
     )
 
     def get_readonly_fields(self, request, obj=None):

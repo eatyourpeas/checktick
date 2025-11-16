@@ -183,15 +183,15 @@ class Command(BaseCommand):
         if error_count > 0:
             raise CommandError(f"{error_count} dataset(s) failed to sync")
 
-    def _fetch_from_api(self, dataset_key: str) -> list[str]:
+    def _fetch_from_api(self, dataset_key: str) -> dict[str, str]:
         """
-        Fetch dataset from external API and transform to option strings.
+        Fetch dataset from external API and transform to option dictionary.
 
         Args:
             dataset_key: The dataset key to fetch
 
         Returns:
-            List of option strings
+            Dictionary of {code: name} option pairs
 
         Raises:
             DatasetFetchError: If fetch or transformation fails

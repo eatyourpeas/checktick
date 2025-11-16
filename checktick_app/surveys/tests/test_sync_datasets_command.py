@@ -167,13 +167,16 @@ class SyncExternalDatasetsCommandTests(TestCase):
             self.assertTrue(dataset.is_global)
             self.assertFalse(dataset.is_custom)
             self.assertIsNotNone(dataset.last_synced_at)
+            # Options should now be a dictionary with 2 entries
+            self.assertIsInstance(dataset.options, dict)
             self.assertEqual(len(dataset.options), 2)
-            self.assertIn("ADDENBROOKE'S HOSPITAL (RGT01)", dataset.options)
+            self.assertIn("RGT01", dataset.options)
+            self.assertEqual(dataset.options["RGT01"], "ADDENBROOKE'S HOSPITAL")
 
     def test_updates_existing_dataset(self):
         """Test that existing datasets are updated with new data."""
         # Set initial data
-        self.existing_dataset.options = ["Old Hospital"]
+        self.existing_dataset.options = {"OLD01": "Old Hospital"}
         self.existing_dataset.version = 1
         self.existing_dataset.save()
 
@@ -196,9 +199,13 @@ class SyncExternalDatasetsCommandTests(TestCase):
             )
 
             self.existing_dataset.refresh_from_db()
+            # Options should now be a dictionary
+            self.assertIsInstance(self.existing_dataset.options, dict)
             self.assertEqual(len(self.existing_dataset.options), 2)
-            self.assertIn("New Hospital A (ABC123)", self.existing_dataset.options)
-            self.assertIn("New Hospital B (DEF456)", self.existing_dataset.options)
+            self.assertIn("ABC123", self.existing_dataset.options)
+            self.assertEqual(self.existing_dataset.options["ABC123"], "New Hospital A")
+            self.assertIn("DEF456", self.existing_dataset.options)
+            self.assertEqual(self.existing_dataset.options["DEF456"], "New Hospital B")
             self.assertEqual(self.existing_dataset.version, 2)  # Version incremented
             self.assertIsNotNone(self.existing_dataset.last_synced_at)
 
@@ -399,9 +406,11 @@ class SyncExternalDatasetsCommandTests(TestCase):
             self.existing_dataset.refresh_from_db()
 
             # Should have same data (not duplicated)
+            self.assertIsInstance(self.existing_dataset.options, dict)
             self.assertEqual(len(self.existing_dataset.options), 2)
-            self.assertIn(
-                "ADDENBROOKE'S HOSPITAL (RGT01)", self.existing_dataset.options
+            self.assertIn("RGT01", self.existing_dataset.options)
+            self.assertEqual(
+                self.existing_dataset.options["RGT01"], "ADDENBROOKE'S HOSPITAL"
             )
 
             # Version should be 3 (starts at 1, incremented twice)
@@ -433,8 +442,10 @@ class SyncExternalDatasetsCommandTests(TestCase):
             )
 
             dataset.refresh_from_db()
+            self.assertIsInstance(dataset.options, dict)
             self.assertEqual(len(dataset.options), 2)
-            self.assertIn("AIREDALE NHS FOUNDATION TRUST (RCF)", dataset.options)
+            self.assertIn("RCF", dataset.options)
+            self.assertEqual(dataset.options["RCF"], "AIREDALE NHS FOUNDATION TRUST")
 
     def test_transforms_welsh_lhbs_with_hierarchy(self):
         """Test that Welsh LHBs include nested organisations."""
@@ -459,6 +470,12 @@ class SyncExternalDatasetsCommandTests(TestCase):
 
             dataset.refresh_from_db()
             # Should have LHB + 1 nested org
+            self.assertIsInstance(dataset.options, dict)
             self.assertEqual(len(dataset.options), 2)
-            self.assertIn("Swansea Bay University Health Board (7A3)", dataset.options)
-            self.assertIn("  Morriston Hospital (RW6C1)", dataset.options)
+            self.assertIn("7A3", dataset.options)
+            self.assertEqual(
+                dataset.options["7A3"], "Swansea Bay University Health Board"
+            )
+            self.assertIn("RW6C1", dataset.options)
+            # Nested orgs have indentation in the name
+            self.assertEqual(dataset.options["RW6C1"], "  Morriston Hospital")

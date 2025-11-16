@@ -58,6 +58,7 @@
             <th>{% trans "Name" %}</th>
             <th>{% trans "Key" %}</th>
             <th>{% trans "Category" %}</th>
+            <th>{% trans "Tags" %}</th>
             <th>{% trans "Organization" %}</th>
             <th>{% trans "Options" %}</th>
             <th>{% trans "Version" %}</th>
@@ -83,6 +84,17 @@
                 <span class="badge badge-outline badge-sm">
                   {{ dataset.get_category_display }}
                 </span>
+              </td>
+              <td>
+                {% if dataset.tags %}
+                  <div class="flex flex-wrap gap-1">
+                    {% for tag in dataset.tags %}
+                      <span class="badge badge-sm badge-primary badge-outline">{{ tag }}</span>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <span class="text-gray-400 text-xs">—</span>
+                {% endif %}
               </td>
               <td>
                 {% if dataset.organization %}

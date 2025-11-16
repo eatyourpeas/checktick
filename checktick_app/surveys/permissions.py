@@ -87,16 +87,12 @@ def user_has_org_membership(user) -> bool:
 
 
 def can_create_datasets(user) -> bool:
-    """Check if user can create datasets (ADMIN or CREATOR in at least one org)."""
-    if not user.is_authenticated:
-        return False
-    return OrganizationMembership.objects.filter(
-        user=user,
-        role__in=[
-            OrganizationMembership.Role.ADMIN,
-            OrganizationMembership.Role.CREATOR,
-        ],
-    ).exists()
+    """Check if user can create datasets.
+
+    TODO: In future, restrict to pro individual accounts.
+    Currently all authenticated users can create datasets.
+    """
+    return user.is_authenticated
 
 
 def can_edit_dataset(user, dataset) -> bool:
@@ -112,25 +108,25 @@ def can_edit_dataset(user, dataset) -> bool:
     if dataset.is_global and not user.is_superuser:
         return False
 
-    # User must be ADMIN or CREATOR in the dataset's organization
-    if dataset.organization:
-        return OrganizationMembership.objects.filter(
-            user=user,
-            organization=dataset.organization,
-            role__in=[
-                OrganizationMembership.Role.ADMIN,
-                OrganizationMembership.Role.CREATOR,
-            ],
-        ).exists()
+    # Individual user datasets - check if user is the creator
+    if dataset.organization is None:
+        return dataset.created_by == user
 
-    return False
+    # Organization datasets - user must be ADMIN or CREATOR in the dataset's organization
+    return OrganizationMembership.objects.filter(
+        user=user,
+        organization=dataset.organization,
+        role__in=[
+            OrganizationMembership.Role.ADMIN,
+            OrganizationMembership.Role.CREATOR,
+        ],
+    ).exists()
 
 
 def require_can_create_datasets(user) -> None:
     if not can_create_datasets(user):
-        raise PermissionDenied(
-            "You must be an ADMIN or CREATOR in an organization to create datasets."
-        )
+        # TODO: Update message when pro accounts are implemented
+        raise PermissionDenied("You must be authenticated to create datasets.")
 
 
 def require_can_edit_dataset(user, dataset) -> None:

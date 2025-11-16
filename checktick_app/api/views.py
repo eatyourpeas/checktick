@@ -112,6 +112,16 @@ class DataSetSerializer(serializers.ModelSerializer):
         source="created_by.username", read_only=True
     )
     is_editable = serializers.SerializerMethodField()
+    parent_name = serializers.CharField(source="parent.name", read_only=True)
+    can_publish = serializers.SerializerMethodField()
+
+    # Explicitly define parent to use key instead of ID
+    parent = serializers.SlugRelatedField(
+        slug_field="key",
+        queryset=DataSet.objects.all(),
+        required=False,
+        allow_null=True,
+    )
 
     class Meta:
         model = DataSet
@@ -126,24 +136,33 @@ class DataSetSerializer(serializers.ModelSerializer):
             "is_global",
             "organization",
             "organization_name",
+            "parent",
+            "parent_name",
             "options",
             "format_pattern",
+            "tags",
             "created_by",
             "created_by_username",
             "created_at",
             "updated_at",
+            "published_at",
             "version",
             "is_active",
             "is_editable",
+            "can_publish",
         ]
         read_only_fields = [
+            "key",  # Auto-generated in perform_create
             "created_by",
             "created_at",
             "updated_at",
+            "published_at",
             "version",
             "created_by_username",
             "organization_name",
+            "parent_name",
             "is_editable",
+            "can_publish",
         ]
 
     def get_is_editable(self, obj):
@@ -173,6 +192,36 @@ class DataSetSerializer(serializers.ModelSerializer):
 
         return False
 
+    def get_can_publish(self, obj):
+        """Determine if current user can publish this dataset globally."""
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+
+        # Already published
+        if obj.is_global:
+            return False
+
+        # Must be organization-owned
+        if not obj.organization:
+            return False
+
+        # NHS DD datasets cannot be published
+        if obj.category == "nhs_dd":
+            return False
+
+        # User must be ADMIN or CREATOR in the organization
+        membership = OrganizationMembership.objects.filter(
+            organization=obj.organization, user=request.user
+        ).first()
+        if membership and membership.role in [
+            OrganizationMembership.Role.ADMIN,
+            OrganizationMembership.Role.CREATOR,
+        ]:
+            return True
+
+        return False
+
     def validate(self, attrs):
         """Validate dataset creation/update."""
         # Prevent editing NHS DD datasets
@@ -181,9 +230,16 @@ class DataSetSerializer(serializers.ModelSerializer):
                 "NHS Data Dictionary datasets cannot be modified"
             )
 
-        # Ensure options is a list
-        if "options" in attrs and not isinstance(attrs["options"], list):
-            raise serializers.ValidationError({"options": "Must be a list of strings"})
+        # Ensure options is a dict (all datasets use key-value format)
+        if "options" in attrs:
+            if not isinstance(attrs["options"], dict):
+                raise serializers.ValidationError(
+                    {"options": "Must be a dictionary of code: name pairs"}
+                )
+
+        # Ensure tags is a list
+        if "tags" in attrs and not isinstance(attrs["tags"], list):
+            raise serializers.ValidationError({"tags": "Must be a list of strings"})
 
         # Validate key format (slug-like)
         if "key" in attrs:
@@ -218,16 +274,10 @@ class IsOrgAdminOrCreator(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return True
 
-        # For POST, user must be ADMIN or CREATOR in at least one organization
+        # For POST, allow all authenticated users to create datasets
+        # TODO: In future, restrict to pro account holders only
         if request.method == "POST":
-            has_role = OrganizationMembership.objects.filter(
-                user=request.user,
-                role__in=[
-                    OrganizationMembership.Role.ADMIN,
-                    OrganizationMembership.Role.CREATOR,
-                ],
-            ).exists()
-            return has_role
+            return True
 
         return True
 
@@ -240,13 +290,27 @@ class IsOrgAdminOrCreator(permissions.BasePermission):
         if request.user.is_superuser:
             return True
 
+        # Allow creating custom versions from ANY global dataset
+        if view.action == "create_custom_version" and obj.is_global:
+            # Permission is checked in the action itself (needs ADMIN/CREATOR)
+            return True
+
+        # Allow publishing datasets user has access to
+        if view.action == "publish_dataset":
+            # Permission is checked in the action itself
+            return True
+
         # Cannot modify NHS DD datasets
         if obj.category == "nhs_dd":
             return False
 
-        # Cannot modify global datasets without organization (platform-wide)
-        if obj.is_global and not obj.organization:
+        # Cannot modify global datasets without organization/creator (platform-wide like NHS DD)
+        if obj.is_global and not obj.organization and obj.created_by != request.user:
             return False
+
+        # Individual user datasets - check if user is the creator
+        if not obj.organization:
+            return obj.created_by == request.user
 
         # Check organization membership
         if obj.organization:
@@ -963,6 +1027,11 @@ class DataSetViewSet(viewsets.ModelViewSet):
         """
         Filter datasets based on user's organization access.
 
+        Query parameters:
+        - tags: Comma-separated list of tags to filter by (AND logic)
+        - search: Search in name and description
+        - category: Filter by category
+
         Returns:
         - Global datasets (is_global=True)
         - Datasets belonging to user's organizations
@@ -975,26 +1044,56 @@ class DataSetViewSet(viewsets.ModelViewSet):
 
         # Anonymous users see only global datasets
         if not user.is_authenticated:
-            return queryset.filter(is_global=True)
+            queryset = queryset.filter(is_global=True)
+        else:
+            # Get user's organizations
+            user_orgs = Organization.objects.filter(memberships__user=user)
 
-        # Get user's organizations
-        user_orgs = Organization.objects.filter(memberships__user=user)
+            # Filter: global OR in user's organizations OR created by user (individual datasets)
+            queryset = queryset.filter(
+                Q(is_global=True)
+                | Q(organization__in=user_orgs)
+                | Q(created_by=user, organization__isnull=True)
+            )
 
-        # Filter: global OR in user's organizations
-        queryset = queryset.filter(Q(is_global=True) | Q(organization__in=user_orgs))
+        # Filter by tags if provided
+        tags_param = self.request.query_params.get("tags")
+        if tags_param:
+            tags = [tag.strip() for tag in tags_param.split(",")]
+            # Filter datasets that contain ALL specified tags
+            for tag in tags:
+                queryset = queryset.filter(tags__contains=[tag])
+
+        # Search in name and description
+        search = self.request.query_params.get("search")
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) | Q(description__icontains=search)
+            )
+
+        # Filter by category
+        category = self.request.query_params.get("category")
+        if category:
+            queryset = queryset.filter(category=category)
 
         return queryset.order_by("category", "name")
 
     def perform_create(self, serializer):
-        """Set created_by to current user and assign to organization."""
+        """Set created_by to current user and assign to organization if applicable."""
         user = self.request.user
+        # TODO: In future, check if user has pro account
 
         # Determine organization from request or user's first org
         org_id = self.request.data.get("organization")
+        org = None
 
         if org_id:
             # Verify user has ADMIN/CREATOR role in specified org
-            org = Organization.objects.get(id=org_id)
+            try:
+                org = Organization.objects.get(id=org_id)
+            except Organization.DoesNotExist:
+                raise PermissionDenied("Organization not found")
+
             membership = OrganizationMembership.objects.filter(
                 organization=org,
                 user=user,
@@ -1008,7 +1107,7 @@ class DataSetViewSet(viewsets.ModelViewSet):
                     "You must be an ADMIN or CREATOR in this organization"
                 )
         else:
-            # Use first organization where user is ADMIN/CREATOR
+            # Try to use first organization where user is ADMIN/CREATOR
             membership = OrganizationMembership.objects.filter(
                 user=user,
                 role__in=[
@@ -1016,26 +1115,220 @@ class DataSetViewSet(viewsets.ModelViewSet):
                     OrganizationMembership.Role.CREATOR,
                 ],
             ).first()
-            if not membership:
-                raise PermissionDenied(
-                    "You must be an ADMIN or CREATOR in an organization to create datasets"
-                )
-            org = membership.organization
+            if membership:
+                org = membership.organization
+            # If no org membership, org remains None (individual user dataset)
+
+        # Generate unique key if not provided
+        import time
+
+        from django.utils.text import slugify
+
+        name = self.request.data.get("name", "dataset")
+        base_key = slugify(name)[:50]  # Limit to 50 chars
+
+        # Add org or user ID plus timestamp for uniqueness
+        if org:
+            key = f"{base_key}_{org.id}_{int(time.time())}"
+        else:
+            key = f"{base_key}_u{user.id}_{int(time.time())}"
+
+        # Ensure uniqueness
+        counter = 1
+        original_key = key
+        while DataSet.objects.filter(key=key).exists():
+            key = f"{original_key}_{counter}"
+            counter += 1
 
         # Set defaults for user-created datasets
         serializer.save(
+            key=key,
             created_by=user,
-            organization=org,
+            organization=org,  # Can be None for individual users
             category="user_created",
             source_type="manual",
             is_custom=True,
-            is_global=False,  # Organization datasets are not global by default
+            is_global=False,  # Datasets are not global by default
         )
 
     def perform_update(self, serializer):
         """Increment version on update."""
         instance = self.get_object()
         serializer.save(version=instance.version + 1)
+
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[IsOrgAdminOrCreator],
+        url_path="create-custom",
+    )
+    def create_custom_version(self, request, key=None):
+        """
+        Create a customized version of a global dataset.
+
+        POST /api/datasets/{key}/create-custom/
+        Body: {
+            "name": "Optional custom name",
+            "organization": "Optional organization ID (defaults to user's first org)"
+        }
+
+        Returns the newly created custom dataset.
+        """
+        dataset = self.get_object()
+        user = request.user
+
+        # Verify dataset is global
+        if not dataset.is_global:
+            return Response(
+                {"error": "Can only create custom versions of global datasets"},
+                status=400,
+            )
+
+        # Get organization
+        # TODO: In future, check if user has pro account
+        org_id = request.data.get("organization")
+        custom_name = request.data.get("name")
+        org = None
+
+        if org_id:
+            # Verify user has ADMIN/CREATOR role in specified org
+            try:
+                org = Organization.objects.get(id=org_id)
+            except Organization.DoesNotExist:
+                return Response({"error": "Organization not found"}, status=404)
+
+            membership = OrganizationMembership.objects.filter(
+                organization=org,
+                user=user,
+                role__in=[
+                    OrganizationMembership.Role.ADMIN,
+                    OrganizationMembership.Role.CREATOR,
+                ],
+            ).first()
+            if not membership:
+                return Response(
+                    {"error": "You must be an ADMIN or CREATOR in this organization"},
+                    status=403,
+                )
+        else:
+            # Try to use first organization where user is ADMIN/CREATOR
+            membership = OrganizationMembership.objects.filter(
+                user=user,
+                role__in=[
+                    OrganizationMembership.Role.ADMIN,
+                    OrganizationMembership.Role.CREATOR,
+                ],
+            ).first()
+            if membership:
+                org = membership.organization
+            # If no org membership, org remains None (individual user dataset)
+
+        # Create custom version
+        try:
+            custom_dataset = dataset.create_custom_version(
+                user=user, organization=org, custom_name=custom_name
+            )
+        except ValueError as e:
+            return Response({"error": str(e)}, status=400)
+
+        serializer = self.get_serializer(custom_dataset)
+        return Response(serializer.data, status=201)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        permission_classes=[permissions.AllowAny],
+        url_path="available-tags",
+    )
+    def available_tags(self, request):
+        """
+        Get all unique tags from accessible datasets.
+
+        GET /api/datasets/available-tags/
+
+        Returns a list of tags with counts for faceted filtering.
+        """
+        from collections import Counter
+
+        # Get accessible queryset (respects user permissions)
+        queryset = self.get_queryset()
+
+        # Collect all tags
+        all_tags = []
+        for dataset in queryset:
+            if dataset.tags:
+                all_tags.extend(dataset.tags)
+
+        # Count occurrences
+        tag_counts = Counter(all_tags)
+
+        # Format as list of {tag, count} sorted by count descending
+        tags_list = [
+            {"tag": tag, "count": count} for tag, count in tag_counts.most_common()
+        ]
+
+        return Response({"tags": tags_list})
+
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[IsOrgAdminOrCreator],
+        url_path="publish",
+    )
+    def publish_dataset(self, request, key=None):
+        """
+        Publish a dataset globally.
+
+        POST /api/datasets/{key}/publish/
+
+        Makes the dataset available to all users while retaining
+        creator/organization attribution.
+        """
+        dataset = self.get_object()
+        user = request.user
+        # TODO: In future, check if user has pro account
+
+        # Verify user has permission to publish
+        if dataset.is_global:
+            return Response(
+                {"error": "Dataset is already published globally"}, status=400
+            )
+
+        # Verify user owns the dataset (either created it or is ADMIN/CREATOR in org)
+        if dataset.organization:
+            # Organization dataset - verify user is ADMIN/CREATOR in the organization
+            membership = OrganizationMembership.objects.filter(
+                organization=dataset.organization,
+                user=user,
+                role__in=[
+                    OrganizationMembership.Role.ADMIN,
+                    OrganizationMembership.Role.CREATOR,
+                ],
+            ).first()
+
+            if not membership:
+                return Response(
+                    {
+                        "error": "You must be an ADMIN or CREATOR in the dataset's organization"
+                    },
+                    status=403,
+                )
+        else:
+            # Individual user dataset - verify user created it
+            if dataset.created_by != user:
+                return Response(
+                    {"error": "You can only publish datasets you created"},
+                    status=403,
+                )
+
+        # Publish the dataset
+        try:
+            dataset.publish()
+        except ValueError as e:
+            return Response({"error": str(e)}, status=400)
+
+        serializer = self.get_serializer(dataset)
+        return Response(serializer.data)
 
     def destroy(self, request, *args, **kwargs):
         """Soft delete by setting is_active=False."""
@@ -1044,6 +1337,16 @@ class DataSetViewSet(viewsets.ModelViewSet):
         # Prevent deletion of NHS DD datasets
         if instance.category == "nhs_dd":
             raise PermissionDenied("NHS Data Dictionary datasets cannot be deleted")
+
+        # Prevent deletion of published datasets with dependents
+        if instance.published_at and instance.has_dependents():
+            return Response(
+                {
+                    "error": "Cannot delete published dataset that has custom versions created by others. "
+                    "This dataset is being used as a base for other lists."
+                },
+                status=400,
+            )
 
         # Soft delete
         instance.is_active = False

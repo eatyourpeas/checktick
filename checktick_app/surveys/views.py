@@ -5638,41 +5638,130 @@ def dataset_create(request: HttpRequest) -> HttpResponse:
         key = request.POST.get("key", "").strip()
         name = request.POST.get("name", "").strip()
         description = request.POST.get("description", "").strip()
-        category = request.POST.get("category", "user_created")
-        source_type = request.POST.get("source_type", "manual")
-        organization_id = request.POST.get("organization")
+        tags_text = request.POST.get("tags", "").strip()
+        organization_id = request.POST.get("organization", "").strip()
         options_text = request.POST.get("options", "").strip()
-        format_pattern = request.POST.get("format_pattern", "").strip()
+
+        # All user-created datasets have these defaults
+        category = "user_created"
+        source_type = "manual"
 
         # Validate
         errors = []
 
-        if not key:
-            errors.append("Key is required")
-        elif not re.match(r"^[a-z0-9_-]+$", key):
-            errors.append(
-                "Key must be lowercase alphanumeric with hyphens or underscores"
-            )
-        elif DataSet.objects.filter(key=key).exists():
-            errors.append("A dataset with this key already exists")
-
         if not name:
             errors.append("Name is required")
 
-        if not organization_id:
-            errors.append("Organization is required")
-        else:
-            org = get_object_or_404(Organization, id=organization_id)
-            # Verify user has permission in this org
-            if not user_orgs.filter(id=org.id).exists():
-                errors.append("You don't have permission in the selected organization")
+        # Parse tags
+        tags = []
+        if tags_text:
+            tags = [tag.strip() for tag in tags_text.split(",") if tag.strip()]
 
-        # Parse options
+        # Auto-generate key from name if not provided or invalid
+        if not key:
+            # Generate key from name
+            key = (
+                name.lower()
+                .strip()
+                .replace(" ", "_")
+                # Replace any non-alphanumeric chars with underscore
+                .translate(
+                    str.maketrans({c: "_" for c in "!@#$%^&*()+=[]{}|\\:;\"'<>,.?/"})
+                )
+            )
+            key = re.sub(r"_+", "_", key)  # Collapse multiple underscores
+            key = key.strip("_")  # Remove leading/trailing underscores
+
+        if not re.match(r"^[a-z0-9_-]+$", key):
+            errors.append(
+                "Generated key is invalid. Please use a simpler name with only letters, numbers, and spaces."
+            )
+
+        # Check for duplicate keys and make unique if needed
+        if DataSet.objects.filter(key=key).exists():
+            # For individual users, append user ID; for org users, append timestamp
+            if not organization_id:
+                key = f"{key}_u{request.user.id}"
+                # If still duplicate, add timestamp
+                if DataSet.objects.filter(key=key).exists():
+                    import time
+
+                    key = f"{key}_{int(time.time())}"
+            else:
+                import time
+
+                key = f"{key}_{int(time.time())}"
+
+        # Handle organization - optional for individual users
+        org = None
+        if organization_id:
+            try:
+                org = Organization.objects.get(id=organization_id)
+                # Verify user has permission in this org
+                if not user_orgs.filter(id=org.id).exists():
+                    errors.append(
+                        "You don't have permission in the selected organization"
+                    )
+            except Organization.DoesNotExist:
+                errors.append("Invalid organization selected")
+
+        # Parse options intelligently
         options = []
+        options_dict = {}
+        has_keyed_options = False
+        line_errors = []
+
         if options_text:
-            options = [
-                line.strip() for line in options_text.split("\n") if line.strip()
-            ]
+            lines = [line.strip() for line in options_text.split("\n") if line.strip()]
+
+            for idx, line in enumerate(lines, 1):
+                # Check if line contains " - " separator (key-value format)
+                if " - " in line:
+                    has_keyed_options = True
+                    parts = line.split(" - ", 1)
+                    if len(parts) == 2:
+                        option_key = parts[0].strip()
+                        option_value = parts[1].strip()
+                        if option_key and option_value:
+                            options_dict[option_key] = option_value
+                        else:
+                            line_errors.append(f"Line {idx}: Empty key or value")
+                    else:
+                        line_errors.append(f"Line {idx}: Invalid format")
+                else:
+                    # Simple option - store for auto-key generation
+                    options.append(line)
+
+            # Convert to dict format (always use dict for consistency)
+            if has_keyed_options:
+                if options:
+                    # Mixed format detected
+                    errors.append(
+                        "Mixed format detected. Use either simple format (one value per line) "
+                        "OR key-value format (key - value) for all options, not both."
+                    )
+                elif not options_dict:
+                    errors.append(
+                        "Key-value format detected but no valid entries found. "
+                        "Ensure format is 'key - value' with space-dash-space separator."
+                    )
+                else:
+                    # Use the manually entered key-value pairs
+                    options = options_dict
+            elif options:
+                # Auto-generate keys for simple list format
+                # Use sequential numbers as keys for simplicity and reliability
+                options_dict = {}
+                for idx, value in enumerate(options, 1):
+                    # Use zero-padded numbers as keys (e.g., "001", "002")
+                    auto_key = f"{idx:03d}"
+                    options_dict[auto_key] = value
+                options = options_dict
+            else:
+                errors.append("At least one option is required")
+
+        if line_errors:
+            errors.extend(line_errors)
 
         if not options:
             errors.append("At least one option is required")
@@ -5684,8 +5773,6 @@ def dataset_create(request: HttpRequest) -> HttpResponse:
                 "surveys/dataset_form.html",
                 {
                     "organizations": user_orgs,
-                    "categories": DataSet.CATEGORY_CHOICES,
-                    "source_types": DataSet.SOURCE_TYPE_CHOICES,
                     "form_data": request.POST,
                     "is_create": True,
                 },
@@ -5698,24 +5785,57 @@ def dataset_create(request: HttpRequest) -> HttpResponse:
             description=description,
             category=category,
             source_type=source_type,
-            organization=org,
+            organization=org,  # Can be None for individual users
             is_global=False,  # Regular users cannot create global datasets
             options=options,
-            format_pattern=format_pattern,
+            tags=tags,
             created_by=request.user,
         )
 
         messages.success(request, f"Dataset '{dataset.name}' created successfully")
         return redirect("surveys:dataset_detail", dataset_id=dataset.id)
 
+    # Check if cloning from existing dataset
+    clone_from_id = request.GET.get("clone_from")
+    clone_source = None
+    initial_data = {}
+
+    if clone_from_id:
+        try:
+            # Get the source dataset to clone from
+            all_user_orgs = Organization.objects.filter(memberships__user=request.user)
+            clone_source = DataSet.objects.filter(
+                Q(is_global=True)
+                | Q(organization__in=all_user_orgs)
+                | Q(created_by=request.user, organization__isnull=True),
+                is_active=True,
+                id=clone_from_id,
+            ).first()
+
+            if clone_source:
+                # Pre-fill form with source dataset data
+                options_text = "\n".join(
+                    [f"{key} - {value}" for key, value in clone_source.options.items()]
+                )
+                tags_text = ", ".join(clone_source.tags) if clone_source.tags else ""
+
+                initial_data = {
+                    "name": f"{clone_source.name} (Custom)",
+                    "description": clone_source.description,
+                    "options": options_text,
+                    "tags": tags_text,
+                }
+        except (ValueError, DataSet.DoesNotExist):
+            pass
+
     return render(
         request,
         "surveys/dataset_form.html",
         {
             "organizations": user_orgs,
-            "categories": DataSet.CATEGORY_CHOICES,
-            "source_types": DataSet.SOURCE_TYPE_CHOICES,
             "is_create": True,
+            "clone_source": clone_source,
+            "form_data": initial_data,
         },
     )
 
@@ -5739,7 +5859,10 @@ def dataset_edit(request: HttpRequest, dataset_id: int) -> HttpResponse:
     all_user_orgs = Organization.objects.filter(memberships__user=user)
     dataset = get_object_or_404(
         DataSet.objects.filter(
-            Q(is_global=True) | Q(organization__in=all_user_orgs), is_active=True
+            Q(is_global=True)
+            | Q(organization__in=all_user_orgs)
+            | Q(created_by=user, organization__isnull=True),
+            is_active=True,
         ),
         id=dataset_id,
     )
@@ -5750,8 +5873,8 @@ def dataset_edit(request: HttpRequest, dataset_id: int) -> HttpResponse:
         # Extract form data
         name = request.POST.get("name", "").strip()
         description = request.POST.get("description", "").strip()
+        tags_text = request.POST.get("tags", "").strip()
         options_text = request.POST.get("options", "").strip()
-        format_pattern = request.POST.get("format_pattern", "").strip()
 
         # Validate
         errors = []
@@ -5759,12 +5882,66 @@ def dataset_edit(request: HttpRequest, dataset_id: int) -> HttpResponse:
         if not name:
             errors.append("Name is required")
 
-        # Parse options
+        # Parse tags
+        tags = []
+        if tags_text:
+            tags = [tag.strip() for tag in tags_text.split(",") if tag.strip()]
+
+        # Parse options intelligently (same logic as create)
         options = []
+        options_dict = {}
+        has_keyed_options = False
+        line_errors = []
+
         if options_text:
-            options = [
-                line.strip() for line in options_text.split("\n") if line.strip()
-            ]
+            lines = [line.strip() for line in options_text.split("\n") if line.strip()]
+
+            for idx, line in enumerate(lines, 1):
+                # Check if line contains " - " separator (key-value format)
+                if " - " in line:
+                    has_keyed_options = True
+                    parts = line.split(" - ", 1)
+                    if len(parts) == 2:
+                        option_key = parts[0].strip()
+                        option_value = parts[1].strip()
+                        if option_key and option_value:
+                            options_dict[option_key] = option_value
+                        else:
+                            line_errors.append(f"Line {idx}: Empty key or value")
+                    else:
+                        line_errors.append(f"Line {idx}: Invalid format")
+                else:
+                    # Simple option - store for auto-key generation
+                    options.append(line)
+
+            # Convert to dict format (always use dict for consistency)
+            if has_keyed_options:
+                if options:
+                    # Mixed format detected
+                    errors.append(
+                        "Mixed format detected. Use either simple format (one value per line) "
+                        "OR key-value format (key - value) for all options, not both."
+                    )
+                elif not options_dict:
+                    errors.append(
+                        "Key-value format detected but no valid entries found. "
+                        "Ensure format is 'key - value' with space-dash-space separator."
+                    )
+                else:
+                    # Use the manually entered key-value pairs
+                    options = options_dict
+            elif options:
+                # Auto-generate keys for simple list format
+                options_dict = {}
+                for idx, value in enumerate(options, 1):
+                    auto_key = f"{idx:03d}"
+                    options_dict[auto_key] = value
+                options = options_dict
+            else:
+                errors.append("At least one option is required")
+
+        if line_errors:
+            errors.extend(line_errors)
 
         if not options:
             errors.append("At least one option is required")
@@ -5777,8 +5954,6 @@ def dataset_edit(request: HttpRequest, dataset_id: int) -> HttpResponse:
                 {
                     "dataset": dataset,
                     "organizations": user_orgs,
-                    "categories": DataSet.CATEGORY_CHOICES,
-                    "source_types": DataSet.SOURCE_TYPE_CHOICES,
                     "form_data": request.POST,
                     "is_create": False,
                 },
@@ -5788,7 +5963,7 @@ def dataset_edit(request: HttpRequest, dataset_id: int) -> HttpResponse:
         dataset.name = name
         dataset.description = description
         dataset.options = options
-        dataset.format_pattern = format_pattern
+        dataset.tags = tags
         dataset.increment_version()
         dataset.save()
 
@@ -5796,6 +5971,14 @@ def dataset_edit(request: HttpRequest, dataset_id: int) -> HttpResponse:
         return redirect("surveys:dataset_detail", dataset_id=dataset.id)
 
     # Prepare initial form data
+    # Convert options dict to text format for textarea (all datasets use dict now)
+    options_text = "\n".join(
+        [f"{key} - {value}" for key, value in dataset.options.items()]
+    )
+
+    # Convert tags list to comma-separated string
+    tags_text = ", ".join(dataset.tags) if dataset.tags else ""
+
     form_data = {
         "key": dataset.key,
         "name": dataset.name,
@@ -5803,8 +5986,8 @@ def dataset_edit(request: HttpRequest, dataset_id: int) -> HttpResponse:
         "category": dataset.category,
         "source_type": dataset.source_type,
         "organization": dataset.organization_id,
-        "options": "\n".join(dataset.options),
-        "format_pattern": dataset.format_pattern,
+        "options": options_text,
+        "tags": tags_text,
     }
 
     return render(
@@ -5813,8 +5996,6 @@ def dataset_edit(request: HttpRequest, dataset_id: int) -> HttpResponse:
         {
             "dataset": dataset,
             "organizations": user_orgs,
-            "categories": DataSet.CATEGORY_CHOICES,
-            "source_types": DataSet.SOURCE_TYPE_CHOICES,
             "form_data": form_data,
             "is_create": False,
         },
@@ -5831,7 +6012,10 @@ def dataset_delete(request: HttpRequest, dataset_id: int) -> HttpResponse:
     all_user_orgs = Organization.objects.filter(memberships__user=user)
     dataset = get_object_or_404(
         DataSet.objects.filter(
-            Q(is_global=True) | Q(organization__in=all_user_orgs), is_active=True
+            Q(is_global=True)
+            | Q(organization__in=all_user_orgs)
+            | Q(created_by=user, organization__isnull=True),
+            is_active=True,
         ),
         id=dataset_id,
     )

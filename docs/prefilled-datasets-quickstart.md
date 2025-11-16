@@ -146,19 +146,31 @@ These are already configured in `.env.example`.
 ## Key Features
 
 **Database Storage**
+
 - All datasets stored in database for consistency
 - 24-hour cache for API data to minimize external calls
 - Version tracking for dataset updates
 
 **Organization Support**
+
 - Global datasets available to all organizations
 - Organization-specific custom lists
 - NHS DD standards remain read-only
 
 **Smart Integration**
+
 - Database checked first for fastest response
 - Falls back to API if data needs refresh
 - Backward compatible with existing hardcoded datasets
+
+**Sharing and Collaboration** ✨ NEW
+
+- Create custom versions from any global dataset (NHS DD, external APIs, or published datasets)
+- Publish your organization's datasets globally to share with all users
+- Search and filter datasets by tags
+- Dependency protection prevents breaking shared datasets
+
+For details on sharing features, see [Dataset Management Features](datasets-features.md).
 
 ## Status
 

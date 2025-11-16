@@ -150,18 +150,19 @@ def _get_endpoint_for_dataset(dataset_key: str) -> str:
     return endpoint_map.get(dataset_key, "")
 
 
-def _transform_response_to_options(dataset_key: str, data: Any) -> list[str]:
+def _transform_response_to_options(dataset_key: str, data: Any) -> dict[str, str]:
     """
-    Transform API response to list of option strings.
+    Transform API response to dictionary of code: name pairs.
 
     Each dataset type has its own transformation logic based on the API response structure.
+    Returns a dictionary with codes as keys and names as values for two-column display.
 
     Args:
         dataset_key: The dataset key
         data: The raw API response data (usually a list of dicts)
 
     Returns:
-        List of formatted option strings for dropdown display
+        Dictionary of {code: name} for dropdown display with two-column layout
 
     Raises:
         DatasetFetchError: If data format is invalid
@@ -171,7 +172,7 @@ def _transform_response_to_options(dataset_key: str, data: Any) -> list[str]:
             f"Expected list response for {dataset_key}, got {type(data)}"
         )
 
-    options = []
+    options = {}
 
     if dataset_key == "hospitals_england_wales":
         # Format: {"ods_code": "RGT01", "name": "ADDENBROOKE'S HOSPITAL"}
@@ -183,7 +184,7 @@ def _transform_response_to_options(dataset_key: str, data: Any) -> list[str]:
             ):
                 logger.warning(f"Skipping invalid hospital item: {item}")
                 continue
-            options.append(f"{item['name']} ({item['ods_code']})")
+            options[item["ods_code"]] = item["name"]
 
     elif dataset_key == "nhs_trusts":
         # Format: {"ods_code": "RCF", "name": "AIREDALE NHS FOUNDATION TRUST", ...}
@@ -195,7 +196,7 @@ def _transform_response_to_options(dataset_key: str, data: Any) -> list[str]:
             ):
                 logger.warning(f"Skipping invalid trust item: {item}")
                 continue
-            options.append(f"{item['name']} ({item['ods_code']})")
+            options[item["ods_code"]] = item["name"]
 
     elif dataset_key == "welsh_lhbs":
         # Format: {"ods_code": "7A3", "name": "Swansea Bay...", "organisations": [...]}
@@ -206,13 +207,14 @@ def _transform_response_to_options(dataset_key: str, data: Any) -> list[str]:
                 continue
 
             # Add the LHB itself
-            options.append(f"{lhb['name']} ({lhb['ods_code']})")
+            options[lhb["ods_code"]] = lhb["name"]
 
-            # Add organisations within the LHB (indented for hierarchy)
+            # Add organisations within the LHB
             if "organisations" in lhb and isinstance(lhb["organisations"], list):
                 for org in lhb["organisations"]:
                     if isinstance(org, dict) and "name" in org and "ods_code" in org:
-                        options.append(f"  {org['name']} ({org['ods_code']})")
+                        # Prefix nested org names with "  " to show hierarchy
+                        options[org["ods_code"]] = f"  {org['name']}"
 
     elif dataset_key == "london_boroughs":
         # Format: {"name": "Westminster", "gss_code": "E09000033", ...}
@@ -224,7 +226,7 @@ def _transform_response_to_options(dataset_key: str, data: Any) -> list[str]:
             ):
                 logger.warning(f"Skipping invalid London borough item: {item}")
                 continue
-            options.append(f"{item['name']} ({item['gss_code']})")
+            options[item["gss_code"]] = item["name"]
 
     elif dataset_key == "nhs_england_regions":
         # Format: {"region_code": "Y58", "name": "South West", ...}
@@ -236,7 +238,7 @@ def _transform_response_to_options(dataset_key: str, data: Any) -> list[str]:
             ):
                 logger.warning(f"Skipping invalid NHS England region item: {item}")
                 continue
-            options.append(f"{item['name']} ({item['region_code']})")
+            options[item["region_code"]] = item["name"]
 
     elif dataset_key == "paediatric_diabetes_units":
         # Format: {"pz_code": "PZ215", "primary_organisation": {"name": "...", "ods_code": "..."}, ...}
@@ -247,7 +249,7 @@ def _transform_response_to_options(dataset_key: str, data: Any) -> list[str]:
                 )
                 continue
 
-            # Try to get name from primary_organisation, fall back to parent
+            # Try to get name and code from primary_organisation, fall back to parent
             name = None
             code = item["pz_code"]
 
@@ -267,10 +269,10 @@ def _transform_response_to_options(dataset_key: str, data: Any) -> list[str]:
                         code = parent["ods_code"]
 
             if name:
-                options.append(f"{name} ({code})")
+                options[code] = name
             else:
                 # Fallback to just the PZ code if no name found
-                options.append(f"PDU {code}")
+                options[code] = f"PDU {code}"
 
     elif dataset_key == "integrated_care_boards":
         # Format: {"ods_code": "QOX", "name": "NHS Bath and North East Somerset...", ...}
@@ -282,7 +284,7 @@ def _transform_response_to_options(dataset_key: str, data: Any) -> list[str]:
             ):
                 logger.warning(f"Skipping invalid ICB item: {item}")
                 continue
-            options.append(f"{item['name']} ({item['ods_code']})")
+            options[item["ods_code"]] = item["name"]
 
     if not options:
         raise DatasetFetchError(f"No valid options found in response for {dataset_key}")
@@ -290,7 +292,7 @@ def _transform_response_to_options(dataset_key: str, data: Any) -> list[str]:
     return options
 
 
-def fetch_dataset(dataset_key: str) -> list[str]:
+def fetch_dataset(dataset_key: str) -> dict[str, str]:
     """
     Fetch dataset options from database.
 
@@ -305,7 +307,7 @@ def fetch_dataset(dataset_key: str) -> list[str]:
         dataset_key: The key identifying which dataset to fetch
 
     Returns:
-        List of option strings
+        Dictionary of {code: name} pairs (all datasets use this format)
 
     Raises:
         DatasetFetchError: If dataset key is invalid or not found
