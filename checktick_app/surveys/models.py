@@ -1603,6 +1603,7 @@ class DataSet(models.Model):
         ("api", "External API"),
         ("manual", "Manual Entry"),
         ("imported", "Imported from File"),
+        ("scrape", "Web Scraping"),
     ]
 
     # Identity
@@ -1679,6 +1680,14 @@ class DataSet(models.Model):
     )
     last_synced_at = models.DateTimeField(
         null=True, blank=True, help_text="Last successful sync from API"
+    )
+
+    # For web scraping
+    last_scraped = models.DateTimeField(
+        null=True, blank=True, help_text="Last successful scrape from source URL"
+    )
+    nhs_dd_published_date = models.DateField(
+        null=True, blank=True, help_text="Date the NHS DD list was published (if available)"
     )
 
     # Sharing and ownership

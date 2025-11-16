@@ -4,7 +4,7 @@ CheckTick requires scheduled tasks for data governance operations, housekeeping,
 
 ## Overview
 
-CheckTick uses three scheduled tasks:
+CheckTick uses four scheduled tasks:
 
 ### 1. Data Governance (Required for GDPR)
 
@@ -43,6 +43,39 @@ python manage.py seed_external_datasets
 
 # One-time: Initial data population (can take 2-3 minutes)
 python manage.py sync_external_datasets
+```
+
+### 4. NHS Data Dictionary Scraping (Recommended)
+
+The `scrape_nhs_dd_datasets` management command runs weekly to:
+
+1. **Scrape standardized lists** - Fetches codes and values from NHS Data Dictionary website
+2. **Update existing datasets** - Keeps NHS DD datasets current with official sources
+3. **Maintain accuracy** - Ensures dropdown options match authoritative NHS standards
+
+**Recommended**: Run this weekly to keep NHS DD datasets fresh. See [NHS Data Dictionary Datasets](nhs-data-dictionary-datasets.md) for the full list of scraped datasets.
+
+**Initial Setup Required**:
+
+```bash
+# One-time: Create NHS DD dataset records
+python manage.py seed_nhs_datasets
+
+# One-time: Initial scraping (can take 1-2 minutes)
+python manage.py scrape_nhs_dd_datasets
+```
+
+**Maintenance**:
+
+```bash
+# Check which datasets need scraping
+python manage.py scrape_nhs_dd_datasets --dry-run
+
+# Force re-scrape all datasets
+python manage.py scrape_nhs_dd_datasets --force
+
+# Scrape a single dataset
+python manage.py scrape_nhs_dd_datasets --dataset smoking_status_code
 ```
 
 ## Prerequisites
@@ -87,7 +120,16 @@ Northflank provides native cron job support, making this the simplest option.
    - **Schedule**: `0 4 * * *` (runs at 4 AM UTC daily)
    - **Command**: `python manage.py sync_external_datasets`
 
-#### 4. Copy Environment Variables
+#### 4. Create NHS DD Scraping Cron Job
+
+1. Click **"Add Service"** → **"Cron Job"** again
+2. Configure the job:
+   - **Name**: `checktick-nhs-dd-scrape`
+   - **Docker Image**: Use the same image as your web service
+   - **Schedule**: `0 5 * * 0` (runs at 5 AM UTC every Sunday - weekly)
+   - **Command**: `python manage.py scrape_nhs_dd_datasets`
+
+#### 5. Copy Environment Variables
 
 All cron jobs need the same environment variables as your web service:
 

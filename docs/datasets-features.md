@@ -16,18 +16,24 @@ Datasets are reusable lists that power dropdown questions in your surveys. Inste
 
 ### 1. NHS Data Dictionary (NHS DD)
 
-Authoritative medical codes and classifications:
+Authoritative medical codes and classifications from the [NHS Data Dictionary](https://www.datadictionary.nhs.uk/). See the [complete list of available NHS DD datasets](nhs-data-dictionary-datasets.md) for full details including source URLs and last update dates.
+
+**Examples:**
 
 - **Main Specialty Code** - 75 medical specialties
 - **Treatment Function Code** - 73 treatment classifications
 - **Ethnic Category** - 17 standardized ethnic categories
+- **Smoking Status Code** - 6 standardized smoking status codes
+- **Clinical Frailty Scale** - 9-point frailty assessment scale
+- Plus 40+ additional standardized lists
 
 **Characteristics:**
 
 - ✅ Read-only (maintains standardization)
-- ✅ Always up-to-date with NHS standards
+- ✅ Regularly synced from NHS DD website
 - ✅ Available to all users
 - ✅ Can be used as templates for custom versions
+- ✅ Full transparency with source URLs
 
 ### 2. External API Datasets
 
