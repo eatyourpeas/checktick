@@ -10,17 +10,60 @@ from typing import Dict, List, Optional
 from django.conf import settings
 import logging
 import re
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 
-class ConversationalSurveyLLM:
+def load_system_prompt_from_docs() -> str:
     """
-    Conversational LLM client for iterative survey refinement.
-    Maintains conversation history and generates markdown in CheckTick format.
-    """
+    Load the system prompt from the AI survey generator documentation.
 
-    SYSTEM_PROMPT = """You are a healthcare survey design assistant. Your role is to help users create surveys by generating questions in a specific markdown format.
+    This ensures transparency - the prompt shown to users is exactly what the LLM receives.
+    The prompt is extracted from the section between SYSTEM_PROMPT_START and SYSTEM_PROMPT_END markers.
+
+    Returns:
+        System prompt string, or fallback prompt if docs file cannot be read
+    """
+    docs_path = Path(settings.BASE_DIR) / "docs" / "ai-survey-generator.md"
+
+    try:
+        if docs_path.exists():
+            content = docs_path.read_text(encoding="utf-8")
+
+            # Extract content between markers
+            start_marker = "<!-- SYSTEM_PROMPT_START -->"
+            end_marker = "<!-- SYSTEM_PROMPT_END -->"
+
+            start_idx = content.find(start_marker)
+            end_idx = content.find(end_marker)
+
+            if start_idx != -1 and end_idx != -1:
+                # Extract text between markers and clean up
+                prompt = content[start_idx + len(start_marker):end_idx].strip()
+
+                # Remove leading/trailing whitespace from each line while preserving structure
+                lines = prompt.split('\n')
+                cleaned_lines = [line.rstrip() for line in lines]
+                prompt = '\n'.join(cleaned_lines).strip()
+
+                logger.info("Successfully loaded system prompt from documentation")
+                return prompt
+            else:
+                logger.warning("System prompt markers not found in documentation file")
+        else:
+            logger.warning(f"Documentation file not found: {docs_path}")
+
+    except Exception as e:
+        logger.error(f"Failed to load system prompt from docs: {e}")
+
+    # Fallback to inline prompt if docs unavailable
+    logger.info("Using fallback inline system prompt")
+    return _FALLBACK_SYSTEM_PROMPT
+
+
+# Fallback prompt if documentation file cannot be loaded
+_FALLBACK_SYSTEM_PROMPT = """You are a healthcare survey design assistant. Your role is to help users create surveys by generating questions in a specific markdown format.
 
 CORE RESPONSIBILITIES:
 1. Ask clarifying questions about survey goals, target audience, and question requirements
@@ -89,10 +132,21 @@ When generating markdown, always wrap it in:
 [your markdown here]
 ```"""
 
+
+class ConversationalSurveyLLM:
+    """
+    Conversational LLM client for iterative survey refinement.
+    Maintains conversation history and generates markdown in CheckTick format.
+
+    The system prompt is loaded from docs/ai-survey-generator.md to ensure
+    transparency - what users see in documentation is exactly what the LLM receives.
+    """
+
     def __init__(self):
         self.endpoint = settings.RCPCH_OLLAMA_API_URL
         self.api_key = settings.RCPCH_OLLAMA_API_KEY
         self.timeout = settings.LLM_TIMEOUT
+        self.system_prompt = load_system_prompt_from_docs()
 
         if not self.endpoint or not self.api_key:
             raise ValueError("LLM endpoint and API key must be configured")
@@ -113,7 +167,7 @@ When generating markdown, always wrap it in:
         if temperature is None:
             temperature = settings.LLM_TEMPERATURE
 
-        messages = [{"role": "system", "content": self.SYSTEM_PROMPT}]
+        messages = [{"role": "system", "content": self.system_prompt}]
         messages.extend(conversation_history)
 
         for attempt in range(settings.LLM_MAX_RETRIES):

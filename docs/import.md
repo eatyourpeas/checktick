@@ -5,6 +5,8 @@ The survey builder supports uploading a complete survey definition written in Ma
 - You already have the survey designed in a document and prefer to import the structure instead of dragging and dropping questions in the visual builder.
 - You want to lay out complex flows with repeatable sections or branching logic before wiring the final details in the UI.
 
+> **New:** You can also create surveys using our [AI-Assisted Survey Generator](/docs/ai-survey-generator/), which helps you design surveys through natural conversation instead of writing markdown manually.
+
 This document captures the grammar the importer recognises and the conventions that keep identifiers stable when you later edit the survey.
 
 ## Authoring overview

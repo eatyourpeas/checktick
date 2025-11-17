@@ -133,6 +133,47 @@ Include category keywords in filenames to ensure correct categorization:
 - Setup guides: `getting-started-api.md`, `quickstart-deploy.md`
 - Configuration: `theme-settings.md`, `branding-guide.md`
 
+## Linking Between Documentation Pages
+
+When linking from one documentation page to another, **always use the `/docs/slug/` URL format**, not the `.md` file extension.
+
+### ✅ Correct Link Format
+
+```markdown
+See the [Bulk Survey Import](/docs/import/) for details.
+Check [Authentication & Permissions](/docs/authentication-and-permissions/) guide.
+Read about [Collections](/docs/collections/) for repeatable questions.
+```
+
+### ❌ Incorrect Link Format
+
+```markdown
+See the [Bulk Survey Import](import.md) for details.  <!-- Will 404 -->
+Check [Authentication](../authentication-and-permissions.md) guide.  <!-- Won't work -->
+```
+
+### How It Works
+
+- The slug is the filename without the `.md` extension
+- URLs follow the pattern: `/docs/<slug>/`
+- Django handles the routing and markdown rendering
+- Links work correctly in both development and production
+
+### Examples
+
+| Markdown File | Slug | URL |
+|--------------|------|-----|
+| `import.md` | `import` | `/docs/import/` |
+| `authentication-and-permissions.md` | `authentication-and-permissions` | `/docs/authentication-and-permissions/` |
+| `api-datasets.md` | `api-datasets` | `/docs/api-datasets/` |
+| `self-hosting-quickstart.md` | `self-hosting-quickstart` | `/docs/self-hosting-quickstart/` |
+
+### Finding the Correct Slug
+
+1. Look at the filename in `docs/` folder
+2. Remove the `.md` extension
+3. Use the result as the slug in `/docs/slug/`
+
 ## Navigation Structure
 
 The documentation sidebar is organized hierarchically:
