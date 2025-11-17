@@ -343,9 +343,11 @@ EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 EMAIL_TIMEOUT = env.int("EMAIL_TIMEOUT", default=10)
 
 # LLM Configuration for AI Survey Generator
-RCPCH_OLLAMA_API_KEY = env("RCPCH_OLLAMA_API_KEY", default="")
-RCPCH_OLLAMA_API_URL = env("RCPCH_OLLAMA_API_URL", default="")
-LLM_ENABLED = bool(RCPCH_OLLAMA_API_KEY and RCPCH_OLLAMA_API_URL)
+LLM_API_KEY = env("LLM_API_KEY", default="")
+LLM_URL = env("LLM_URL", default="")
+LLM_AUTH_TYPE = env("LLM_AUTH_TYPE", default="apim")  # 'apim' or 'bearer'
+LLM_MODEL = env("LLM_MODEL", default="llama3.2")
+LLM_ENABLED = bool(LLM_API_KEY and LLM_URL)
 LLM_TIMEOUT = env.int("LLM_TIMEOUT", default=30)  # seconds
 LLM_MAX_RETRIES = env.int("LLM_MAX_RETRIES", default=2)
 LLM_TEMPERATURE = env.float("LLM_TEMPERATURE", default=0.2)  # Low for consistency

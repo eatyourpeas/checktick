@@ -5,6 +5,7 @@ This module provides a secure interface to the RCPCH Ollama LLM service
 for AI-assisted healthcare survey design.
 """
 
+import json
 import logging
 from pathlib import Path
 import re
@@ -144,8 +145,9 @@ class ConversationalSurveyLLM:
     """
 
     def __init__(self):
-        self.endpoint = settings.RCPCH_OLLAMA_API_URL
-        self.api_key = settings.RCPCH_OLLAMA_API_KEY
+        self.endpoint = settings.LLM_URL
+        self.api_key = settings.LLM_API_KEY
+        self.auth_type = settings.LLM_AUTH_TYPE
         self.timeout = settings.LLM_TIMEOUT
         self.system_prompt = load_system_prompt_from_docs()
 
@@ -173,13 +175,18 @@ class ConversationalSurveyLLM:
 
         for attempt in range(settings.LLM_MAX_RETRIES):
             try:
+                # Support both Azure APIM and standard OpenAI authentication
+                headers = {"Content-Type": "application/json"}
+                if self.auth_type.lower() == "apim":
+                    headers["Ocp-Apim-Subscription-Key"] = self.api_key
+                else:
+                    headers["Authorization"] = f"Bearer {self.api_key}"
+
                 response = requests.post(
                     self.endpoint,
-                    headers={
-                        "Authorization": f"Bearer {self.api_key}",
-                        "Content-Type": "application/json",
-                    },
+                    headers=headers,
                     json={
+                        "model": settings.LLM_MODEL,
                         "messages": messages,
                         "temperature": temperature,
                         "max_tokens": 2000,
@@ -191,13 +198,27 @@ class ConversationalSurveyLLM:
                 data = response.json()
 
                 # Handle OpenAI-compatible response format
+                content = None
                 if "choices" in data:
-                    return data["choices"][0]["message"]["content"]
+                    content = data["choices"][0]["message"]["content"]
                 elif "content" in data:
-                    return data["content"]
+                    content = data["content"]
                 else:
                     logger.error(f"Unexpected response format: {data.keys()}")
                     return None
+
+                # Strip markdown code fences if present
+                if content:
+                    content = content.strip()
+                    # Remove ```markdown and ``` wrappers
+                    if content.startswith("```markdown"):
+                        content = content[len("```markdown"):].strip()
+                    elif content.startswith("```"):
+                        content = content[3:].strip()
+                    if content.endswith("```"):
+                        content = content[:-3].strip()
+
+                return content
 
             except requests.RequestException as e:
                 logger.error(f"LLM request failed (attempt {attempt + 1}): {e}")
@@ -205,6 +226,85 @@ class ConversationalSurveyLLM:
                     return None
 
         return None
+
+    def chat_stream(
+        self, conversation_history: List[Dict[str, str]], temperature: float = None
+    ):
+        """
+        Stream conversation with LLM, yielding chunks as they arrive.
+
+        Args:
+            conversation_history: List of message dicts with 'role' and 'content'
+            temperature: Override default temperature
+
+        Yields:
+            Chunks of the LLM response as they arrive
+        """
+        if temperature is None:
+            temperature = settings.LLM_TEMPERATURE
+
+        messages = [{"role": "system", "content": self.system_prompt}]
+        messages.extend(conversation_history)
+
+        headers = {"Content-Type": "application/json"}
+        if self.auth_type.lower() == "apim":
+            headers["Ocp-Apim-Subscription-Key"] = self.api_key
+        else:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+
+        try:
+            response = requests.post(
+                self.endpoint,
+                headers=headers,
+                json={
+                    "model": settings.LLM_MODEL,
+                    "messages": messages,
+                    "temperature": temperature,
+                    "max_tokens": 2000,
+                    "stream": True,
+                },
+                timeout=self.timeout,
+                stream=True,
+            )
+
+            response.raise_for_status()
+
+            # Process the streaming response - stream everything as-is
+            for line in response.iter_lines():
+                if not line:
+                    continue
+
+                line = line.decode('utf-8')
+
+                # Skip SSE comments and empty lines
+                if line.startswith(':') or not line.strip():
+                    continue
+
+                # Parse SSE data
+                if line.startswith('data: '):
+                    data_str = line[6:]
+
+                    # Check for end of stream
+                    if data_str == '[DONE]':
+                        break
+
+                    try:
+                        data = json.loads(data_str)
+                        if 'choices' in data and len(data['choices']) > 0:
+                            delta = data['choices'][0].get('delta', {})
+                            chunk = delta.get('content', '')
+
+                            if chunk:
+                                # Stream each character
+                                for char in chunk:
+                                    yield char
+
+                    except json.JSONDecodeError:
+                        continue
+
+        except requests.RequestException as e:
+            logger.error(f"LLM streaming request failed: {e}")
+            yield ""
 
     @staticmethod
     def extract_markdown(llm_response: str) -> Optional[str]:

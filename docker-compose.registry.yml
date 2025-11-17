@@ -84,6 +84,13 @@ services:
       OIDC_OP_JWKS_ENDPOINT_GOOGLE: ${OIDC_OP_JWKS_ENDPOINT_GOOGLE:-https://www.googleapis.com/oauth2/v3/certs}
       OIDC_OP_JWKS_ENDPOINT_AZURE: ${OIDC_OP_JWKS_ENDPOINT_AZURE:-https://login.microsoftonline.com/common/discovery/v2.0/keys}
 
+      # ========================
+      # OPTIONAL: LLM/AI Features
+      # ========================
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_URL: ${LLM_URL:-}
+      LLM_AUTH_TYPE: ${LLM_AUTH_TYPE:-apim}
+
     depends_on:
       db:
         condition: service_healthy

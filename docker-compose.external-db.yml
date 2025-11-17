@@ -78,6 +78,13 @@ services:
       OIDC_OP_TENANT_ID_AZURE: ${OIDC_OP_TENANT_ID_AZURE:-}
       OIDC_RP_CLIENT_ID_GOOGLE: ${OIDC_RP_CLIENT_ID_GOOGLE:-}
       OIDC_RP_CLIENT_SECRET_GOOGLE: ${OIDC_RP_CLIENT_SECRET_GOOGLE:-}
+
+      # ========================
+      # OPTIONAL: LLM/AI Features
+      # ========================
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_URL: ${LLM_URL:-}
+      LLM_AUTH_TYPE: ${LLM_AUTH_TYPE:-apim}
       OIDC_RP_SIGN_ALGO: ${OIDC_RP_SIGN_ALGO:-RS256}
       OIDC_OP_JWKS_ENDPOINT_GOOGLE: ${OIDC_OP_JWKS_ENDPOINT_GOOGLE:-https://www.googleapis.com/oauth2/v3/certs}
       OIDC_OP_JWKS_ENDPOINT_AZURE: ${OIDC_OP_JWKS_ENDPOINT_AZURE:-https://login.microsoftonline.com/common/discovery/v2.0/keys}

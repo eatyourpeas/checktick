@@ -88,7 +88,7 @@
         </div>
         <div class="card-actions justify-end pt-2">
           {% if user.is_authenticated %}
-            <a class="btn btn-sm btn-primary" href="{% url 'surveys:bulk_upload' %}">{% trans "Try AI generator" %}</a>
+            <a class="btn btn-sm btn-primary" href="{% url 'surveys:list' %}">{% trans "Get started" %}</a>
           {% else %}
             <a class="btn btn-sm btn-primary" href="{% url 'core:docs_page' slug='ai-survey-generator' %}">{% trans "Learn more" %}</a>
           {% endif %}

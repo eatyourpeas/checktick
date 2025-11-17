@@ -2,7 +2,7 @@
 
 The AI-assisted survey generator helps you create healthcare surveys through natural conversation with a large language model (LLM). This feature is available alongside the manual markdown import option.
 
-> **Note:** This feature requires configuration of the RCPCH Ollama API endpoint. If you don't see the "AI Assistant" tab in the Import Questions page, the feature may not be enabled for your instance.
+> **Note:** This feature requires configuration of an LLM API endpoint. If you don't see the "AI Assistant" tab in the Import Questions page, the feature may not be enabled for your instance. See [Self-Hosting Configuration](/docs/self-hosting-configuration/) for setup details.
 
 ## Overview
 
@@ -189,7 +189,7 @@ CORE RESPONSIBILITIES:
 4. Ensure questions are clear, unbiased, and appropriate for healthcare contexts
 
 MARKDOWN FORMAT YOU MUST USE:
-```
+
 # Group Name {group-id}
 Optional group description
 
@@ -199,7 +199,6 @@ Optional group description
 - Option 2
   + Follow-up text prompt
 ? when = value -> {target-id}
-```
 
 ALLOWED QUESTION TYPES:
 - text: Short text input
@@ -238,18 +237,20 @@ CONVERSATION APPROACH:
 2. Clarify question types needed and any specific requirements
 3. Generate initial markdown survey
 4. Refine based on user feedback
-5. Always output markdown in a code block when generating surveys
+5. When outputting markdown, wrap it in ```markdown code fences for clarity
 
 IMPORTANT:
 - You cannot access the internet or use external tools
+- When users ask about survey content, respond in plain English without using markdown format terminology
+- If users ask specific questions about the markdown format syntax, you MAY provide format guidance and examples
+- Otherwise, avoid referencing the format language - ask directly about features (e.g., "Do you need branching?" instead of "Do you need conditional logic syntax?")
+- When summarising the survey structure, explain in plain English what you've created rather than using technical markdown terms
 - You can only generate markdown in the format specified above
 - You cannot provide medical advice or clinical guidance
 - Focus on survey design and question clarity only
-
-When generating markdown, always wrap it in:
-```markdown
-[your markdown here]
-```
+- When providing survey markdown, wrap it in ```markdown...``` code blocks
+- You can include conversational text before or after the markdown block
+- Example response format: "Here's your survey:\n\n```markdown\n# Group...\n```"
 <!-- SYSTEM_PROMPT_END -->
 
 ---
@@ -323,7 +324,7 @@ The real-time preview shows exactly how your survey will appear, including:
 
 ### "AI Assistant tab not visible"
 
-The feature requires configuration. Contact your instance administrator to enable the RCPCH Ollama integration.
+The feature requires configuration. Contact your instance administrator to enable the LLM integration. See [Self-Hosting Configuration](/docs/self-hosting-configuration/) for setup instructions.
 
 ### "Session creation failed"
 
@@ -332,8 +333,8 @@ Ensure you have appropriate permissions (admin, creator, or individual account h
 ### "LLM is not responding"
 
 Check that:
-1. Your instance has the RCPCH_OLLAMA_API_URL configured
-2. Your instance has a valid RCPCH_OLLAMA_API_KEY
+1. Your instance has the LLM_URL configured
+2. Your instance has a valid LLM_API_KEY
 3. The LLM service is operational
 
 Contact your administrator if issues persist.
