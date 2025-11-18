@@ -51,7 +51,7 @@
 
 
 <section class="mt-12">
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
   <div class="card bg-secondary/10 border border-secondary/20 hover:bg-secondary/20 transition-colors flex flex-col">
     <div class="card-body flex flex-col flex-1">
         <div class="flex-1">
@@ -69,6 +69,28 @@
             <a class="btn btn-sm btn-secondary" href="{% url 'surveys:create' %}">{% trans "Create a survey" %}</a>
           {% else %}
             <a class="btn btn-sm btn-secondary" href="/accounts/login/">{% trans "Login to start" %}</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  <div class="card bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-colors flex flex-col">
+    <div class="card-body flex flex-col flex-1">
+        <div class="flex-1">
+          <div class="flex items-center gap-3">
+            <span class="text-base-content/80">{% include "components/icons/llm.html" with classes="w-8 h-8" %}</span>
+            <h3 class="card-title text-base-content">{% trans "AI-Assisted" %}</h3>
+          </div>
+          <div class="h5 text-primary">{% trans "Generate surveys using AI conversation" %}</div>
+          <div class="h5 text-primary">{% trans "Self-hosted LLM with transparent prompts" %}</div>
+          <div class="h5 text-primary">{% trans "No third-party AI services" %}</div>
+          <div class="h5 text-primary">{% trans "Export to markdown for review and refinement" %}</div>
+        </div>
+        <div class="card-actions justify-end pt-2">
+          {% if user.is_authenticated %}
+            <a class="btn btn-sm btn-primary" href="{% url 'surveys:list' %}">{% trans "Get started" %}</a>
+          {% else %}
+            <a class="btn btn-sm btn-primary" href="{% url 'core:docs_page' slug='ai-survey-generator' %}">{% trans "Learn more" %}</a>
           {% endif %}
         </div>
       </div>

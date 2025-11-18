@@ -11,7 +11,7 @@ body:
         CheckTick maintains a curated collection of commonly-used NHS Data Dictionary standardized lists as global datasets. These are scraped from the official NHS Data Dictionary and made available to all users.
 
         Before requesting a new dataset, please:
-        1. Check the [existing NHS DD datasets](https://github.com/eatyourpeas/checktick/blob/main/checktick_app/surveys/management/commands/seed_nhs_datasets.py) to see if it's already available
+        1. Check the [existing NHS DD datasets](https://github.com/eatyourpeas/checktick/blob/main/checktick_app/surveys/management/commands/sync_nhs_dd_datasets.py) to see if it's already available
         2. Search existing issues to avoid duplicates
         3. Consider if this is a commonly-needed list that would benefit multiple users
 

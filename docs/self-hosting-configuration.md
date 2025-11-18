@@ -133,6 +133,28 @@ This provides access to:
 - Paediatric Diabetes Units
 - Integrated Care Boards (ICBs)
 
+#### AI-Assisted Survey Generation
+
+**Optional** - Enable AI features for conversational survey creation:
+
+```bash
+# Works with any OpenAI-compatible API endpoint
+LLM_URL=https://api.openai.com/v1/chat/completions
+LLM_API_KEY=your-api-key-here
+
+# Authentication type: 'apim' for Azure API Management, 'bearer' for standard OpenAI
+LLM_AUTH_TYPE=apim  # or 'bearer' (default: apim)
+```
+
+Supported LLM providers:
+- **Local Ollama**: `http://localhost:11434/v1/chat/completions` (use `LLM_AUTH_TYPE=bearer`)
+- **OpenAI**: `https://api.openai.com/v1/chat/completions` (use `LLM_AUTH_TYPE=bearer`)
+- **Azure OpenAI**: `https://your-resource.openai.azure.com/openai/deployments/your-model/chat/completions?api-version=2024-02-15-preview` (use `LLM_AUTH_TYPE=bearer`)
+- **Azure API Management**: Any APIM-protected endpoint (use `LLM_AUTH_TYPE=apim`)
+- **Custom endpoints**: Any OpenAI-compatible API
+
+When configured, users will see an "AI Assistant" tab in the bulk import interface that allows them to generate surveys through natural conversation. See [AI-Assisted Survey Generator](/docs/ai-survey-generator/) for usage details.
+
 #### Data Governance
 
 Configure data retention and export policies for GDPR/healthcare compliance:

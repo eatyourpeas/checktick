@@ -34,12 +34,14 @@ from django_ratelimit.decorators import ratelimit
 
 from .color import hex_to_oklch
 from .external_datasets import get_available_datasets
+from .llm_client import ConversationalSurveyLLM
 from .markdown_import import BulkParseError, parse_bulk_markdown_with_collections
 from .models import (
     AuditLog,
     CollectionDefinition,
     CollectionItem,
     DataSet,
+    LLMConversationSession,
     Organization,
     OrganizationMembership,
     QuestionGroup,
@@ -1750,6 +1752,10 @@ def survey_dashboard(request: HttpRequest, slug: str) -> HttpResponse:
         "can_export": (
             survey.is_closed and can_export_survey_data(request.user, survey)
         ),
+        # Check if survey has any questions for signposting
+        "has_questions": survey.question_groups.filter(
+            surveyquestion__survey=survey
+        ).exists(),
     }
     if any(
         v for k, v in brand_overrides.items() if k != "primary_hex"
@@ -5234,11 +5240,554 @@ def _clear_existing_bulk_import_content(survey: Survey) -> dict[str, int]:
     }
 
 
+def _handle_llm_new_session(request: HttpRequest, survey: Survey) -> JsonResponse:
+    """
+    Handle LLM new session creation (AJAX only).
+    Security: Only authenticated users with edit permission can create sessions.
+    """
+    if not settings.LLM_ENABLED:
+        return JsonResponse(
+            {"status": "error", "message": "AI generation not available"}, status=400
+        )
+
+    # Deactivate any existing session
+    LLMConversationSession.objects.filter(
+        survey=survey, user=request.user, is_active=True
+    ).update(is_active=False)
+
+    # Create new session
+    session = LLMConversationSession.objects.create(survey=survey, user=request.user)
+
+    # Audit log
+    AuditLog.objects.create(
+        actor=request.user,
+        scope=AuditLog.Scope.SURVEY,
+        survey=survey,
+        action=AuditLog.Action.ADD,
+        target_user=request.user,
+        metadata={"action": "llm_session_started", "session_id": str(session.id)},
+    )
+
+    return JsonResponse(
+        {
+            "status": "success",
+            "session_id": str(session.id),
+            "message": "New conversation started",
+        }
+    )
+
+
+def _handle_llm_send_message(request: HttpRequest, survey: Survey) -> JsonResponse:
+    """
+    Handle LLM message sending (AJAX only).
+    Security: Session must belong to requesting user, no survey modification occurs here.
+    """
+    if not settings.LLM_ENABLED:
+        return JsonResponse(
+            {"status": "error", "message": "AI generation not available"}, status=400
+        )
+
+    # Get user's active session
+    session = LLMConversationSession.objects.filter(
+        survey=survey, user=request.user, is_active=True
+    ).first()
+
+    if not session:
+        return JsonResponse(
+            {"status": "error", "message": "No active session"}, status=400
+        )
+
+    user_message = request.POST.get("message", "").strip()
+    if not user_message:
+        return JsonResponse(
+            {"status": "error", "message": "Message cannot be empty"}, status=400
+        )
+
+    # Add user message to history
+    session.add_message("user", user_message)
+
+    try:
+        # Get LLM response
+        llm_client = ConversationalSurveyLLM()
+        llm_response = llm_client.chat(session.get_conversation_for_llm())
+
+        if not llm_response:
+            return JsonResponse(
+                {"status": "error", "message": "Failed to get response from AI"},
+                status=500,
+            )
+
+        # Add assistant response to history
+        session.add_message("assistant", llm_response)
+
+        # Try to extract and validate markdown
+        markdown = llm_client.extract_markdown(llm_response)
+        markdown_valid = False
+        validation_errors = []
+
+        if markdown:
+            # Sanitize
+            markdown = llm_client.sanitize_markdown(markdown)
+
+            # Validate against parser (but don't create anything yet!)
+            try:
+                parse_bulk_markdown_with_collections(markdown)
+                markdown_valid = True
+
+                # Update session with valid markdown
+                session.current_markdown = markdown
+                session.save()
+
+            except BulkParseError as e:
+                validation_errors.append(str(e))
+
+        # Audit log for message
+        AuditLog.objects.create(
+            actor=request.user,
+            scope=AuditLog.Scope.SURVEY,
+            survey=survey,
+            action=AuditLog.Action.UPDATE,
+            target_user=request.user,
+            metadata={
+                "action": "llm_message_sent",
+                "session_id": str(session.id),
+                "markdown_valid": markdown_valid,
+            },
+        )
+
+        return JsonResponse(
+            {
+                "status": "success",
+                "assistant_message": llm_response,
+                "markdown": markdown if markdown else session.current_markdown,
+                "markdown_valid": markdown_valid,
+                "validation_errors": validation_errors,
+                "timestamp": timezone.now().isoformat(),
+            }
+        )
+
+    except ValueError as e:
+        logger.error(f"LLM configuration error: {e}")
+        return JsonResponse(
+            {"status": "error", "message": "AI generation not properly configured"},
+            status=500,
+        )
+    except Exception as e:
+        logger.error(f"LLM chat error: {e}", exc_info=True)
+        return JsonResponse(
+            {"status": "error", "message": "Unexpected error occurred"}, status=500
+        )
+
+
+def _handle_llm_new_session(request: HttpRequest, survey: Survey) -> JsonResponse:
+    """Handle AJAX request to start a new LLM conversation session."""
+    if not settings.LLM_ENABLED:
+        return JsonResponse(
+            {"status": "error", "message": "AI generation is not available"}, status=400
+        )
+
+    # Deactivate any existing active sessions
+    LLMConversationSession.objects.filter(
+        survey=survey, user=request.user, is_active=True
+    ).update(is_active=False)
+
+    # Create new session
+    session = LLMConversationSession.objects.create(survey=survey, user=request.user)
+
+    # Log audit
+    AuditLog.objects.create(
+        actor=request.user,
+        scope=AuditLog.Scope.SURVEY,
+        survey=survey,
+        action=AuditLog.Action.ADD,
+        target_user=request.user,
+        metadata={"action": "llm_session_started", "session_id": str(session.id)},
+    )
+
+    return JsonResponse(
+        {
+            "status": "success",
+            "session_id": str(session.id),
+            "message": "New conversation started",
+        }
+    )
+
+
+def _handle_llm_send_message(request: HttpRequest, survey: Survey) -> JsonResponse:
+    """Handle AJAX request to send message to LLM."""
+    if not settings.LLM_ENABLED:
+        return JsonResponse(
+            {"status": "error", "message": "AI generation is not available"}, status=400
+        )
+
+    # Get active session
+    session = LLMConversationSession.objects.filter(
+        survey=survey, user=request.user, is_active=True
+    ).first()
+
+    if not session:
+        return JsonResponse(
+            {"status": "error", "message": "No active session"}, status=400
+        )
+
+    user_message = request.POST.get("message", "").strip()
+    if not user_message:
+        return JsonResponse(
+            {"status": "error", "message": "Message cannot be empty"}, status=400
+        )
+
+    # Add user message to history
+    session.add_message("user", user_message)
+
+    try:
+        # Get LLM response
+        llm_client = ConversationalSurveyLLM()
+        llm_response = llm_client.chat(session.get_conversation_for_llm())
+
+        if not llm_response:
+            return JsonResponse(
+                {"status": "error", "message": "Failed to get response from AI"},
+                status=500,
+            )
+
+        # Add assistant response to history
+        session.add_message("assistant", llm_response)
+
+        # Try to extract markdown
+        markdown = llm_client.extract_markdown(llm_response)
+        markdown_valid = False
+        validation_errors = []
+
+        if markdown:
+            # Sanitize
+            markdown = llm_client.sanitize_markdown(markdown)
+
+            # Validate against parser
+            try:
+                parse_bulk_markdown_with_collections(markdown)
+                markdown_valid = True
+
+                # Update session with valid markdown
+                session.current_markdown = markdown
+                session.save()
+
+            except BulkParseError as e:
+                validation_errors.append(str(e))
+
+        # Log audit
+        AuditLog.objects.create(
+            actor=request.user,
+            scope=AuditLog.Scope.SURVEY,
+            survey=survey,
+            action=AuditLog.Action.UPDATE,
+            target_user=request.user,
+            metadata={
+                "action": "llm_message_sent",
+                "session_id": str(session.id),
+                "message_count": len(session.conversation_history),
+                "markdown_valid": markdown_valid,
+            },
+        )
+
+        return JsonResponse(
+            {
+                "status": "success",
+                "assistant_message": llm_response,
+                "markdown": markdown if markdown else session.current_markdown,
+                "markdown_valid": markdown_valid,
+                "validation_errors": validation_errors,
+                "timestamp": timezone.now().isoformat(),
+            }
+        )
+
+    except ValueError as e:
+        logger.error(f"LLM configuration error: {e}")
+        return JsonResponse(
+            {"status": "error", "message": "AI generation not properly configured"},
+            status=500,
+        )
+    except Exception as e:
+        logger.error(f"LLM chat error: {e}", exc_info=True)
+        return JsonResponse(
+            {"status": "error", "message": "Unexpected error occurred"}, status=500
+        )
+
+
 @login_required
+def _handle_llm_ai_chat(
+    request: HttpRequest, survey: Survey, data: dict
+) -> StreamingHttpResponse:
+    """Handle JSON AJAX request for AI chat with streaming - modern interface."""
+    if not settings.LLM_ENABLED:
+        return JsonResponse({"error": "AI generation is not available"}, status=400)
+
+    user_message = data.get("message", "").strip()
+    if not user_message:
+        return JsonResponse({"error": "Message cannot be empty"}, status=400)
+
+    session_id = data.get("session_id")
+
+    # Get or create session
+    if session_id:
+        try:
+            session = LLMConversationSession.objects.get(
+                id=session_id, survey=survey, user=request.user, is_active=True
+            )
+            # Refresh from database to ensure we have latest conversation history
+            session.refresh_from_db()
+        except LLMConversationSession.DoesNotExist:
+            session = None
+    else:
+        session = None
+
+    if not session:
+        # Deactivate any existing active sessions
+        LLMConversationSession.objects.filter(
+            survey=survey, user=request.user, is_active=True
+        ).update(is_active=False)
+
+        # Create new session
+        session = LLMConversationSession.objects.create(
+            survey=survey, user=request.user
+        )
+
+        # Log audit
+        AuditLog.objects.create(
+            actor=request.user,
+            scope=AuditLog.Scope.SURVEY,
+            survey=survey,
+            action=AuditLog.Action.ADD,
+            target_user=request.user,
+            metadata={"action": "llm_session_started", "session_id": str(session.id)},
+        )
+
+    # Add user message to history
+    session.add_message("user", user_message)
+
+    def stream_response():
+        """Generator function for streaming LLM response."""
+        import json
+
+        try:
+            # Send session_id first
+            yield f"data: {json.dumps({'session_id': str(session.id)})}\n\n"
+
+            # Get LLM response stream
+            llm_client = ConversationalSurveyLLM()
+            full_response = ""
+
+            for chunk in llm_client.chat_stream(session.get_conversation_for_llm()):
+                if chunk:
+                    full_response += chunk
+                    # Send each chunk as SSE
+                    yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+
+            if not full_response:
+                yield f"data: {json.dumps({'error': 'Failed to get response from AI'})}\n\n"
+                return
+
+            # Add complete assistant response to history
+            session.add_message("assistant", full_response)
+
+            # Try to extract markdown
+            markdown = llm_client.extract_markdown(full_response)
+
+            if markdown:
+                # Sanitize
+                markdown = llm_client.sanitize_markdown(markdown)
+
+                # Validate against parser
+                try:
+                    parse_bulk_markdown_with_collections(markdown)
+                    # Update session with valid markdown
+                    session.current_markdown = markdown
+                    session.save()
+                except BulkParseError:
+                    # Markdown extraction found but invalid - include in response anyway
+                    pass
+
+            # Log audit
+            AuditLog.objects.create(
+                actor=request.user,
+                scope=AuditLog.Scope.SURVEY,
+                survey=survey,
+                action=AuditLog.Action.UPDATE,
+                target_user=request.user,
+                metadata={
+                    "action": "llm_message_sent",
+                    "session_id": str(session.id),
+                    "has_markdown": bool(markdown),
+                },
+            )
+
+            # Send final metadata
+            yield f"data: {json.dumps({'done': True, 'markdown': markdown})}\n\n"
+
+        except Exception as e:
+            logger.exception("Error in LLM chat stream: %s", e)
+            yield f"data: {json.dumps({'error': 'An error occurred processing your request'})}\n\n"
+
+    response = StreamingHttpResponse(
+        stream_response(), content_type="text/event-stream"
+    )
+    response["Cache-Control"] = "no-cache"
+    response["X-Accel-Buffering"] = "no"
+    return response
+
+
+def _handle_llm_get_sessions(request: HttpRequest, survey: Survey) -> JsonResponse:
+    """Get list of all LLM conversation sessions for the current survey and user."""
+    try:
+        sessions = (
+            LLMConversationSession.objects.filter(survey=survey, user=request.user)
+            .order_by("-updated_at")
+            .values(
+                "id",
+                "created_at",
+                "updated_at",
+                "is_active",
+                "conversation_history",
+                "current_markdown",
+            )
+        )
+
+        session_list = []
+        for session in sessions:
+            # Get message count and last message preview
+            history = session.get("conversation_history", [])
+            message_count = len(history)
+            last_message = ""
+            if history:
+                # Get last user message for preview
+                for msg in reversed(history):
+                    if msg.get("role") == "user":
+                        last_message = msg.get("content", "")[:100]
+                        break
+
+            session_list.append(
+                {
+                    "id": str(session["id"]),
+                    "created_at": session["created_at"].isoformat(),
+                    "updated_at": session["updated_at"].isoformat(),
+                    "is_active": session["is_active"],
+                    "message_count": message_count,
+                    "last_message_preview": last_message,
+                    "has_markdown": bool(session.get("current_markdown")),
+                }
+            )
+
+        return JsonResponse({"sessions": session_list})
+
+    except Exception as e:
+        logger.exception("Error fetching LLM sessions: %s", e)
+        return JsonResponse(
+            {"error": "An error occurred fetching sessions"}, status=500
+        )
+
+
+def _handle_llm_get_session_details(
+    request: HttpRequest, survey: Survey, data: dict
+) -> JsonResponse:
+    """Get full details of a specific LLM conversation session."""
+    try:
+        session_id = data.get("session_id")
+        if not session_id:
+            return JsonResponse({"error": "session_id is required"}, status=400)
+
+        try:
+            session = LLMConversationSession.objects.get(
+                id=session_id, survey=survey, user=request.user
+            )
+        except LLMConversationSession.DoesNotExist:
+            return JsonResponse({"error": "Session not found"}, status=404)
+
+        return JsonResponse(
+            {
+                "id": str(session.id),
+                "created_at": session.created_at.isoformat(),
+                "updated_at": session.updated_at.isoformat(),
+                "is_active": session.is_active,
+                "conversation_history": session.conversation_history,
+                "current_markdown": session.current_markdown,
+            }
+        )
+
+    except Exception as e:
+        logger.exception("Error fetching LLM session details: %s", e)
+        return JsonResponse(
+            {"error": "An error occurred fetching session details"}, status=500
+        )
+
+
 def bulk_upload(request: HttpRequest, slug: str) -> HttpResponse:
     survey = get_object_or_404(Survey, slug=slug)
     require_can_edit(request.user, survey)
-    context = {"survey": survey, "example": _bulk_upload_example_md()}
+
+    # Check if LLM is enabled for context
+    llm_enabled = settings.LLM_ENABLED
+
+    # Handle JSON AJAX requests for LLM functionality
+    if request.content_type == "application/json":
+        try:
+            import json
+
+            data = json.loads(request.body)
+            action = data.get("action")
+
+            if action == "ai_chat":
+                return _handle_llm_ai_chat(request, survey, data)
+            elif action == "get_sessions":
+                return _handle_llm_get_sessions(request, survey)
+            elif action == "get_session_details":
+                return _handle_llm_get_session_details(request, survey, data)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    # Handle legacy AJAX requests for LLM functionality
+    if (
+        request.method == "POST"
+        and request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    ):
+        action = request.POST.get("action")
+
+        if action == "new_session":
+            return _handle_llm_new_session(request, survey)
+        elif action == "send_message":
+            return _handle_llm_send_message(request, survey)
+
+    # Original bulk upload logic continues
+    # Get tab parameter from URL to pre-select a tab
+    initial_tab = request.GET.get("tab", "manual")  # default to manual
+    if initial_tab not in ["manual", "ai", "history"]:
+        initial_tab = "manual"
+
+    # Check if survey has existing questions and export to markdown
+    has_questions = survey.question_groups.filter(
+        surveyquestion__survey=survey
+    ).exists()
+
+    existing_markdown = ""
+    if has_questions:
+        existing_markdown = _export_survey_to_markdown(survey)
+
+    context = {
+        "survey": survey,
+        "example": _bulk_upload_example_md(),
+        "llm_enabled": llm_enabled,
+        "initial_tab": initial_tab,
+        "markdown": existing_markdown,  # Pre-populate with existing questions
+    }
+
+    # Get or create LLM session if LLM is enabled
+    if llm_enabled:
+        llm_session = LLMConversationSession.objects.filter(
+            survey=survey, user=request.user, is_active=True
+        ).first()
+        if llm_session:
+            context["llm_session"] = llm_session
+            context["conversation_history"] = llm_session.conversation_history
+            context["current_markdown"] = llm_session.current_markdown
+
     if request.method == "POST":
         md = request.POST.get("markdown", "")
         try:
@@ -5432,6 +5981,168 @@ def bulk_upload(request: HttpRequest, slug: str) -> HttpResponse:
         messages.success(request, "".join(summary_parts))
         return redirect("surveys:dashboard", slug=survey.slug)
     return render(request, "surveys/bulk_upload.html", context)
+
+
+def _export_survey_to_markdown(survey: Survey) -> str:
+    """Export existing survey questions to markdown format."""
+    from collections import defaultdict
+
+    # Get all collections for this survey
+    collections = (
+        CollectionDefinition.objects.filter(survey=survey)
+        .select_related("parent")
+        .prefetch_related("items")
+    )
+
+    # Build collection hierarchy
+    parent_collections = {}
+    child_collections = defaultdict(list)
+
+    for coll in collections:
+        if coll.parent is None:
+            parent_collections[coll.id] = coll
+        else:
+            child_collections[coll.parent_id].append(coll)
+
+    # Get all question groups for this survey
+    groups = (
+        survey.question_groups.all()
+        .prefetch_related(
+            models.Prefetch(
+                "surveyquestion_set",
+                queryset=SurveyQuestion.objects.filter(survey=survey).order_by("order"),
+            )
+        )
+        .order_by("id")
+    )
+
+    # Build markdown
+    lines = []
+
+    for group in groups:
+        # Check if this group is part of a collection
+        parent_coll_item = (
+            CollectionItem.objects.filter(group=group, collection__parent__isnull=True)
+            .select_related("collection")
+            .first()
+        )
+
+        child_coll_item = (
+            CollectionItem.objects.filter(group=group, collection__parent__isnull=False)
+            .select_related("collection")
+            .first()
+        )
+
+        indent = ""
+
+        # If this is a child collection group
+        if child_coll_item:
+            indent = "> "
+            # Add REPEAT marker for child collection (only once per collection)
+            first_item = (
+                CollectionItem.objects.filter(collection=child_coll_item.collection)
+                .order_by("order")
+                .first()
+            )
+            if first_item and first_item.group_id == group.id:
+                max_count = child_coll_item.collection.max_count or 0
+                if max_count > 0:
+                    lines.append(f"{indent}REPEAT-{max_count}")
+                else:
+                    lines.append(f"{indent}REPEAT")
+
+        # If this is a parent collection group
+        elif parent_coll_item:
+            # Add REPEAT marker for parent collection (only once per collection)
+            first_item = (
+                CollectionItem.objects.filter(collection=parent_coll_item.collection)
+                .order_by("order")
+                .first()
+            )
+            if first_item and first_item.group_id == group.id:
+                max_count = parent_coll_item.collection.max_count or 0
+                if max_count > 0:
+                    lines.append(f"REPEAT-{max_count}")
+                else:
+                    lines.append("REPEAT")
+
+        # Add group heading
+        group_ref = group.name.lower().replace(" ", "-")
+        lines.append(f"{indent}# {group.name} {{{group_ref}}}")
+        if group.description:
+            lines.append(f"{indent}{group.description}")
+        lines.append("")
+
+        # Add questions
+        for question in group.surveyquestion_set.all():
+            required = "*" if question.required else ""
+            question_ref = question.text.lower()[:30].replace(" ", "-").strip("-")
+            lines.append(f"{indent}## {question.text}{required} {{{question_ref}}}")
+
+            # Question type
+            lines.append(f"{indent}({question.type})")
+
+            # Options for question types that need them
+            if question.type in [
+                "mc_single",
+                "mc_multi",
+                "dropdown",
+                "orderable",
+                "yesno",
+                "image",
+                "likert categories",
+            ]:
+                if question.options:
+                    for option in question.options:
+                        option_text = option.get("text", "")
+                        lines.append(f"{indent}- {option_text}")
+                        # Check for follow-up text
+                        if option.get("has_followup_text"):
+                            followup_label = option.get(
+                                "followup_text_label", "Please specify"
+                            )
+                            lines.append(f"{indent}  + {followup_label}")
+
+            # Likert number settings
+            elif question.type == "likert number":
+                if question.options:
+                    min_val = question.options.get("min")
+                    max_val = question.options.get("max")
+                    left_label = question.options.get("left_label", "")
+                    right_label = question.options.get("right_label", "")
+
+                    if min_val is not None:
+                        lines.append(f"{indent}min: {min_val}")
+                    if max_val is not None:
+                        lines.append(f"{indent}max: {max_val}")
+                    if left_label:
+                        lines.append(f"{indent}left: {left_label}")
+                    if right_label:
+                        lines.append(f"{indent}right: {right_label}")
+
+            # Branching rules
+            conditions = SurveyQuestionCondition.objects.filter(question=question)
+            for condition in conditions:
+                operator = condition.operator
+                value = condition.value or ""
+                if condition.target_question:
+                    target_ref = (
+                        condition.target_question.text.lower()[:30]
+                        .replace(" ", "-")
+                        .strip("-")
+                    )
+                    lines.append(
+                        f"{indent}? when {operator} {value} -> {{{target_ref}}}"
+                    )
+                elif condition.target_group:
+                    target_ref = condition.target_group.name.lower().replace(" ", "-")
+                    lines.append(
+                        f"{indent}? when {operator} {value} -> {{{target_ref}}}"
+                    )
+
+            lines.append("")
+
+    return "\n".join(lines)
 
 
 def _bulk_upload_example_md() -> str:

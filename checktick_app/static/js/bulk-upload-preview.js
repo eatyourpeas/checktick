@@ -3,15 +3,27 @@
   const previewContainer = document.getElementById("bulk-structure-preview");
   const countBadge = document.getElementById("bulk-structure-count");
   const openModalButton = document.getElementById("bulk-import-open-modal");
+  const openModalButtonTop = document.getElementById(
+    "bulk-import-open-modal-top"
+  );
   const confirmDialog = document.getElementById("bulk-import-confirm");
   const cancelModalButton = document.getElementById("bulk-import-cancel");
 
-  if (openModalButton && confirmDialog && cancelModalButton) {
-    openModalButton.addEventListener("click", () => {
-      if (typeof confirmDialog.showModal === "function") {
-        confirmDialog.showModal();
-      }
-    });
+  // Function to open modal
+  const openModal = () => {
+    if (typeof confirmDialog.showModal === "function") {
+      confirmDialog.showModal();
+    }
+  };
+
+  if (confirmDialog && cancelModalButton) {
+    // Add event listeners to both buttons
+    if (openModalButton) {
+      openModalButton.addEventListener("click", openModal);
+    }
+    if (openModalButtonTop) {
+      openModalButtonTop.addEventListener("click", openModal);
+    }
 
     cancelModalButton.addEventListener("click", () => {
       if (typeof confirmDialog.close === "function") {
@@ -517,4 +529,661 @@
   textarea.addEventListener("change", scheduleUpdate);
 
   updatePreview();
+})();
+
+// AI Assistant Tab Functionality
+(() => {
+  const tabManual = document.getElementById("tab-manual");
+  const tabAI = document.getElementById("tab-ai");
+  const manualContent = document.getElementById("manual-tab-content");
+  const aiContent = document.getElementById("ai-tab-content");
+  const chatMessages = document.getElementById("chat-messages");
+  const userMessageInput = document.getElementById("user-message-input");
+  const sendMessageBtn = document.getElementById("send-message-btn");
+  const newSessionBtn = document.getElementById("new-session-btn");
+  const aiLoading = document.getElementById("ai-loading");
+  const manualMarkdownInput = document.getElementById("markdown-input");
+
+  if (!tabManual || !tabAI || !manualContent || !aiContent) {
+    return;
+  }
+
+  let conversationHistory = [];
+  let sessionId = null;
+
+  // Get session history elements
+  const tabHistory = document.getElementById("tab-history");
+  const historyContent = document.getElementById("history-tab-content");
+  const sessionHistoryList = document.getElementById("session-history-list");
+
+  // Manual Input sub-tabs
+  const tabMarkdownInput = document.getElementById("tab-markdown-input");
+  const tabFormatReference = document.getElementById("tab-format-reference");
+  const markdownInputContent = document.getElementById(
+    "markdown-input-content"
+  );
+  const formatReferenceContent = document.getElementById(
+    "format-reference-content"
+  );
+
+  // Store current survey markdown
+  let currentSurveyMarkdown = "";
+
+  // Tab switching
+  const switchTab = () => {
+    if (tabManual.checked) {
+      manualContent.classList.remove("hidden");
+      aiContent.classList.add("hidden");
+      if (historyContent) historyContent.classList.add("hidden");
+    } else if (tabAI.checked) {
+      manualContent.classList.add("hidden");
+      aiContent.classList.remove("hidden");
+      if (historyContent) historyContent.classList.add("hidden");
+    } else if (tabHistory && tabHistory.checked) {
+      manualContent.classList.add("hidden");
+      aiContent.classList.add("hidden");
+      if (historyContent) historyContent.classList.remove("hidden");
+    }
+  };
+
+  tabManual.addEventListener("change", switchTab);
+  tabAI.addEventListener("change", switchTab);
+
+  if (tabHistory) {
+    tabHistory.addEventListener("change", () => {
+      switchTab();
+      if (tabHistory.checked) {
+        loadSessionHistory();
+      }
+    });
+  }
+
+  // Sub-tab switching for Manual Input
+  const switchManualSubTab = () => {
+    if (!tabMarkdownInput || !tabFormatReference) return;
+
+    if (tabMarkdownInput.checked) {
+      markdownInputContent.classList.remove("hidden");
+      formatReferenceContent.classList.add("hidden");
+    } else if (tabFormatReference.checked) {
+      markdownInputContent.classList.add("hidden");
+      formatReferenceContent.classList.remove("hidden");
+    }
+  };
+
+  if (tabMarkdownInput) {
+    tabMarkdownInput.addEventListener("change", switchManualSubTab);
+  }
+  if (tabFormatReference) {
+    tabFormatReference.addEventListener("change", switchManualSubTab);
+  }
+
+  // Load session history
+  const loadSessionHistory = async () => {
+    if (!sessionHistoryList) return;
+
+    // Show loading state
+    sessionHistoryList.innerHTML = `
+      <div class="text-sm text-base-content/70 text-center py-8">
+        <span class="loading loading-spinner loading-md"></span>
+        <p class="mt-2">Loading previous sessions...</p>
+      </div>
+    `;
+
+    try {
+      const response = await fetch(window.location.href, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
+            .value,
+        },
+        body: JSON.stringify({
+          action: "get_sessions",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      displaySessionList(data.sessions);
+    } catch (error) {
+      console.error("Error loading sessions:", error);
+      sessionHistoryList.innerHTML = `
+        <div class="alert alert-error text-sm">
+          <span>Error loading sessions: ${error.message}</span>
+        </div>
+      `;
+    }
+  };
+
+  // Display session list
+  const displaySessionList = (sessions) => {
+    if (!sessions || sessions.length === 0) {
+      sessionHistoryList.innerHTML = `
+        <div class="text-sm text-base-content/70 text-center py-8">
+          <p>No previous sessions found.</p>
+          <p class="mt-2">Start a new conversation in the AI Assistant tab.</p>
+        </div>
+      `;
+      return;
+    }
+
+    sessionHistoryList.innerHTML = "";
+
+    sessions.forEach((session) => {
+      const sessionCard = document.createElement("div");
+      sessionCard.className = `card bg-base-200 border border-base-300 ${
+        session.is_active ? "ring-2 ring-primary" : ""
+      }`;
+
+      const updatedDate = new Date(session.updated_at);
+      const formattedDate = updatedDate.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      sessionCard.innerHTML = `
+        <div class="card-body p-4">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-sm font-medium">${formattedDate}</span>
+                ${
+                  session.is_active
+                    ? '<span class="badge badge-primary badge-sm">Active</span>'
+                    : ""
+                }
+              </div>
+              <p class="text-sm text-base-content/70 truncate">${
+                session.last_message_preview || "No messages yet"
+              }</p>
+              <div class="flex gap-2 mt-2 text-xs text-base-content/60">
+                <span>${session.message_count} message${
+        session.message_count !== 1 ? "s" : ""
+      }</span>
+                ${
+                  session.has_markdown
+                    ? '<span class="text-success">• Has markdown</span>'
+                    : ""
+                }
+              </div>
+            </div>
+            <div class="flex flex-col gap-2">
+              <button class="btn btn-sm btn-primary resume-session-btn" data-session-id="${
+                session.id
+              }">
+                Resume
+              </button>
+              <button class="btn btn-sm btn-ghost view-session-btn" data-session-id="${
+                session.id
+              }">
+                View
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      sessionHistoryList.appendChild(sessionCard);
+    });
+
+    // Add event listeners to buttons using event delegation
+    sessionHistoryList
+      .querySelectorAll(".resume-session-btn")
+      .forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const sessionIdToResume = btn.dataset.sessionId;
+          resumeSession(sessionIdToResume);
+        });
+      });
+
+    sessionHistoryList.querySelectorAll(".view-session-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const sessionIdToView = btn.dataset.sessionId;
+        viewSession(sessionIdToView);
+      });
+    });
+  };
+
+  // Resume session
+  const resumeSession = async (sessionIdToResume) => {
+    try {
+      // Fetch session details
+      const response = await fetch(window.location.href, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
+            .value,
+        },
+        body: JSON.stringify({
+          action: "get_session_details",
+          session_id: sessionIdToResume,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      // Set session ID
+      sessionId = sessionIdToResume;
+
+      // Clear chat messages
+      chatMessages.innerHTML = "";
+
+      // Load conversation history
+      conversationHistory = data.conversation_history || [];
+
+      // Display all messages
+      conversationHistory.forEach((msg) => {
+        if (msg.role === "user" || msg.role === "assistant") {
+          addMessageToChat(msg.content, msg.role === "user");
+        }
+      });
+
+      // Load markdown if available
+      if (data.current_markdown) {
+        updateMarkdownOutput(data.current_markdown);
+      }
+
+      // Switch to AI tab
+      tabAI.checked = true;
+      switchTab();
+    } catch (error) {
+      console.error("Error resuming session:", error);
+      alert(`Error resuming session: ${error.message}`);
+    }
+  };
+
+  // View session
+  const viewSession = (sessionIdToView) => {
+    // TODO: Show modal with full conversation history
+    console.log("Viewing session:", sessionIdToView);
+  };
+
+  // Auto-scroll chat to bottom
+  const scrollChatToBottom = () => {
+    if (chatMessages) {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+  };
+
+  // Add message to chat UI
+  const addMessageToChat = (content, isUser = false) => {
+    if (!chatMessages) return;
+
+    const messageDiv = document.createElement("div");
+    messageDiv.className = `chat ${isUser ? "chat-end" : "chat-start"}`;
+
+    const bubble = document.createElement("div");
+    bubble.className = `chat-bubble ${isUser ? "chat-bubble-primary" : ""}`;
+    if (isUser) {
+      bubble.textContent = content;
+    } else {
+      bubble.innerHTML = renderMarkdown(content);
+    }
+
+    messageDiv.appendChild(bubble);
+
+    // Remove placeholder if exists
+    const placeholder = chatMessages.querySelector(".text-center");
+    if (placeholder) {
+      placeholder.remove();
+    }
+
+    chatMessages.appendChild(messageDiv);
+    scrollChatToBottom();
+  };
+
+  // Escape HTML entities
+  const escapeHtml = (text) => {
+    if (!text) return "";
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  };
+
+  // Simple markdown to HTML converter for chat messages
+  const renderMarkdown = (text) => {
+    if (!text) return "";
+
+    // Escape HTML first
+    let html = text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+
+    // Convert markdown syntax
+    html = html
+      // Bold
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      // Italic
+      .replace(/\*(.+?)\*/g, "<em>$1</em>")
+      // Code
+      .replace(/`(.+?)`/g, '<code class="bg-base-300 px-1 rounded">$1</code>')
+      // Lists (simple approach)
+      .replace(/^\* (.+)$/gm, "<li>$1</li>")
+      .replace(/^- (.+)$/gm, "<li>$1</li>")
+      // Wrap lists
+      .replace(/(<li>.*<\/li>)/gs, '<ul class="list-disc list-inside">$1</ul>')
+      // Headings
+      .replace(/^### (.+)$/gm, '<h3 class="font-bold text-base mt-2">$1</h3>')
+      .replace(/^## (.+)$/gm, '<h2 class="font-bold text-lg mt-2">$1</h2>')
+      .replace(/^# (.+)$/gm, '<h1 class="font-bold text-xl mt-2">$1</h1>')
+      // Line breaks
+      .replace(/\n/g, "<br>");
+
+    return html;
+  };
+
+  // Update markdown output in Manual Input tab
+  const updateMarkdownOutput = (markdown) => {
+    if (manualMarkdownInput && markdown) {
+      // Update the manual input textarea
+      manualMarkdownInput.value = markdown;
+      // Trigger input event to update the preview
+      manualMarkdownInput.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  };
+
+  // Extract markdown from code blocks
+  const extractMarkdownFromText = (text) => {
+    // First try: Look for ```markdown ... ``` or ``` ... ``` code blocks
+    const markdownMatch = text.match(/```(?:markdown)?\s*\n([\s\S]*?)```/);
+    if (markdownMatch) {
+      return markdownMatch[1].trim();
+    }
+
+    // Fallback: Look for markdown-like content (starts with # or ##)
+    // This handles cases where LLM doesn't use code fences
+    const lines = text.split("\n");
+    let markdownLines = [];
+    let foundMarkdownStart = false;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      // Look for markdown heading that starts with # followed by space and text ending with {id}
+      if (!foundMarkdownStart && /^#+\s+.+\s+\{[^}]+\}/.test(line)) {
+        foundMarkdownStart = true;
+      }
+
+      if (foundMarkdownStart) {
+        markdownLines.push(lines[i]);
+      }
+    }
+
+    return markdownLines.length > 0 ? markdownLines.join("\n").trim() : null;
+  };
+
+  // Separate conversational text from markdown
+  const separateConversationAndMarkdown = (text) => {
+    const markdown = extractMarkdownFromText(text);
+
+    if (!markdown) {
+      return { conversation: text, markdown: null };
+    }
+
+    // Remove the markdown from conversation
+    let conversation = text;
+
+    // If it was in code fences, remove the whole block
+    conversation = conversation.replace(/```(?:markdown)?\s*\n[\s\S]*?```/, "");
+
+    // Otherwise remove the extracted markdown
+    if (conversation === text) {
+      conversation = conversation.replace(markdown, "");
+    }
+
+    conversation = conversation.trim();
+
+    return { conversation, markdown };
+  };
+
+  // Send message to AI
+  const sendMessage = async () => {
+    const message = userMessageInput.value.trim();
+    if (!message) {
+      return;
+    }
+
+    // Add user message to UI
+    addMessageToChat(message, true);
+    conversationHistory.push({ role: "user", content: message });
+
+    // Clear input
+    userMessageInput.value = "";
+
+    // Show loading
+    aiLoading.classList.remove("hidden");
+    sendMessageBtn.disabled = true;
+
+    try {
+      // Create a placeholder message element for streaming response
+      const assistantMsgDiv = document.createElement("div");
+      assistantMsgDiv.className = "chat chat-start";
+      const bubble = document.createElement("div");
+      bubble.className = "chat-bubble chat-bubble-secondary";
+      bubble.textContent = "";
+      assistantMsgDiv.appendChild(bubble);
+      chatMessages.appendChild(assistantMsgDiv);
+      scrollChatToBottom();
+
+      let fullResponse = "";
+      let currentMarkdown = "";
+
+      // Use fetch with streaming
+      const response = await fetch(window.location.href, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
+            .value,
+        },
+        body: JSON.stringify({
+          action: "ai_chat",
+          message: message,
+          session_id: sessionId,
+          conversation_history: conversationHistory,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) break;
+
+        // Decode the chunk
+        const chunk = decoder.decode(value, { stream: true });
+        buffer += chunk;
+
+        // Process complete SSE messages (each ends with \n\n)
+        let boundary;
+        while ((boundary = buffer.indexOf("\n\n")) !== -1) {
+          const message = buffer.substring(0, boundary);
+          buffer = buffer.substring(boundary + 2);
+
+          // Each SSE message should start with "data: "
+          if (message.startsWith("data: ")) {
+            const jsonStr = message.substring(6).trim();
+            if (!jsonStr) continue;
+
+            try {
+              const data = JSON.parse(jsonStr);
+
+              if (data.error) {
+                throw new Error(data.error);
+              }
+
+              if (data.session_id) {
+                sessionId = data.session_id;
+              }
+
+              if (data.chunk) {
+                fullResponse += data.chunk;
+                bubble.textContent = fullResponse;
+                scrollChatToBottom();
+              }
+
+              if (data.markdown) {
+                currentMarkdown = data.markdown;
+              }
+
+              if (data.done) {
+                console.log("Full LLM response:", fullResponse);
+
+                // Separate conversation from markdown
+                const { conversation, markdown } =
+                  separateConversationAndMarkdown(fullResponse);
+
+                console.log("Extracted conversation:", conversation);
+                console.log("Extracted markdown:", markdown);
+
+                // Update chat bubble with rendered conversational text
+                if (conversation) {
+                  bubble.innerHTML = renderMarkdown(conversation);
+                } else {
+                  // If no conversation, show a generic message
+                  bubble.innerHTML = renderMarkdown(
+                    "I've updated the survey markdown."
+                  );
+                }
+
+                // Update conversation history with full response
+                conversationHistory.push({
+                  role: "assistant",
+                  content: fullResponse,
+                });
+
+                // Update markdown in manual input tab
+                if (markdown) {
+                  console.log("Updating manual input with markdown:", markdown);
+                  updateMarkdownOutput(markdown);
+                }
+
+                // Update markdown in manual input tab
+                const markdownToUse = currentMarkdown || markdown;
+                if (markdownToUse) {
+                  console.log(
+                    "Updating manual input with markdown:",
+                    markdownToUse
+                  );
+                  updateMarkdownOutput(markdownToUse);
+                }
+              }
+            } catch (e) {
+              console.error(
+                "Error parsing SSE data:",
+                e,
+                "JSON string:",
+                jsonStr
+              );
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      const errorMsg = document.createElement("div");
+      errorMsg.className = "alert alert-error text-sm";
+      errorMsg.textContent = `Error: ${error.message}`;
+      chatMessages.appendChild(errorMsg);
+      scrollChatToBottom();
+    } finally {
+      aiLoading.classList.add("hidden");
+      sendMessageBtn.disabled = false;
+      userMessageInput.focus();
+    }
+  };
+
+  // New session handler
+  const startNewSession = () => {
+    conversationHistory = [];
+    sessionId = null;
+    chatMessages.innerHTML = `
+      <div class="text-sm text-base-content/70 text-center py-8">
+        Start a conversation to generate your survey using AI. Describe what you want to measure, and the assistant will help you create the markdown.
+      </div>
+    `;
+    // Clear manual input
+    if (manualMarkdownInput) {
+      manualMarkdownInput.value = "";
+      manualMarkdownInput.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  };
+
+  // Event listeners
+  if (sendMessageBtn) {
+    sendMessageBtn.addEventListener("click", sendMessage);
+  }
+
+  if (userMessageInput) {
+    userMessageInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+  }
+
+  if (newSessionBtn) {
+    newSessionBtn.addEventListener("click", startNewSession);
+  }
+
+  // Handle initial tab selection from data attribute
+  const scriptTag = document.querySelector("script[data-initial-tab]");
+  if (scriptTag) {
+    const initialTab = scriptTag.dataset.initialTab;
+    if (initialTab === "ai") {
+      const tabAi = document.getElementById("tab-ai");
+      const manualContent = document.getElementById("manual-tab-content");
+      const aiContent = document.getElementById("ai-tab-content");
+      const historyContent = document.getElementById("history-tab-content");
+
+      if (tabAi) tabAi.checked = true;
+      if (manualContent) manualContent.classList.add("hidden");
+      if (aiContent) aiContent.classList.remove("hidden");
+      if (historyContent) historyContent.classList.add("hidden");
+    } else if (initialTab === "history") {
+      const tabHistory = document.getElementById("tab-history");
+      const manualContent = document.getElementById("manual-tab-content");
+      const aiContent = document.getElementById("ai-tab-content");
+      const historyContent = document.getElementById("history-tab-content");
+
+      if (tabHistory) tabHistory.checked = true;
+      if (manualContent) manualContent.classList.add("hidden");
+      if (aiContent) aiContent.classList.add("hidden");
+      if (historyContent) historyContent.classList.remove("hidden");
+    }
+    // manual is default, already checked in HTML
+  }
 })();

@@ -33,6 +33,10 @@ services:
       OIDC_RP_SIGN_ALGO: ${OIDC_RP_SIGN_ALGO}
       OIDC_OP_JWKS_ENDPOINT_GOOGLE: ${OIDC_OP_JWKS_ENDPOINT_GOOGLE}
       OIDC_OP_JWKS_ENDPOINT_AZURE: ${OIDC_OP_JWKS_ENDPOINT_AZURE}
+      # LLM Configuration
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_URL: ${LLM_URL}
+      LLM_AUTH_TYPE: ${LLM_AUTH_TYPE:-apim}
     ports:
       - "8000:8000"
     depends_on:
