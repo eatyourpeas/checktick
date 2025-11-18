@@ -6088,7 +6088,10 @@ def _export_survey_to_markdown(survey: Survey) -> str:
                 # Check if it's text number
                 if isinstance(question.options, list) and len(question.options) > 0:
                     first_option = question.options[0]
-                    if first_option.get("type") == "text" and first_option.get("format") == "number":
+                    if (
+                        first_option.get("type") == "text"
+                        and first_option.get("format") == "number"
+                    ):
                         export_type = "text number"
             elif question.type == "likert" and question.options:
                 # Check if it's categories or number
@@ -6107,7 +6110,10 @@ def _export_survey_to_markdown(survey: Survey) -> str:
                 # Check if it's categories or number type
                 if isinstance(question.options, list) and len(question.options) > 0:
                     first_option = question.options[0]
-                    if first_option.get("type") == "categories" and "labels" in first_option:
+                    if (
+                        first_option.get("type") == "categories"
+                        and "labels" in first_option
+                    ):
                         # Likert categories - export as list
                         for label in first_option["labels"]:
                             lines.append(f"{indent}- {label}")
@@ -6139,7 +6145,11 @@ def _export_survey_to_markdown(survey: Survey) -> str:
                 if question.options:
                     for option in question.options:
                         # Options can have 'text', 'label', or 'value' keys
-                        option_text = option.get("text") or option.get("label") or option.get("value", "")
+                        option_text = (
+                            option.get("text")
+                            or option.get("label")
+                            or option.get("value", "")
+                        )
                         lines.append(f"{indent}- {option_text}")
                         # Check for follow-up text
                         if option.get("has_followup_text"):
@@ -6817,8 +6827,8 @@ def dataset_delete(request: HttpRequest, dataset_id: int) -> HttpResponse:
 @login_required
 def published_templates_list(request):
     """Browse published question group templates."""
-    from django.db.models import Q
     from django.core.paginator import Paginator
+    from django.db.models import Q
 
     user = request.user
 
@@ -7004,7 +7014,9 @@ def question_group_publish(request, slug, gid):
                 "surveys:published_template_detail", template_id=publication.pk
             )
     else:
-        form = PublishQuestionGroupForm(user=request.user, question_group=group, survey=survey)
+        form = PublishQuestionGroupForm(
+            user=request.user, question_group=group, survey=survey
+        )
 
     return render(
         request,
@@ -7172,7 +7184,10 @@ def _export_question_group_to_markdown(group: QuestionGroup, survey: Survey) -> 
             # Check if it's text number
             if isinstance(question.options, list) and len(question.options) > 0:
                 first_option = question.options[0]
-                if first_option.get("type") == "text" and first_option.get("format") == "number":
+                if (
+                    first_option.get("type") == "text"
+                    and first_option.get("format") == "number"
+                ):
                     export_type = "text number"
         elif question.type == "likert" and question.options:
             # Check if it's categories or number
@@ -7191,7 +7206,10 @@ def _export_question_group_to_markdown(group: QuestionGroup, survey: Survey) -> 
             # Check if it's categories or number type
             if isinstance(question.options, list) and len(question.options) > 0:
                 first_option = question.options[0]
-                if first_option.get("type") == "categories" and "labels" in first_option:
+                if (
+                    first_option.get("type") == "categories"
+                    and "labels" in first_option
+                ):
                     # Likert categories - export as list
                     for label in first_option["labels"]:
                         lines.append(f"- {label}")
@@ -7223,7 +7241,11 @@ def _export_question_group_to_markdown(group: QuestionGroup, survey: Survey) -> 
             if question.options:
                 for option in question.options:
                     # Options can have 'text', 'label', or 'value' keys
-                    option_text = option.get("text") or option.get("label") or option.get("value", "")
+                    option_text = (
+                        option.get("text")
+                        or option.get("label")
+                        or option.get("value", "")
+                    )
                     lines.append(f"- {option_text}")
                     # Check for follow-up text
                     if option.get("has_followup_text"):

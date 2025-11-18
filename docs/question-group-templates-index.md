@@ -24,7 +24,7 @@ This appendix lists validated questionnaires and instruments available as global
 
 ## Template File Format
 
-Global templates are stored as markdown files in the `docs/` directory with the naming pattern `question-group-templates-{slug}.md`.
+Global templates are stored as markdown files in the `docs/question-group-templates/` directory.
 
 ### Required Structure
 
