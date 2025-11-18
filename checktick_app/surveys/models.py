@@ -104,10 +104,129 @@ class QuestionGroup(models.Model):
     schema = models.JSONField(
         default=dict, help_text="Definition of questions in this group"
     )
+    imported_from = models.ForeignKey(
+        "PublishedQuestionGroup",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="imported_copies",
+        help_text="Source published template if this was imported",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:  # pragma: no cover
         return self.name
+
+    def to_markdown(self, survey=None) -> str:
+        """Export this group to markdown format."""
+        # Import here to avoid circular dependency
+
+        # Create a temporary survey-like structure for export
+        # Implementation will be completed in views module
+        raise NotImplementedError("Will be implemented with export functionality")
+
+    def can_publish(self, user: User, level: str) -> bool:
+        """Check if user can publish this group at given level."""
+        from .permissions import can_publish_question_group
+
+        return can_publish_question_group(user, self, level)
+
+
+class PublishedQuestionGroup(models.Model):
+    """A published, reusable QuestionGroup template."""
+
+    class PublicationLevel(models.TextChoices):
+        ORGANIZATION = "organization", "Organization"
+        GLOBAL = "global", "Global"
+
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Active"
+        DELETED = "deleted", "Deleted (Soft Delete)"
+
+    # Source
+    source_group = models.ForeignKey(
+        QuestionGroup,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="published_versions",
+        help_text="Original QuestionGroup this was published from",
+    )
+
+    # Ownership & Permissions
+    publisher = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="published_templates"
+    )
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        help_text="Organization for org-level publications",
+    )
+    publication_level = models.CharField(
+        max_length=20, choices=PublicationLevel.choices
+    )
+
+    # Content (snapshot at publication time)
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    markdown = models.TextField(help_text="Markdown representation")
+
+    # Attribution
+    attribution = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Attribution metadata (authors, citation, PMID, DOI, license)",
+    )
+
+    # Metadata
+    tags = models.JSONField(
+        default=list, blank=True, help_text="Tags for categorization and search"
+    )
+    language = models.CharField(max_length=10, default="en")
+    version = models.CharField(max_length=50, blank=True)
+
+    # Status
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.ACTIVE
+    )
+
+    # Usage tracking
+    import_count = models.PositiveIntegerField(default=0)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["publication_level", "status"]),
+            models.Index(fields=["organization", "status"]),
+            models.Index(fields=["-created_at"]),
+            models.Index(fields=["-import_count"]),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    Q(publication_level="organization", organization__isnull=False)
+                    | Q(publication_level="global")
+                ),
+                name="org_required_for_org_level",
+            )
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover
+        level = (
+            "Global"
+            if self.publication_level == "global"
+            else f"Org: {self.organization}"
+        )
+        return f"{self.name} ({level})"
+
+    def increment_import_count(self) -> None:
+        """Increment the import counter when template is used."""
+        self.import_count += 1
+        self.save(update_fields=["import_count"])
 
 
 class Survey(models.Model):
