@@ -205,7 +205,7 @@
 
         <!-- Actions -->
         <div class="flex gap-3 justify-end">
-          <a href="{% url 'surveys:group_detail' group_id=question_group.id %}" class="btn btn-outline">
+          <a href="{% url 'surveys:groups' slug=survey.slug %}" class="btn btn-outline">
             {% trans "Cancel" %}
           </a>
           <button type="submit" class="btn btn-primary">

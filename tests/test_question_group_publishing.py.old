@@ -1,0 +1,937 @@
+"""
+Comprehensive tests for question group publishing and import functionality.
+
+Tests cover:
+- Publishing permissions (organization-level and global)
+- Template discovery and listing (public, organization, global)
+- Import functionality with schema preservation
+- Attribution preservation through export/import
+- Publisher credit privacy controls
+- Rate limiting enforcement
+- Markdown round-trip integrity
+- Global template sync management command
+"""
+
+import json
+from io import StringIO
+from unittest.mock import patch
+
+from django.contrib.auth import get_user_model
+from django.core.management import call_command
+import pytest
+
+from checktick_app.surveys.models import (
+    Organization,
+    OrganizationMembership,
+    PublishedQuestionGroup,
+    QuestionGroup,
+    Survey,
+)
+
+User = get_user_model()
+TEST_PASSWORD = "test-pass"
+
+
+@pytest.fixture(autouse=True)
+def disable_rate_limiting(settings):
+    """Disable rate limiting for all tests."""
+    settings.RATELIMIT_ENABLE = False
+
+
+@pytest.fixture
+def publisher_user(django_user_model):
+    """Create a user who can publish question groups."""
+    return django_user_model.objects.create_user(
+        username="publisher@example.com", password=TEST_PASSWORD
+    )
+
+
+@pytest.fixture
+def other_user(django_user_model):
+    """Create another user for permission tests."""
+    return django_user_model.objects.create_user(
+        username="other@example.com", password=TEST_PASSWORD
+    )
+
+
+@pytest.fixture
+def test_organization(publisher_user):
+    """Create a test organization to bypass encryption setup."""
+    return Organization.objects.create(
+        name="Test Organization", owner=publisher_user
+    )
+
+
+@pytest.fixture
+def other_organization(other_user):
+    """Create another organization for cross-org tests."""
+    return Organization.objects.create(name="Other Organization", owner=other_user)
+
+
+@pytest.fixture
+def org_admin(django_user_model, test_organization):
+    """Create an organization admin member."""
+    user = django_user_model.objects.create_user(
+        username="admin@example.com", password=TEST_PASSWORD
+    )
+    OrganizationMembership.objects.create(
+        organization=test_organization, user=user, role="admin"
+    )
+    return user
+
+
+@pytest.fixture
+def org_creator(django_user_model, test_organization):
+    """Create an organization creator member."""
+    user = django_user_model.objects.create_user(
+        username="creator@example.com", password=TEST_PASSWORD
+    )
+    OrganizationMembership.objects.create(
+        organization=test_organization, user=user, role="creator"
+    )
+    return user
+
+
+@pytest.fixture
+def org_viewer(django_user_model, test_organization):
+    """Create an organization viewer member."""
+    user = django_user_model.objects.create_user(
+        username="viewer@example.com", password=TEST_PASSWORD
+    )
+    OrganizationMembership.objects.create(
+        organization=test_organization, user=user, role="viewer"
+    )
+    return user
+
+
+@pytest.fixture
+def test_survey(publisher_user, test_organization):
+    """Create a test survey with question groups."""
+    return Survey.objects.create(
+        owner=publisher_user,
+        name="Test Survey",
+        slug="test-survey",
+        organization=test_organization,
+    )
+
+
+@pytest.fixture
+def question_group(test_survey, publisher_user):
+    """Create a question group for testing."""
+    group = QuestionGroup.objects.create(
+        owner=publisher_user,
+        name="Depression Screening",
+        description="Standard PHQ-9 assessment",
+    )
+    test_survey.question_groups.add(group)
+    return group
+
+
+@pytest.fixture
+def published_org_template(publisher_user, test_organization):
+    """Create a published organization-level template."""
+    return PublishedQuestionGroup.objects.create(
+        name="Org Template",
+        description="Organization-level template",
+        publisher=publisher_user,
+        organization=test_organization,
+        publication_level="organization",
+        status="active",
+        markdown="# Org Template\n\n## Q1\ntype: text\nQuestion text here",
+        show_publisher_credit=True,
+    )
+
+
+@pytest.fixture
+def published_global_template(publisher_user):
+    """Create a published global template."""
+    return PublishedQuestionGroup.objects.create(
+        name="Global Template",
+        description="Global template available to all",
+        publisher=publisher_user,
+        publication_level="global",
+        status="active",
+        markdown="# Global Template\n\n## Q1\ntype: text\nQuestion text here",
+        attribution={
+            "authors": "Test Author",
+            "title": "Test Scale",
+            "year": 2024,
+        },
+        show_publisher_credit=False,
+    )
+
+
+@pytest.mark.django_db
+class TestPublishingPermissions:
+    """Test permission checks for publishing question groups."""
+
+    def test_owner_can_publish_to_organization(
+        self, client, publisher_user, test_organization, question_group, test_survey
+    ):
+        """Organization owner should be able to publish to organization level."""
+        client.force_login(publisher_user)
+
+        response = client.post(
+            f"/surveys/{test_survey.slug}/groups/{question_group.id}/publish/",
+            data={
+                "publication_level": "organization",
+                "name": "Test Template",
+                "description": "Test description",
+                "tags": "screening, mental-health",
+            },
+        )
+
+        assert response.status_code == 302  # Redirect on success
+        assert PublishedQuestionGroup.objects.filter(
+            publication_level="organization", organization=test_organization
+        ).exists()
+
+    def test_admin_can_publish_to_organization(
+        self, client, org_admin, test_organization, test_survey
+    ):
+        """Organization admin should be able to publish to organization level."""
+        group = QuestionGroup.objects.create(
+            owner=org_admin, name="Admin Group"
+        )
+        test_survey.question_groups.add(group)
+        client.force_login(org_admin)
+
+        response = client.post(
+            f"/surveys/{test_survey.slug}/groups/{group.id}/publish/",
+            data={
+                "publication_level": "organization",
+                "name": "Admin Template",
+                "description": "Published by admin",
+                "tags": "test",
+            },
+        )
+
+        assert response.status_code == 302
+        assert PublishedQuestionGroup.objects.filter(publisher=org_admin).exists()
+
+    def test_creator_cannot_publish(
+        self, client, org_creator, test_organization, test_survey
+    ):
+        """Organization creator should not be able to publish."""
+        group = QuestionGroup.objects.create(
+            owner=org_creator, name="Creator Group"
+        )
+        test_survey.question_groups.add(group)
+        client.force_login(org_creator)
+
+        response = client.get(f"/surveys/{test_survey.slug}/groups/{group.id}/publish/")
+
+        assert response.status_code == 403  # Forbidden
+
+    def test_viewer_cannot_publish(
+        self, client, org_viewer, test_organization, test_survey
+    ):
+        """Organization viewer should not be able to publish."""
+        group = QuestionGroup.objects.create(
+            owner=org_viewer, name="Viewer Group"
+        )
+        test_survey.question_groups.add(group)
+        client.force_login(org_viewer)
+
+        response = client.get(f"/surveys/{test_survey.slug}/groups/{group.id}/publish/")
+
+        assert response.status_code == 403
+
+    def test_non_member_cannot_publish(
+        self, client, other_user, question_group, test_survey
+    ):
+        """User not in organization should not be able to publish."""
+        client.force_login(other_user)
+
+        response = client.get(f"/surveys/{test_survey.slug}/groups/{question_group.id}/publish/")
+
+        assert response.status_code == 403
+
+    def test_unauthenticated_cannot_publish(self, client, question_group, test_survey):
+        """Anonymous user should be redirected to login."""
+        response = client.get(f"/surveys/{test_survey.slug}/groups/{question_group.id}/publish/")
+
+        assert response.status_code == 302
+        assert "/accounts/login/" in response.url
+
+
+@pytest.mark.django_db
+class TestTemplateDiscovery:
+    """Test template listing and search functionality."""
+
+    def test_anonymous_sees_only_global_templates(
+        self, client, published_global_template, published_org_template
+    ):
+        """Anonymous users should only see global templates."""
+        response = client.get("/surveys/templates/")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Global Template" in content
+        assert "Org Template" not in content
+
+    def test_org_member_sees_org_and_global_templates(
+        self, client, org_creator, published_global_template, published_org_template
+    ):
+        """Organization members should see both org and global templates."""
+        client.force_login(org_creator)
+
+        response = client.get("/surveys/templates/")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Global Template" in content
+        assert "Org Template" in content
+
+    def test_non_member_does_not_see_org_templates(
+        self, client, other_user, published_org_template
+    ):
+        """Users not in organization should not see org templates."""
+        client.force_login(other_user)
+
+        response = client.get("/surveys/templates/")
+
+        content = response.content.decode()
+        assert "Org Template" not in content
+
+    def test_filter_by_publication_level(
+        self, client, publisher_user, published_global_template, published_org_template
+    ):
+        """Users should be able to filter templates by publication level."""
+        client.force_login(publisher_user)
+
+        # Filter for global only
+        response = client.get("/surveys/templates/?level=global")
+        content = response.content.decode()
+        assert "Global Template" in content
+
+        # Filter for organization only
+        response = client.get("/surveys/templates/?level=organization")
+        content = response.content.decode()
+        assert "Org Template" in content
+
+    def test_search_templates(
+        self, client, published_global_template, published_org_template
+    ):
+        """Users should be able to search templates by title/description."""
+        response = client.get("/surveys/templates/?q=Global")
+
+        content = response.content.decode()
+        assert "Global Template" in content
+        assert "Org Template" not in content
+
+    def test_pagination(self, client, publisher_user):
+        """Templates should be paginated at 20 per page."""
+        # Create 25 global templates
+        for i in range(25):
+            PublishedQuestionGroup.objects.create(
+                name=f"Template {i}",
+                description="Test",
+                publisher=publisher_user,
+                publication_level="global",
+                status="active",
+                markdown=f"# Template {i}",
+            )
+
+        response = client.get("/surveys/templates/")
+        content = response.content.decode()
+
+        # Should see pagination controls
+        assert "page=2" in content or "Next" in content
+
+
+@pytest.mark.django_db
+class TestImportFunctionality:
+    """Test importing templates into surveys."""
+
+    def test_import_global_template_authenticated(
+        self, client, publisher_user, test_survey, published_global_template
+    ):
+        """Authenticated users should be able to import global templates."""
+        client.force_login(publisher_user)
+
+        response = client.post(
+            f"/surveys/{test_survey.id}/import-template/",
+            data={"template_id": published_global_template.id},
+        )
+
+        assert response.status_code == 302
+
+        # Verify import
+        imported_group = QuestionGroup.objects.filter(survey=test_survey).first()
+        assert imported_group is not None
+        assert imported_group.imported_from == published_global_template
+        assert published_global_template.import_count == 1
+
+    def test_import_org_template_by_member(
+        self, client, org_creator, test_survey, published_org_template
+    ):
+        """Organization members should be able to import org templates."""
+        client.force_login(org_creator)
+
+        response = client.post(
+            f"/surveys/{test_survey.id}/import-template/",
+            data={"template_id": published_org_template.id},
+        )
+
+        assert response.status_code == 302
+
+        # Verify import
+        imported_group = QuestionGroup.objects.filter(survey=test_survey).first()
+        assert imported_group is not None
+        assert imported_group.imported_from == published_org_template
+
+    def test_import_org_template_by_non_member_fails(
+        self, client, other_user, other_organization, published_org_template
+    ):
+        """Non-members should not be able to import org templates."""
+        survey = Survey.objects.create(
+            owner=other_user,
+            name="Other Survey",
+            slug="other-survey",
+            organization=other_organization,
+        )
+        client.force_login(other_user)
+
+        response = client.post(
+            f"/surveys/{survey.id}/import-template/",
+            data={"template_id": published_org_template.id},
+        )
+
+        assert response.status_code == 403
+
+    def test_import_increments_counter(
+        self, client, publisher_user, test_survey, published_global_template
+    ):
+        """Import count should increment with each import."""
+        client.force_login(publisher_user)
+
+        initial_count = published_global_template.import_count
+
+        for i in range(3):
+            survey = Survey.objects.create(
+                owner=publisher_user,
+                name=f"Survey {i}",
+                slug=f"survey-{i}",
+                organization=test_survey.organization,
+            )
+            client.post(
+                f"/surveys/{survey.id}/import-template/",
+                data={"template_id": published_global_template.id},
+            )
+
+        published_global_template.refresh_from_db()
+        assert published_global_template.import_count == initial_count + 3
+
+    def test_anonymous_cannot_import(
+        self, client, test_survey, published_global_template
+    ):
+        """Anonymous users should not be able to import templates."""
+        response = client.post(
+            f"/surveys/{test_survey.id}/import-template/",
+            data={"template_id": published_global_template.id},
+        )
+
+        assert response.status_code == 302  # Redirect to login
+        assert "/accounts/login/" in response.url
+
+
+@pytest.mark.django_db
+class TestAttributionAndCredit:
+    """Test attribution preservation and publisher credit display."""
+
+    def test_attribution_preserved_in_markdown(
+        self, client, publisher_user, question_group, test_survey
+    ):
+        """Attribution data should be stored when publishing."""
+        client.force_login(publisher_user)
+
+        response = client.post(
+            f"/surveys/{test_survey.slug}/groups/{question_group.id}/publish/",
+            data={
+                "publication_level": "global",
+                "name": "PHQ-9",
+                "description": "Depression screening",
+                "attribution_authors": "Kroenke, Spitzer, Williams",
+                "attribution_title": "PHQ-9 Scale",
+                "attribution_year": "2001",
+                "attribution_doi": "10.1046/j.1525-1497.2001.016009606.x",
+                "tags": "mental-health",
+            },
+        )
+
+        assert response.status_code == 302
+
+        published = PublishedQuestionGroup.objects.get(name="PHQ-9")
+        assert published.attribution["authors"] == "Kroenke, Spitzer, Williams"
+        assert published.attribution["title"] == "PHQ-9 Scale"
+        assert published.attribution["doi"] == "10.1046/j.1525-1497.2001.016009606.x"
+
+    def test_attribution_displayed_over_publisher_credit(
+        self, client, published_global_template
+    ):
+        """When attribution.authors exists, it should be displayed instead of publisher."""
+        response = client.get("/surveys/templates/")
+        content = response.content.decode()
+
+        # Should see author name, not publisher username
+        assert "Test Author" in content
+
+    def test_publisher_credit_shown_when_enabled(
+        self, client, publisher_user, published_org_template
+    ):
+        """When show_publisher_credit=True and no attribution, show publisher."""
+        client.force_login(publisher_user)
+
+        response = client.get("/surveys/templates/")
+        content = response.content.decode()
+
+        # Should see publisher username
+        assert "publisher@example.com" in content
+
+    def test_publisher_credit_hidden_when_disabled(
+        self, client, publisher_user, test_organization, question_group, test_survey
+    ):
+        """When show_publisher_credit=False, show anonymous."""
+        client.force_login(publisher_user)
+
+        # Publish without showing credit
+        client.post(
+            f"/surveys/{test_survey.slug}/groups/{question_group.id}/publish/",
+            data={
+                "publication_level": "organization",
+                "name": "Anonymous Template",
+                "description": "Test",
+                "show_publisher_credit": False,
+                "tags": "test",
+            },
+        )
+
+        response = client.get("/surveys/templates/")
+        content = response.content.decode()
+
+        # Should not see publisher username
+        assert "publisher@example.com" not in content or "Anonymous" in content
+
+
+@pytest.mark.django_db
+class TestMarkdownRoundTrip:
+    """Test markdown export and import integrity."""
+
+    def test_basic_markdown_export(self, client, publisher_user, question_group):
+        """Question groups should export to valid markdown."""
+        from checktick_app.surveys.views import _export_question_group_to_markdown
+
+        markdown = _export_question_group_to_markdown(question_group)
+
+        assert f"# {question_group.name}" in markdown
+        assert question_group.description in markdown
+
+    def test_options_preserved_in_export(
+        self, client, publisher_user, test_survey, question_group
+    ):
+        """Question options should be preserved in markdown export."""
+        from checktick_app.surveys.models import SurveyQuestion
+        from checktick_app.surveys.views import _export_question_group_to_markdown
+
+        # Create question with options
+        SurveyQuestion.objects.create(
+            survey=test_survey,
+            text="How do you feel?",
+            type="mc_single",
+            options=[{"label": "Good", "value": "good"}, {"label": "Bad", "value": "bad"}],
+            order=1,
+        )
+
+        markdown = _export_question_group_to_markdown(question_group)
+
+        assert "Good" in markdown
+        assert "Bad" in markdown
+
+    def test_likert_categories_export_correctly(
+        self, client, publisher_user, test_survey, question_group
+    ):
+        """Likert scales with categories should export with correct type."""
+        from checktick_app.surveys.models import SurveyQuestion
+        from checktick_app.surveys.views import _export_question_group_to_markdown
+
+        # Create likert question with categories
+        SurveyQuestion.objects.create(
+            survey=test_survey,
+            text="Rate your mood",
+            type="likert",
+            options=[{"type": "categories", "labels": ["Never", "Sometimes", "Often", "Always"]}],
+            order=1,
+        )
+
+        markdown = _export_question_group_to_markdown(question_group)
+
+        assert "type: likert categories" in markdown
+        assert "Never" in markdown
+        assert "Always" in markdown
+
+    def test_likert_number_scale_exports_correctly(
+        self, client, publisher_user, test_survey, question_group
+    ):
+        """Likert number scales should export with correct type."""
+        from checktick_app.surveys.models import SurveyQuestion
+        from checktick_app.surveys.views import _export_question_group_to_markdown
+
+        # Create likert question with number scale
+        SurveyQuestion.objects.create(
+            survey=test_survey,
+            text="Rate from 1-10",
+            type="likert",
+            options=[{"type": "number-scale", "min": 1, "max": 10, "minLabel": "Bad", "maxLabel": "Good"}],
+            order=1,
+        )
+
+        markdown = _export_question_group_to_markdown(question_group)
+
+        assert "type: likert number" in markdown
+        assert "min: 1" in markdown
+        assert "max: 10" in markdown
+
+
+@pytest.mark.django_db
+class TestRateLimiting:
+    """Test rate limiting enforcement."""
+
+    def test_publish_rate_limit(
+        self, client, publisher_user, test_survey, settings
+    ):
+        """Publishing should be rate limited (10/day)."""
+        settings.RATELIMIT_ENABLE = True
+        client.force_login(publisher_user)
+
+        # Create 11 question groups
+        for i in range(11):
+            group = QuestionGroup.objects.create(
+                owner=publisher_user, name=f"Group {i}"
+            )
+            test_survey.question_groups.add(group)
+
+            response = client.post(
+                f"/surveys/{test_survey.slug}/groups/{group.id}/publish/",
+                data={
+                    "publication_level": "global",
+                    "name": f"Template {i}",
+                    "description": "Test",
+                    "tags": "test",
+                },
+                follow=True,
+            )
+
+            if i < 10:
+                # First 10 should succeed
+                assert PublishedQuestionGroup.objects.filter(name=f"Template {i}").exists()
+            else:
+                # 11th should be rate limited
+                assert response.status_code == 429 or "rate limit" in response.content.decode().lower()
+
+    def test_import_rate_limit(
+        self, client, publisher_user, published_global_template, settings
+    ):
+        """Importing should be rate limited (50/hour)."""
+        settings.RATELIMIT_ENABLE = True
+        client.force_login(publisher_user)
+
+        # Try 51 imports
+        for i in range(51):
+            survey = Survey.objects.create(
+                owner=publisher_user,
+                name=f"Survey {i}",
+                slug=f"survey-import-{i}",
+                organization=Survey.objects.first().organization,
+            )
+
+            response = client.post(
+                f"/surveys/{survey.id}/import-template/",
+                data={"template_id": published_global_template.id},
+            )
+
+            if i < 50:
+                # First 50 should succeed
+                assert response.status_code == 302
+            else:
+                # 51st should be rate limited
+                assert response.status_code == 429 or "rate limit" in response.content.decode().lower()
+
+
+@pytest.mark.django_db
+class TestGlobalTemplateSync:
+    """Test the sync_global_question_group_templates management command."""
+
+    @patch("pathlib.Path.glob")
+    def test_sync_creates_new_template(self, mock_glob, publisher_user, tmp_path):
+        """Sync command should create new templates from markdown files."""
+        # Create a temporary markdown file
+        template_file = tmp_path / "question-group-templates-gad7.md"
+        template_file.write_text("""---
+title: GAD-7
+description: Generalized Anxiety Disorder 7-item scale
+attribution:
+  authors: Spitzer, Kroenke, Williams, Löwe
+  title: GAD-7
+  year: 2006
+tags:
+  - anxiety
+  - mental-health
+license: public-domain
+---
+
+# GAD-7
+
+## Q1
+type: likert categories
+Over the last 2 weeks, how often have you been bothered by feeling nervous?
+
+- Not at all
+- Several days
+- More than half the days
+- Nearly every day
+""")
+
+        mock_glob.return_value = [template_file]
+
+        out = StringIO()
+        call_command("sync_global_question_group_templates", stdout=out)
+
+        # Verify template was created
+        assert PublishedQuestionGroup.objects.filter(name="GAD-7").exists()
+        template = PublishedQuestionGroup.objects.get(name="GAD-7")
+        assert template.publication_level == "global"
+        assert template.status == "active"
+        assert "Spitzer" in template.attribution.get("authors", "")
+
+    @patch("pathlib.Path.glob")
+    def test_sync_updates_existing_template(self, mock_glob, publisher_user, tmp_path):
+        """Sync command should update templates when content changes."""
+        # Create initial template
+        initial = PublishedQuestionGroup.objects.create(
+            name="Test Template",
+            description="Old description",
+            publisher=publisher_user,
+            publication_level="global",
+            status="active",
+            markdown="# Old content",
+        )
+
+        # Create updated markdown file
+        template_file = tmp_path / "question-group-templates-test-template.md"
+        template_file.write_text("""---
+title: Test Template
+description: New description
+tags:
+  - test
+---
+
+# Test Template
+
+## Q1
+type: text
+New question content
+""")
+
+        mock_glob.return_value = [template_file]
+
+        out = StringIO()
+        call_command("sync_global_question_group_templates", stdout=out)
+
+        # Verify template was updated
+        initial.refresh_from_db()
+        assert initial.description == "New description"
+        assert "New question content" in initial.markdown
+
+    @patch("pathlib.Path.glob")
+    def test_sync_creates_system_user_when_needed(self, mock_glob, tmp_path):
+        """Sync command should create system user if no superuser exists."""
+        # Delete all users
+        User.objects.all().delete()
+
+        # Create a template file
+        template_file = tmp_path / "question-group-templates-test.md"
+        template_file.write_text("""---
+title: Test
+description: Test template
+tags:
+  - test
+---
+
+# Test
+
+## Q1
+type: text
+Test question
+""")
+
+        mock_glob.return_value = [template_file]
+
+        out = StringIO()
+        call_command("sync_global_question_group_templates", stdout=out)
+
+        # Verify system user was created
+        system_user = User.objects.get(username="system@checktick.local")
+        assert system_user.is_active is False
+        assert system_user.is_staff is True
+
+    @patch("pathlib.Path.glob")
+    def test_sync_dry_run_does_not_commit(self, mock_glob, tmp_path):
+        """Sync command with --dry-run should not create templates."""
+        template_file = tmp_path / "question-group-templates-dryrun.md"
+        template_file.write_text("""---
+title: Dry Run Test
+description: Should not be created
+tags:
+  - test
+---
+
+# Dry Run Test
+
+## Q1
+type: text
+Test question
+""")
+
+        mock_glob.return_value = [template_file]
+
+        initial_count = PublishedQuestionGroup.objects.count()
+
+        out = StringIO()
+        call_command("sync_global_question_group_templates", "--dry-run", stdout=out)
+
+        # Verify no templates were created
+        assert PublishedQuestionGroup.objects.count() == initial_count
+        assert not PublishedQuestionGroup.objects.filter(name="Dry Run Test").exists()
+
+    @patch("pathlib.Path.glob")
+    def test_sync_detects_metadata_changes(self, mock_glob, publisher_user, tmp_path):
+        """Sync should update when metadata (description, attribution) changes."""
+        # Create initial template
+        initial = PublishedQuestionGroup.objects.create(
+            name="Metadata Test",
+            description="Old description",
+            publisher=publisher_user,
+            publication_level="global",
+            status="active",
+            markdown="# Content\n\n## Q1\ntype: text\nQuestion",
+            attribution={"authors": "Old Author"},
+        )
+
+        # Create file with updated metadata but same content
+        template_file = tmp_path / "question-group-templates-metadata-test.md"
+        template_file.write_text("""---
+title: Metadata Test
+description: New description
+attribution:
+  authors: New Author
+tags:
+  - updated
+---
+
+# Content
+
+## Q1
+type: text
+Question
+""")
+
+        mock_glob.return_value = [template_file]
+
+        out = StringIO()
+        call_command("sync_global_question_group_templates", stdout=out)
+
+        # Verify metadata was updated
+        initial.refresh_from_db()
+        assert initial.description == "New description"
+        assert initial.attribution["authors"] == "New Author"
+
+
+@pytest.mark.django_db
+class TestBrowseOwnPublications:
+    """Test viewing and managing own published templates."""
+
+    def test_browse_own_publications(
+        self, client, publisher_user, published_org_template
+    ):
+        """Users should be able to view their own published templates."""
+        client.force_login(publisher_user)
+
+        response = client.get("/surveys/my-templates/")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Org Template" in content
+
+    def test_unpublish_own_template(
+        self, client, publisher_user, published_org_template
+    ):
+        """Users should be able to unpublish their own templates."""
+        client.force_login(publisher_user)
+
+        response = client.post(
+            f"/surveys/templates/{published_org_template.id}/unpublish/"
+        )
+
+        assert response.status_code == 302
+
+        published_org_template.refresh_from_db()
+        assert published_org_template.status == "archived"
+
+    def test_cannot_unpublish_others_template(
+        self, client, other_user, published_org_template
+    ):
+        """Users should not be able to unpublish others' templates."""
+        client.force_login(other_user)
+
+        response = client.post(
+            f"/surveys/templates/{published_org_template.id}/unpublish/"
+        )
+
+        assert response.status_code == 403
+
+
+@pytest.mark.django_db
+class TestTemplateDetail:
+    """Test template detail view."""
+
+    def test_view_global_template_detail(
+        self, client, published_global_template
+    ):
+        """Anyone should be able to view global template details."""
+        response = client.get(f"/surveys/templates/{published_global_template.id}/")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert published_global_template.name in content
+        assert published_global_template.description in content
+
+    def test_view_org_template_detail_as_member(
+        self, client, org_creator, published_org_template
+    ):
+        """Organization members should be able to view org template details."""
+        client.force_login(org_creator)
+
+        response = client.get(f"/surveys/templates/{published_org_template.id}/")
+
+        assert response.status_code == 200
+
+    def test_cannot_view_org_template_as_non_member(
+        self, client, other_user, published_org_template
+    ):
+        """Non-members should not be able to view org template details."""
+        client.force_login(other_user)
+
+        response = client.get(f"/surveys/templates/{published_org_template.id}/")
+
+        assert response.status_code == 403
+
+    def test_attribution_displayed_in_detail(
+        self, client, published_global_template
+    ):
+        """Attribution information should be displayed in detail view."""
+        response = client.get(f"/surveys/templates/{published_global_template.id}/")
+
+        content = response.content.decode()
+        assert "Test Author" in content
+        assert "Test Scale" in content

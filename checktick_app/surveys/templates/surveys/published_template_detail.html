@@ -75,9 +75,19 @@
               {% if template.attribution.authors %}
                 <p class="text-sm mt-2">
                   <strong>{% trans "Authors:" %}</strong>
-                  {% for author in template.attribution.authors %}
-                    {{ author.name }}{% if author.orcid %} (<a href="https://orcid.org/{{ author.orcid }}" target="_blank" rel="noopener noreferrer" class="link">ORCID: {{ author.orcid }}</a>){% endif %}{% if not forloop.last %}, {% endif %}
-                  {% endfor %}
+                  {% if template.attribution.authors is iterable and template.attribution.authors is not string %}
+                    {% for author in template.attribution.authors %}
+                      {% if author.name %}{{ author.name }}{% else %}{{ author }}{% endif %}{% if author.orcid %} (<a href="https://orcid.org/{{ author.orcid }}" target="_blank" rel="noopener noreferrer" class="link">ORCID: {{ author.orcid }}</a>){% endif %}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                  {% else %}
+                    {{ template.attribution.authors }}
+                  {% endif %}
+                </p>
+              {% endif %}
+
+              {% if template.attribution.title %}
+                <p class="text-sm mt-2">
+                  <strong>{% trans "Title:" %}</strong> {{ template.attribution.title }}
                 </p>
               {% endif %}
 

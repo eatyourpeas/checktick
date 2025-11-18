@@ -6834,14 +6834,23 @@ def published_templates_list(request):
         status=PublishedQuestionGroup.Status.ACTIVE
     ).select_related("publisher", "organization")
 
-    # Filter by visibility
-    templates = templates.filter(
-        Q(publication_level=PublishedQuestionGroup.PublicationLevel.GLOBAL)
-        | Q(
-            publication_level=PublishedQuestionGroup.PublicationLevel.ORGANIZATION,
-            organization_id__in=user_org_ids,
+    # Filter by visibility:
+    # - Individual users (not in any org): only global templates
+    # - Organization users: global templates + their org's templates
+    if user_org_ids:
+        # User is in at least one organization - show global and their org templates
+        templates = templates.filter(
+            Q(publication_level=PublishedQuestionGroup.PublicationLevel.GLOBAL)
+            | Q(
+                publication_level=PublishedQuestionGroup.PublicationLevel.ORGANIZATION,
+                organization_id__in=user_org_ids,
+            )
         )
-    )
+    else:
+        # Individual user not in any organization - only global templates
+        templates = templates.filter(
+            publication_level=PublishedQuestionGroup.PublicationLevel.GLOBAL
+        )
 
     # Search filter
     search = request.GET.get("search", "").strip()
@@ -6959,7 +6968,7 @@ def question_group_publish(request, slug, gid):
 
     if request.method == "POST":
         form = PublishQuestionGroupForm(
-            request.POST, user=request.user, question_group=group
+            request.POST, user=request.user, question_group=group, survey=survey
         )
         if form.is_valid():
             # Generate markdown from group
@@ -6976,7 +6985,14 @@ def question_group_publish(request, slug, gid):
                 publication.publication_level
                 == PublishedQuestionGroup.PublicationLevel.ORGANIZATION
             ):
-                publication.organization = group.organization or survey.organization
+                # Get organization from survey
+                if not survey.organization:
+                    messages.error(
+                        request,
+                        "Organization-level publishing requires the survey to be associated with an organization.",
+                    )
+                    return redirect("surveys:group_builder", slug=slug, gid=gid)
+                publication.organization = survey.organization
 
             publication.save()
 
@@ -6988,7 +7004,7 @@ def question_group_publish(request, slug, gid):
                 "surveys:published_template_detail", template_id=publication.pk
             )
     else:
-        form = PublishQuestionGroupForm(user=request.user, question_group=group)
+        form = PublishQuestionGroupForm(user=request.user, question_group=group, survey=survey)
 
     return render(
         request,

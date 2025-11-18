@@ -48,23 +48,24 @@ class PublishQuestionGroupForm(forms.ModelForm):
     license = forms.CharField(required=False, max_length=200, label="License")
     year = forms.IntegerField(required=False, label="Year")
 
-    def __init__(self, *args, user=None, question_group=None, **kwargs):
+    def __init__(self, *args, user=None, question_group=None, survey=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user
         self.question_group = question_group
+        self.survey = survey
 
         # Limit publication level choices based on user permissions
-        if question_group and question_group.organization:
-            # Organization group - can publish to org or global
+        if survey and survey.organization:
+            # Survey belongs to organization - can publish to org or global
             choices = [
                 (
                     PublishedQuestionGroup.PublicationLevel.ORGANIZATION,
-                    f"Organization ({question_group.organization.name})",
+                    f"Organization ({survey.organization.name})",
                 ),
                 (PublishedQuestionGroup.PublicationLevel.GLOBAL, "Global (all users)"),
             ]
         else:
-            # Individual group - can only publish globally
+            # Individual survey - can only publish globally
             choices = [
                 (PublishedQuestionGroup.PublicationLevel.GLOBAL, "Global (all users)")
             ]
