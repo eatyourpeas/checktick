@@ -219,8 +219,9 @@ class TestLLMReadOnlyOperations:
     @pytest.mark.django_db
     @override_settings(
         LLM_ENABLED=True,
-        RCPCH_OLLAMA_API_URL="http://test",
-        RCPCH_OLLAMA_API_KEY="test",
+        LLM_URL="http://test",
+        LLM_API_KEY="test",
+        LLM_AUTH_TYPE="bearer",
     )
     def test_llm_send_message_does_not_modify_survey(
         self, client, users, org_survey, monkeypatch
@@ -351,8 +352,9 @@ class TestLLMSessionIsolation:
     @pytest.mark.django_db
     @override_settings(
         LLM_ENABLED=True,
-        RCPCH_OLLAMA_API_URL="http://test",
-        RCPCH_OLLAMA_API_KEY="test",
+        LLM_URL="http://test",
+        LLM_API_KEY="test",
+        LLM_AUTH_TYPE="bearer",
     )
     def test_user_cannot_access_another_users_session(
         self, client, users, org_survey, monkeypatch
