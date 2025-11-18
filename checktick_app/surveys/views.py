@@ -642,7 +642,7 @@ def survey_create(request: HttpRequest) -> HttpResponse:
                                 "Survey created with dual-path encryption! "
                                 "Keep your password and recovery phrase safe.",
                             )
-                        return redirect("surveys:groups", slug=survey.slug)
+                        return redirect("surveys:dashboard", slug=survey.slug)
 
                     except Exception as e:
                         logger.error(f"Failed to create encrypted survey: {e}")
@@ -654,7 +654,7 @@ def survey_create(request: HttpRequest) -> HttpResponse:
 
             # No encryption or other options
             survey.save()
-            return redirect("surveys:groups", slug=survey.slug)
+            return redirect("surveys:dashboard", slug=survey.slug)
     else:
         form = SurveyCreateForm()
     return render(request, "surveys/create.html", {"form": form})
@@ -6970,6 +6970,14 @@ def question_group_publish(request, slug, gid):
 
     group = get_object_or_404(QuestionGroup, pk=gid, owner=request.user)
 
+    # Prevent publishing of imported question groups
+    if group.imported_from:
+        messages.error(
+            request,
+            "Cannot publish question groups that were imported from templates to prevent copyright issues.",
+        )
+        return redirect("surveys:group_builder", slug=slug, gid=gid)
+
     # Check if group has questions
     questions = SurveyQuestion.objects.filter(survey=survey, group=group)
     if not questions.exists():
@@ -7032,13 +7040,13 @@ def question_group_publish(request, slug, gid):
 
 @login_required
 @ratelimit(key="user", rate="50/h", block=True)
-def published_template_import(request, template_id, survey_slug):
+def published_template_import(request, template_id, slug):
     """Import a published template into a survey."""
     from .markdown_import import parse_bulk_markdown
     from .permissions import require_can_edit, require_can_import_published_template
 
     template = get_object_or_404(PublishedQuestionGroup, pk=template_id)
-    survey = get_object_or_404(Survey, slug=survey_slug)
+    survey = get_object_or_404(Survey, slug=slug)
 
     require_can_edit(request.user, survey)
     require_can_import_published_template(request.user, template)
@@ -7085,7 +7093,7 @@ def published_template_import(request, template_id, survey_slug):
                 request,
                 f"Template '{template.name}' imported successfully!",
             )
-            return redirect("surveys:group_builder", slug=survey_slug, gid=new_group.pk)
+            return redirect("surveys:group_builder", slug=slug, gid=new_group.pk)
 
         except Exception as e:
             messages.error(request, f"Error importing template: {str(e)}")

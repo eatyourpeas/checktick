@@ -85,7 +85,9 @@ class PublishQuestionGroupForm(forms.ModelForm):
         if self.user and self.question_group:
             from .permissions import can_publish_question_group
 
-            if not can_publish_question_group(self.user, self.question_group, level):
+            if not can_publish_question_group(
+                self.user, self.question_group, level, survey=self.survey
+            ):
                 raise forms.ValidationError(
                     "You do not have permission to publish at this level."
                 )

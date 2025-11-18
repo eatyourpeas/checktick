@@ -52,7 +52,13 @@
           <label class="label">{% trans "Markdown" %}</label>
           <textarea class="textarea textarea-bordered w-full min-h-[500px]" name="markdown" id="markdown-input" required>{{ markdown|default:example }}</textarea>
           <div class="mt-3">
-            <button class="btn btn-primary" type="button" id="bulk-import-open-modal">{% trans "Create survey" %}</button>
+            <button class="btn btn-primary" type="button" id="bulk-import-open-modal">
+              {% if has_questions %}
+                {% trans "Edit Survey" %}
+              {% else %}
+                {% trans "Create survey" %}
+              {% endif %}
+            </button>
           </div>
         </form>
       </div>
@@ -261,7 +267,13 @@
     <div>
       <button class="btn btn-primary" type="button" id="bulk-import-open-modal-top">
         {% include "components/icons/document.html" with classes="w-5 h-5" %}
-        <span>{% trans "Create survey" %}</span>
+        <span>
+          {% if has_questions %}
+            {% trans "Edit Survey" %}
+          {% else %}
+            {% trans "Create survey" %}
+          {% endif %}
+        </span>
       </button>
     </div>
 
@@ -294,7 +306,13 @@
     </p>
     <div class="modal-action">
       <button class="btn" type="button" id="bulk-import-cancel">{% trans "Cancel" %}</button>
-      <button class="btn btn-primary" type="submit" form="bulk-import-form">{% trans "Create survey" %}</button>
+      <button class="btn btn-primary" type="submit" form="bulk-import-form">
+        {% if has_questions %}
+          {% trans "Edit Survey" %}
+        {% else %}
+          {% trans "Create survey" %}
+        {% endif %}
+      </button>
     </div>
   </div>
 </dialog>

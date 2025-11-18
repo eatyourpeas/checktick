@@ -371,7 +371,7 @@ def require_can_hard_delete_survey(user, survey: Survey) -> None:
 # Published Question Group Permissions
 
 
-def can_publish_question_group(user, group, level: str) -> bool:
+def can_publish_question_group(user, group, level: str, survey=None) -> bool:
     """Check if user can publish a question group at given level."""
     from .models import OrganizationMembership
 
@@ -393,13 +393,13 @@ def can_publish_question_group(user, group, level: str) -> bool:
         return True
 
     if level == "organization":
-        # Must have an organization associated with the group
-        if not group.organization:
+        # Must have an organization associated with the survey
+        if not survey or not survey.organization:
             return False
         # Must be CREATOR or ADMIN in that organization
         membership = OrganizationMembership.objects.filter(
             user=user,
-            organization=group.organization,
+            organization=survey.organization,
             role__in=[
                 OrganizationMembership.Role.ADMIN,
                 OrganizationMembership.Role.CREATOR,

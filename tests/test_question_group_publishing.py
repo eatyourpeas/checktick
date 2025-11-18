@@ -60,6 +60,14 @@ def published_org_template(publisher_user, test_organization):
         organization=test_organization,
         defaults={"role": OrganizationMembership.Role.ADMIN},
     )
+    markdown = """# Org Template
+
+## What is your name?
+(text)
+
+## How old are you?
+(text number)
+"""
     return PublishedQuestionGroup.objects.create(
         name="Org Template",
         description="Organization-level template",
@@ -67,7 +75,7 @@ def published_org_template(publisher_user, test_organization):
         organization=test_organization,
         publication_level="organization",
         status="active",
-        markdown="# Org Template\n\n## Q1\ntype: text\nQuestion text here",
+        markdown=markdown,
         show_publisher_credit=True,
     )
 
@@ -75,13 +83,21 @@ def published_org_template(publisher_user, test_organization):
 @pytest.fixture
 def published_global_template(publisher_user):
     """Create a published global template."""
+    markdown = """# Global Template
+
+## What is your name?
+(text)
+
+## How old are you?
+(text number)
+"""
     return PublishedQuestionGroup.objects.create(
         name="Global Template",
         description="Global template available to all",
         publisher=publisher_user,
         publication_level="global",
         status="active",
-        markdown="# Global Template\n\n## Q1\ntype: text\nQuestion text here",
+        markdown=markdown,
         attribution={
             "authors": "Test Author",
             "title": "Test Scale",
@@ -381,3 +397,223 @@ class TestTemplateDetail:
         content = response.content.decode()
         assert "Test Author" in content
         assert "Test Scale" in content
+
+
+@pytest.mark.django_db
+class TestGlobalTemplateRepublishingPrevention:
+    """
+    Test that question groups with imported_from set cannot be republished.
+    This protects copyright regardless of whether they're modified or not.
+    """
+
+    def test_cannot_publish_imported_global_template(
+        self, client, publisher_user, published_global_template
+    ):
+        """
+        Test that question groups imported from global templates cannot be published.
+        """
+        # Create a survey
+        survey = Survey.objects.create(
+            name="Test Survey",
+            slug="test-survey",
+            owner=publisher_user,
+        )
+
+        client.force_login(publisher_user)
+
+        # Import the global template into the survey
+        response = client.post(
+            f"/surveys/templates/{published_global_template.id}/import/{survey.slug}/",
+            follow=True,
+        )
+        assert response.status_code == 200
+
+        # Get the imported question group
+        imported_group = QuestionGroup.objects.filter(
+            owner=publisher_user, imported_from=published_global_template
+        ).first()
+        assert imported_group is not None
+        assert imported_group.imported_from == published_global_template
+
+        # Try to publish the imported group - should be blocked at view level
+        response = client.get(
+            f"/surveys/{survey.slug}/groups/{imported_group.id}/publish/",
+            follow=True,
+        )
+
+        # Should redirect with error message
+        assert response.status_code == 200
+        messages = list(response.context["messages"])
+        assert len(messages) >= 1
+        assert any(
+            "Cannot publish question groups that were imported from templates"
+            in str(msg)
+            for msg in messages
+        )
+
+    def test_cannot_publish_modified_imported_global_template(
+        self, client, publisher_user, published_global_template
+    ):
+        """
+        Test that even modified imported question groups cannot be published.
+        This prevents any republishing of imported templates to avoid copyright issues.
+        """
+        # Create a survey
+        survey = Survey.objects.create(
+            name="Test Survey",
+            slug="test-survey-2",
+            owner=publisher_user,
+        )
+
+        client.force_login(publisher_user)
+
+        # Import the global template
+        response = client.post(
+            f"/surveys/templates/{published_global_template.id}/import/{survey.slug}/",
+            follow=True,
+        )
+        assert response.status_code == 200
+
+        # Get the imported question group
+        imported_group = QuestionGroup.objects.filter(
+            owner=publisher_user, imported_from=published_global_template
+        ).first()
+        assert imported_group is not None
+        assert imported_group.imported_from == published_global_template
+
+        # Modify one of the questions
+        question = SurveyQuestion.objects.filter(
+            survey=survey, group=imported_group
+        ).first()
+        assert question is not None
+        question.text = "What is your FULL name?"  # Modified
+        question.save()
+
+        # Reload the group - imported_from should still be set
+        imported_group.refresh_from_db()
+        assert imported_group.imported_from == published_global_template
+
+        # Try to publish - should still be blocked even after modification
+        response = client.get(
+            f"/surveys/{survey.slug}/groups/{imported_group.id}/publish/",
+            follow=True,
+        )
+
+        # Should redirect with error message
+        assert response.status_code == 200
+        messages = list(response.context["messages"])
+        assert len(messages) >= 1
+        assert any(
+            "Cannot publish question groups that were imported from templates"
+            in str(msg)
+            for msg in messages
+        )
+
+    def test_cannot_publish_imported_org_template(
+        self, client, publisher_user, published_org_template, test_organization
+    ):
+        """
+        Test that question groups imported from organization templates also cannot be published.
+        """
+        # Ensure publisher_user is a member
+        OrganizationMembership.objects.get_or_create(
+            user=publisher_user,
+            organization=test_organization,
+            defaults={"role": OrganizationMembership.Role.ADMIN},
+        )
+
+        # Create a survey associated with the organization
+        survey = Survey.objects.create(
+            name="Test Survey",
+            slug="test-survey-3",
+            owner=publisher_user,
+            organization=test_organization,
+        )
+
+        client.force_login(publisher_user)
+
+        # Import the org template
+        response = client.post(
+            f"/surveys/templates/{published_org_template.id}/import/{survey.slug}/",
+            follow=True,
+        )
+
+        # Get the imported question group
+        imported_group = QuestionGroup.objects.filter(
+            owner=publisher_user, imported_from=published_org_template
+        ).first()
+
+        # If import failed, show the response content for debugging
+        if not imported_group:
+            content = response.content.decode()
+            messages = list(response.context.get("messages", []))
+            assert (
+                imported_group is not None
+            ), f"Import failed. Status: {response.status_code}, Messages: {messages}, Content snippet: {content[:500]}"
+
+        assert imported_group is not None
+
+        # Try to publish - should be blocked
+        response = client.get(
+            f"/surveys/{survey.slug}/groups/{imported_group.id}/publish/",
+            follow=True,
+        )
+
+        # Should redirect with error message
+        assert response.status_code == 200
+        messages = list(response.context["messages"])
+        assert len(messages) >= 1
+        assert any(
+            "Cannot publish question groups that were imported from templates"
+            in str(msg)
+            for msg in messages
+        )
+
+    def test_can_publish_non_imported_question_group(
+        self, client, publisher_user, test_organization
+    ):
+        """
+        Test that question groups created from scratch (not imported) CAN be published.
+        """
+        # Ensure publisher_user is a member
+        OrganizationMembership.objects.get_or_create(
+            user=publisher_user,
+            organization=test_organization,
+            defaults={"role": OrganizationMembership.Role.ADMIN},
+        )
+
+        # Create a survey
+        survey = Survey.objects.create(
+            name="Test Survey",
+            slug="test-survey-4",
+            owner=publisher_user,
+            organization=test_organization,
+        )
+
+        # Create a question group from scratch (no imported_from)
+        group = QuestionGroup.objects.create(
+            name="Original Group",
+            description="Created from scratch",
+            owner=publisher_user,
+        )
+
+        # Add a question to it
+        SurveyQuestion.objects.create(
+            survey=survey,
+            group=group,
+            text="What is your name?",
+            type="short_text",
+            required=True,
+            order=0,
+        )
+
+        client.force_login(publisher_user)
+
+        # Try to publish - should show the form (not be blocked)
+        response = client.get(
+            f"/surveys/{survey.slug}/groups/{group.id}/publish/",
+        )
+
+        # Should show the publish form
+        assert response.status_code == 200
+        assert "form" in response.context
