@@ -986,51 +986,61 @@ class PublicationWorkflowTests(TestCase):
 
 ## 15. Implementation Checklist
 
-### Phase 1: Core Infrastructure
-- [ ] Create `PublishedQuestionGroup` model
-- [ ] Add `imported_from` to `QuestionGroup`
-- [ ] Run migrations
-- [ ] Add permission helper functions
-- [ ] Write model methods: `to_markdown()`, `from_markdown_with_attribution()`
+### Phase 1: Core Infrastructure ✅ COMPLETE
+- [x] Create `PublishedQuestionGroup` model (with show_publisher_credit field)
+- [x] Add `imported_from` to `QuestionGroup`
+- [x] Run migrations (0026, 0027)
+- [x] Add permission helper functions
+- [x] Write model methods: `to_markdown()`, `from_markdown_with_attribution()`
 
-### Phase 2: Publication Workflow
-- [ ] Create publication form view
-- [ ] Create publication submission endpoint
-- [ ] Add validation logic
-- [ ] Implement rate limiting
-- [ ] Add success notifications
+### Phase 2: Publication Workflow ✅ COMPLETE
+- [x] Create publication form view
+- [x] Create publication submission endpoint
+- [x] Add validation logic
+- [x] Implement rate limiting (10/day publish, 50/hr import)
+- [x] Add success notifications
 
-### Phase 3: Discovery & Import
-- [ ] Create templates library page
-- [ ] Implement search and filtering
-- [ ] Create import endpoint
-- [ ] Add question selection checkboxes (customization step)
-- [ ] Update survey builder with "Add from Templates" button
+### Phase 3: Discovery & Import ✅ COMPLETE
+- [x] Create templates library page (with pagination)
+- [x] Implement search and filtering (tags, level, language, search)
+- [x] Create import endpoint
+- [x] Add question selection checkboxes (import preview step)
+- [x] Update survey builder with "Browse & Import Templates" button
 
-### Phase 4: Attribution
-- [ ] Add attribution fields to publication form
-- [ ] Include attribution in markdown export as HTML comments
-- [ ] Display attribution badge in builder
-- [ ] Display attribution footer in participant view
-- [ ] Add attribution parsing in import flow
+### Phase 4: Attribution ✅ COMPLETE
+- [x] Add attribution fields to publication form
+- [x] Include attribution in markdown export
+- [x] Display attribution badge in builder (tooltip with info icon)
+- [x] Display attribution in template listings
+- [x] Add attribution parsing in import flow
 
-### Phase 5: API
+### Phase 4.5: Global Template Repository ✅ COMPLETE (BONUS)
+- [x] Create sync_global_question_group_templates management command
+- [x] Add YAML frontmatter support for template metadata
+- [x] Create PHQ-9 template in docs/
+- [x] Create documentation (publish-question-groups.md, templates index)
+- [x] Add publisher credit system with privacy controls
+
+### Phase 5: API ⏳ IN PROGRESS
 - [ ] Implement API endpoints
 - [ ] Add API documentation
 - [ ] Add API rate limiting
 - [ ] Write API tests
 
-### Phase 6: UI/UX Polish
-- [ ] Design and implement template cards
-- [ ] Add icons and badges
-- [ ] Implement responsive layouts
+### Phase 6: UI/UX Polish ⏳ PARTIAL
+- [x] Design and implement template cards
+- [x] Add icons and badges
+- [x] Implement responsive layouts
 - [ ] Add loading states and error handling
-- [ ] i18n for all new strings
+- [ ] i18n for all new strings (partially done)
 
-### Phase 7: Testing
-- [ ] Write unit tests
-- [ ] Write integration tests
-- [ ] Write UI tests
+### Phase 7: Testing ⏳ NEXT
+- [ ] Write unit tests for models and permissions
+- [ ] Write integration tests for publication workflow
+- [ ] Write UI tests for template library and import
+- [ ] Test markdown round-trip integrity
+- [ ] Test rate limiting enforcement
+- [ ] Test attribution display across views
 - [ ] Manual QA testing
 - [ ] Accessibility testing
 
