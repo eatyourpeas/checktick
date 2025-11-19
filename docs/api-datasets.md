@@ -1,4 +1,8 @@
-# Dataset API Reference
+---
+title: Dataset API Reference
+category: api
+priority: 3
+---
 
 This document covers the Dataset API endpoints for programmatic access to dataset management.
 

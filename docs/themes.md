@@ -1,4 +1,8 @@
-# Theming and UI Components (Developer Guide)
+---
+title: Themes (Legacy)
+category: configuration
+priority: 2
+---
 
 This guide covers the technical implementation of CheckTick's theming system for developers. For user-facing theme configuration, see [Branding and Theme Settings](branding-and-theme-settings.md). For platform deployment configuration, see [Self-Hosting: Platform Theme Configuration](self-hosting-themes.md).
 
@@ -266,7 +270,7 @@ DARK_THEMES = [
 
 ```python
 from checktick_app.core.themes import (
-    LIGHT_THEMES, 
+    LIGHT_THEMES,
     get_theme_color_scheme,
     generate_theme_css_for_brand
 )

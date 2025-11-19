@@ -118,7 +118,7 @@ API endpoints:
 - /api/surveys/ (CRUD for authenticated owners)
 - /api/users/ (admin read-only)
 
-API permissions mirror SSR rules: you can list and retrieve surveys you own, and any survey in organizations where you are an ADMIN. Updates/deletes require ownership or org ADMIN.
+API permissions mirror SSR rules: you can list and retrieve surveys you own, and any survey in organisations where you are an ADMIN. Updates/deletes require ownership or org ADMIN.
 See docs/api.md for endpoint-level protections and error semantics.
 
 Security posture:

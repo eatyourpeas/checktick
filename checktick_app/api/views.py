@@ -4,6 +4,7 @@ from typing import Any
 
 from csp.decorators import csp_exempt
 from django.contrib.auth import get_user_model
+from django.db import models
 from django.shortcuts import render
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -22,6 +23,7 @@ from checktick_app.surveys.models import (
     DataSet,
     Organization,
     OrganizationMembership,
+    PublishedQuestionGroup,
     QuestionGroup,
     Survey,
     SurveyAccessToken,
@@ -1354,6 +1356,279 @@ class DataSetViewSet(viewsets.ModelViewSet):
         instance.save()
 
         return Response(status=204)
+
+
+class PublishedQuestionGroupSerializer(serializers.ModelSerializer):
+    """Serializer for PublishedQuestionGroup with read-only list/retrieve."""
+
+    publisher_username = serializers.CharField(
+        source="publisher.username", read_only=True
+    )
+    organization_name = serializers.CharField(
+        source="organization.name", read_only=True, allow_null=True
+    )
+    can_delete = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PublishedQuestionGroup
+        fields = [
+            "id",
+            "name",
+            "description",
+            "markdown",
+            "publication_level",
+            "publisher",
+            "publisher_username",
+            "organization",
+            "organization_name",
+            "attribution",
+            "show_publisher_credit",
+            "tags",
+            "language",
+            "version",
+            "status",
+            "import_count",
+            "created_at",
+            "updated_at",
+            "can_delete",
+        ]
+        read_only_fields = [
+            "id",
+            "publisher",
+            "import_count",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_can_delete(self, obj):
+        """Check if current user can delete this template."""
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        return obj.publisher == request.user
+
+
+class PublishedQuestionGroupViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for browsing published question group templates.
+
+    Provides read-only endpoints for listing and retrieving published templates.
+    Users can only see:
+    - Global templates (publication_level='global')
+    - Organization templates from their own organization(s)
+
+    List supports filtering by:
+    - publication_level: 'global' or 'organization'
+    - language: language code (e.g., 'en', 'cy')
+    - tags: comma-separated list of tags
+    - search: search in name and description
+    - ordering: 'name', '-created_at', '-import_count'
+    """
+
+    serializer_class = PublishedQuestionGroupSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filterset_fields = ["publication_level", "language"]
+    search_fields = ["name", "description", "tags"]
+    ordering_fields = ["name", "created_at", "import_count"]
+    ordering = ["-created_at"]
+
+    def get_queryset(self):
+        """Filter templates based on user's access."""
+        user = self.request.user
+
+        # Base query: only active templates
+        qs = PublishedQuestionGroup.objects.filter(
+            status=PublishedQuestionGroup.Status.ACTIVE
+        )
+
+        # User can see:
+        # 1. Global templates
+        # 2. Organization templates from their own organizations
+        user_org_ids = OrganizationMembership.objects.filter(user=user).values_list(
+            "organization_id", flat=True
+        )
+
+        qs = qs.filter(
+            models.Q(publication_level=PublishedQuestionGroup.PublicationLevel.GLOBAL)
+            | models.Q(
+                publication_level=PublishedQuestionGroup.PublicationLevel.ORGANIZATION,
+                organization_id__in=user_org_ids,
+            )
+        )
+
+        # Apply filters
+        publication_level = self.request.query_params.get("publication_level")
+        if publication_level:
+            qs = qs.filter(publication_level=publication_level)
+
+        language = self.request.query_params.get("language")
+        if language:
+            qs = qs.filter(language=language)
+
+        search = self.request.query_params.get("search")
+        if search:
+            qs = qs.filter(
+                models.Q(name__icontains=search)
+                | models.Q(description__icontains=search)
+            )
+
+        tags = self.request.query_params.get("tags")
+        if tags:
+            tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+            for tag in tag_list:
+                qs = qs.filter(tags__contains=tag)
+
+        # Apply ordering
+        ordering = self.request.query_params.get("ordering")
+        if ordering:
+            # Validate ordering field
+            valid_fields = {
+                "name",
+                "-name",
+                "created_at",
+                "-created_at",
+                "import_count",
+                "-import_count",
+            }
+            if ordering in valid_fields:
+                qs = qs.order_by(ordering)
+
+        return qs.select_related("publisher", "organization")
+
+    @action(detail=False, methods=["post"], url_path="publish")
+    def publish_from_group(self, request):
+        """
+        Publish a question group as a template.
+
+        Required fields:
+        - question_group_id: ID of the QuestionGroup to publish
+        - name: Template name
+        - description: Template description
+        - publication_level: 'organization' or 'global'
+        - language: Language code (default: 'en')
+
+        Optional fields:
+        - tags: List of tags
+        - attribution: Dict with authors, citation, doi, pmid, license, year
+        - show_publisher_credit: Boolean (default: True)
+        - organization_id: Required if publication_level='organization'
+        """
+        from checktick_app.surveys.views import _export_question_group_to_markdown
+
+        # Validate input
+        question_group_id = request.data.get("question_group_id")
+        if not question_group_id:
+            return Response({"error": "question_group_id is required"}, status=400)
+
+        try:
+            group = QuestionGroup.objects.get(id=question_group_id)
+        except QuestionGroup.DoesNotExist:
+            return Response({"error": "Question group not found"}, status=404)
+
+        # Check if user can access this group
+        survey = group.surveys.first()
+        if not survey:
+            return Response(
+                {"error": "Question group must be part of a survey"}, status=400
+            )
+
+        if not can_edit_survey(request.user, survey):
+            return Response(
+                {"error": "You don't have permission to publish this question group"},
+                status=403,
+            )
+
+        # Check if this group was imported from another template
+        if group.imported_from:
+            return Response(
+                {
+                    "error": "Cannot publish question groups that were imported from templates. "
+                    "This protects copyright and prevents circular attribution issues."
+                },
+                status=400,
+            )
+
+        # Validate required fields
+        name = request.data.get("name")
+        description = request.data.get("description", "")
+        publication_level = request.data.get("publication_level")
+        language = request.data.get("language", "en")
+
+        if not name:
+            return Response({"error": "name is required"}, status=400)
+        if not publication_level:
+            return Response({"error": "publication_level is required"}, status=400)
+        if publication_level not in [
+            PublishedQuestionGroup.PublicationLevel.ORGANIZATION,
+            PublishedQuestionGroup.PublicationLevel.GLOBAL,
+        ]:
+            return Response(
+                {"error": "publication_level must be 'organization' or 'global'"},
+                status=400,
+            )
+
+        # Handle organization requirement for organization-level publications
+        organization = None
+        if publication_level == PublishedQuestionGroup.PublicationLevel.ORGANIZATION:
+            org_id = request.data.get("organization_id")
+            if not org_id:
+                return Response(
+                    {
+                        "error": "organization_id is required for organization-level publications"
+                    },
+                    status=400,
+                )
+
+            try:
+                organization = Organization.objects.get(id=org_id)
+            except Organization.DoesNotExist:
+                return Response({"error": "Organization not found"}, status=404)
+
+            # Check if user is admin in this organization
+            membership = OrganizationMembership.objects.filter(
+                user=request.user,
+                organization=organization,
+                role=OrganizationMembership.Role.ADMIN,
+            ).first()
+
+            if not membership:
+                return Response(
+                    {
+                        "error": "You must be an ADMIN in the organization to publish at organization level"
+                    },
+                    status=403,
+                )
+
+        # Global publications require superuser
+        if publication_level == PublishedQuestionGroup.PublicationLevel.GLOBAL:
+            if not request.user.is_superuser:
+                return Response(
+                    {"error": "Only administrators can publish global templates"},
+                    status=403,
+                )
+
+        # Export to markdown
+        markdown = _export_question_group_to_markdown(group, survey)
+
+        # Create the published template
+        template = PublishedQuestionGroup.objects.create(
+            source_group=group,
+            publisher=request.user,
+            organization=organization,
+            publication_level=publication_level,
+            name=name,
+            description=description,
+            markdown=markdown,
+            attribution=request.data.get("attribution", {}),
+            show_publisher_credit=request.data.get("show_publisher_credit", True),
+            tags=request.data.get("tags", []),
+            language=language,
+            version=request.data.get("version", ""),
+            status=PublishedQuestionGroup.Status.ACTIVE,
+        )
+
+        serializer = self.get_serializer(template)
+        return Response(serializer.data, status=201)
 
 
 @csp_exempt

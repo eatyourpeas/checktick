@@ -1,4 +1,8 @@
-# Self-Hosting Backup and Restore
+---
+title: Backup & Restore
+category: self-hosting
+priority: 7
+---
 
 Protect your CheckTick data with regular backups and disaster recovery procedures.
 

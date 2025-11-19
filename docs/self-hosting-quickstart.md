@@ -1,4 +1,8 @@
-# Self-Hosting Quick Start
+---
+title: Self-Hosting Quickstart
+category: self-hosting
+priority: 2
+---
 
 Get CheckTick running on your own infrastructure in minutes using pre-built Docker images.
 
@@ -114,6 +118,7 @@ Visit `http://localhost:8000` (or your domain) and log in with your admin creden
 
 ## Next Steps
 
+- [Scheduled Tasks](/docs/self-hosting-scheduled-tasks/) - **REQUIRED** for GDPR compliance and maintenance
 - [Production Setup](/docs/self-hosting-production/) - SSL, nginx, security hardening
 - [Database Options](/docs/self-hosting-database/) - External managed databases (AWS RDS, Azure, etc.)
 - [Configuration Guide](/docs/self-hosting-configuration/) - Branding, authentication, email providers

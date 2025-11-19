@@ -1,4 +1,8 @@
-# Self-hosting: Dataset Management
+---
+title: Datasets Setup
+category: self-hosting
+priority: 5
+---
 
 This guide covers the setup and maintenance of datasets for self-hosted CheckTick instances.
 

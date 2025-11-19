@@ -1,4 +1,8 @@
-# Getting Help and Contributing
+---
+title: Getting Help
+category: getting-involved
+priority: 1
+---
 
 This guide helps you choose the right channel for getting help or contributing to CheckTick.
 

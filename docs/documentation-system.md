@@ -1,20 +1,85 @@
-# Documentation System
+---
+title: Documentation System
+category: getting-involved
+priority: 3
+---
 
 The CheckTick documentation system automatically discovers and organizes all markdown files in the `docs/` folder.
 
 ## How It Works
 
+### YAML Frontmatter (Required)
+
+**All documentation files MUST include YAML frontmatter** at the top with `title` and `category` fields. Files without proper frontmatter will not appear in the documentation.
+
+```markdown
+---
+title: My Feature Guide
+category: features
+priority: 5
+---
+
+Your documentation content starts here...
+```
+
+**Required Fields:**
+
+- `title` (required): The display title in navigation and page header
+- `category` (required): Which section to display in
+  - Must match one of the valid categories listed below
+  - Set to `None` to hide from sidebar while keeping the page accessible via URL
+
+**Optional Fields:**
+
+- `priority` (optional): Sort order within category (lower numbers appear first)
+  - Default: 999 (appears at end)
+  - Example: priority 1 appears before priority 5
+
+**Valid Categories:**
+
+- `getting-started` - Getting Started guides
+- `features` - Feature documentation
+- `self-hosting` - Self-hosting guides
+- `configuration` - Configuration guides
+- `security` - Security documentation
+- `data-governance` - Data governance guides
+- `api` - API & development docs
+- `testing` - Testing guides
+- `internationalization` - i18n documentation
+- `getting-involved` - Contributing guides
+- `None` - Hide from menu (accessible via URL only)
+
+**Example:**
+
+```markdown
+---
+title: Getting Started
+category: getting-started
+priority: 1
+---
+
+Welcome to CheckTick! This guide will help you get started...
+```
+
 ### Auto-Discovery
 
-Simply add a new `.md` file to the `docs/` folder and it will automatically appear in the documentation navigation. No code changes needed!
+Simply add a new `.md` file to the `docs/` folder with proper YAML frontmatter and it will automatically appear in the documentation navigation. No code changes needed!
 
 **Example:**
 ```bash
 # Add a new guide
 touch docs/my-new-feature.md
 
-# Edit the file with your content
-echo "# My New Feature\n\nThis is a guide..." > docs/my-new-feature.md
+# Edit the file with YAML frontmatter and content
+cat > docs/my-new-feature.md << 'EOF'
+---
+title: My New Feature
+category: features
+priority: 10
+---
+
+This is a guide to using my new feature...
+EOF
 
 # Restart the web container
 docker compose restart web
@@ -22,41 +87,13 @@ docker compose restart web
 # The page will now appear in the docs!
 ```
 
-### Automatic Categorization
-
-The system automatically categorizes documentation based on filename patterns:
-
-| Category | Pattern Keywords | Examples |
-|----------|-----------------|----------|
-| **Getting Started** 📚 | `getting-started`, `quickstart`, `setup` | `getting-started.md`, `quickstart-guide.md` |
-| **Features** ✨ | `surveys`, `collections`, `groups`, `import`, `publish` | `surveys.md`, `collections.md` |
-| **Configuration** ⚙️ | `branding`, `theme`, `user-management`, `setup` | `branding-and-theme-settings.md` |
-| **Security** 🔒 | `security`, `encryption`, `patient-data`, `authentication`, `permissions` | `patient-data-encryption.md`, `authentication-and-permissions.md` |
-| **API & Development** 🔧 | `api`, `adding-`, `development` | `api.md`, `adding-external-datasets.md` |
-| **Testing** 🧪 | `testing`, `test-` | `testing-api.md`, `testing-webapp.md` |
-| **Internationalization** 🌍 | `i18n`, `internationalization`, `translation`, `locale` | `i18n.md` |
-| **Advanced Topics** 🚀 | `advanced`, `custom`, `extend` | `advanced-config.md` |
-| **Other** 📄 | Everything else | `releases.md` |
-
-### Title Extraction
-
-The system extracts the page title from the first `# Heading` in your markdown file. For example:
-
-```markdown
-# My Awesome Feature Guide
-
-This guide shows you how to...
-```
-
-Will display as **"My Awesome Feature Guide"** in the navigation.
-
-If no heading is found, the filename is converted to title case (e.g., `my-feature.md` → "My Feature").
+**Important:** Files without proper YAML frontmatter will be ignored and will not appear in the documentation.
 
 ## Manual Overrides
 
-If you need more control, you can override settings in `checktick_app/core/views.py`:
+If you need more control over specific pages (e.g., including files from outside the `docs/` folder), you can override settings in `checktick_app/core/views.py`:
 
-### Custom Category Assignment
+### Custom Page Configuration
 
 Edit the `DOC_PAGE_OVERRIDES` dictionary:
 
@@ -64,8 +101,8 @@ Edit the `DOC_PAGE_OVERRIDES` dictionary:
 DOC_PAGE_OVERRIDES = {
     "my-special-doc": {
         "file": "my-special-doc.md",
-        "category": "api",  # Force into API category
-        "title": "Custom Display Title",  # Optional custom title
+        "category": "api",
+        "title": "Custom Display Title",
     },
 }
 ```
@@ -78,7 +115,8 @@ You can include files from outside the `docs/` folder:
 DOC_PAGE_OVERRIDES = {
     "changelog": {
         "file": REPO_ROOT / "CHANGELOG.md",
-        "category": "other",
+        "category": "features",
+        "title": "Changelog",
     },
 }
 ```
@@ -99,39 +137,83 @@ DOC_CATEGORIES = {
 
 ## Best Practices
 
-### 1. Descriptive Filenames
+### 1. Always Use YAML Frontmatter
+
+Start every documentation file with YAML frontmatter:
+
+```markdown
+---
+title: Clear Descriptive Title
+category: features
+priority: 5
+---
+
+Your content here...
+```
+
+This ensures consistent display and proper organization.
+
+### 2. Hide Supporting Documentation
+
+Use `category: None` for detailed reference pages that should be accessible but not clutter the main menu:
+
+```markdown
+---
+title: Advanced Technical Details
+category: None
+---
+
+This page is accessible via direct link but won't appear in sidebar.
+```
+
+Link to these pages from main documentation pages.
+
+### 3. Use Priority for Logical Ordering
+
+Within each category, use `priority` to control the order:
+
+```markdown
+# In getting-started.md
+---
+title: Getting Started
+category: getting-started
+priority: 1
+---
+
+# In getting-started-api.md
+---
+title: Getting Started with API
+category: getting-started
+priority: 2
+---
+```
+
+Lower priority values appear first in the menu.
+
+### 4. Descriptive Filenames
 
 Use descriptive, kebab-case filenames:
-- ✅ `prefilled-datasets-quickstart.md`
+- ✅ `datasets-and-dropdowns.md`
 - ✅ `authentication-and-permissions.md`
 - ❌ `doc1.md`
 - ❌ `README.md` (reserved for index)
 
-### 2. Clear First Heading
+### 5. Clear Titles
 
-Always start your document with a clear `# Heading`:
+Use clear, concise titles in frontmatter:
+- ✅ `title: Getting Started`
+- ✅ `title: API Reference`
+- ❌ `title: Docs`
+- ❌ `title: Untitled Document`
 
-```markdown
-# Prefilled Datasets Quick Start
-
-A quick guide to using prefilled dropdown options...
-```
-
-### 3. Consistent Naming Patterns
+### 6. Consistent Naming Patterns
 
 Use consistent prefixes for related docs:
-- `prefilled-datasets-quickstart.md`
-- `prefilled-datasets-setup.md`
-- `adding-external-datasets.md`
+- `self-hosting.md` (priority: 1)
+- `self-hosting-quickstart.md` (priority: 2)
+- `self-hosting-configuration.md` (priority: 3)
 
-This helps with auto-categorization and keeps related docs together.
-
-### 4. Category Hints in Filenames
-
-Include category keywords in filenames to ensure correct categorization:
-- API guides: `api-reference.md`, `authentication-guide.md`
-- Setup guides: `getting-started-api.md`, `quickstart-deploy.md`
-- Configuration: `theme-settings.md`, `branding-guide.md`
+This helps organize related documentation together in the same category.
 
 ## Linking Between Documentation Pages
 

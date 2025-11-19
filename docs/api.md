@@ -1,4 +1,8 @@
-# API reference and protections
+---
+title: API Reference
+category: api
+priority: 1
+---
 
 Use the interactive documentation for the full, always-up-to-date list of endpoints and schemas:
 
@@ -88,3 +92,180 @@ The DataSet API (`/api/datasets-v2/`) manages shared dropdown option lists for s
 ## Example curl snippets (session + CSRF)
 
 See `docs/authentication-and-permissions.md` for a step-by-step session login and CSRF flow using curl.
+
+## Question Group Template Library API
+
+The Question Group Template API (`/api/question-group-templates/`) provides programmatic access to the template library for browsing and publishing reusable question group templates.
+
+### Endpoints
+
+#### List Templates
+
+```http
+GET /api/question-group-templates/
+```
+
+Returns a list of published question group templates visible to the authenticated user.
+
+**Access Control:**
+- Users see global templates (publication_level='global')
+- Users see organization-level templates from their own organization(s)
+
+**Query Parameters:**
+- `publication_level` (string): Filter by 'global' or 'organization'
+- `language` (string): Filter by language code (e.g., 'en', 'cy')
+- `tags` (string): Comma-separated list of tags to filter by
+- `search` (string): Search in template name and description
+- `ordering` (string): Order results by 'name', '-name', 'created_at', '-created_at', 'import_count', or '-import_count'
+
+**Response:** Array of template objects with fields:
+- `id`: Template ID
+- `name`: Template name
+- `description`: Template description
+- `markdown`: Markdown representation of questions
+- `publication_level`: 'global' or 'organization'
+- `publisher_username`: Username of publisher
+- `organization_name`: Name of organization (for org-level templates)
+- `attribution`: Attribution metadata
+- `tags`: Array of tags
+- `language`: Language code
+- `import_count`: Number of times imported
+- `can_delete`: Boolean indicating if current user can delete this template
+- `created_at`: Creation timestamp
+- `updated_at`: Last update timestamp
+
+**Example:**
+```bash
+curl -H "Authorization: Bearer <token>" \
+  "https://example.com/api/question-group-templates/?publication_level=global&language=en"
+```
+
+#### Retrieve Template
+
+```http
+GET /api/question-group-templates/{id}/
+```
+
+Returns detailed information about a specific template.
+
+**Access Control:** Same as list endpoint (global + own org templates only)
+
+**Example:**
+```bash
+curl -H "Authorization: Bearer <token>" \
+  "https://example.com/api/question-group-templates/123/"
+```
+
+#### Publish Question Group
+
+```http
+POST /api/question-group-templates/publish/
+```
+
+Publishes a question group as a reusable template.
+
+**Request Body:**
+```json
+{
+  "question_group_id": 456,
+  "name": "Depression Screening (PHQ-9)",
+  "description": "Standard 9-item depression screening questionnaire",
+  "publication_level": "organization",
+  "organization_id": 789,
+  "language": "en",
+  "tags": ["mental-health", "screening", "validated"],
+  "attribution": {
+    "original_author": "Dr. Smith",
+    "source": "Clinical Guidelines 2023"
+  },
+  "show_publisher_credit": true
+}
+```
+
+**Required Fields:**
+- `question_group_id`: ID of the question group to publish
+- `name`: Template name
+- `publication_level`: 'global' or 'organization'
+- `organization_id`: Required if publication_level is 'organization'
+
+**Optional Fields:**
+- `description`: Template description (default: empty string)
+- `language`: Language code (default: 'en')
+- `tags`: Array of tags (default: empty array)
+- `attribution`: Attribution metadata (default: empty object)
+- `show_publisher_credit`: Show publisher name (default: true)
+
+**Access Control:**
+- User must have edit permission on the survey containing the question group
+- Cannot publish question groups that were imported from other templates (copyright protection)
+- **Organization-level** publication requires ADMIN role in the target organization
+- **Global** publication requires superuser status
+
+**Response:** Created template object (201 Created)
+
+**Example:**
+```bash
+curl -X POST \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question_group_id": 456,
+    "name": "Anxiety Screening (GAD-7)",
+    "description": "7-item anxiety screening tool",
+    "publication_level": "organization",
+    "organization_id": 789,
+    "language": "en",
+    "tags": ["mental-health", "anxiety", "validated"]
+  }' \
+  "https://example.com/api/question-group-templates/publish/"
+```
+
+### Permission Matrix
+
+| Action | Anonymous | Authenticated | Org Admin | Superuser |
+|--------|-----------|---------------|-----------|-----------|
+| List templates | ❌ | ✅ (global + own org) | ✅ (global + own org) | ✅ (all) |
+| Retrieve template | ❌ | ✅ (global + own org) | ✅ (global + own org) | ✅ (all) |
+| Publish (org-level) | ❌ | ❌ | ✅ (own org only) | ✅ |
+| Publish (global) | ❌ | ❌ | ❌ | ✅ |
+
+### Copyright Protection
+
+The API prevents publishing question groups that were imported from other templates. This protects against:
+- Copyright violations
+- Circular attribution issues
+- Confusion about original sources
+
+If you need to share an imported question group, either:
+1. Credit the original template in your documentation
+2. Significantly modify the questions to create original content
+3. Contact the original publisher for permission
+
+### Error Responses
+
+```json
+// 400 Bad Request - Missing required field
+{
+  "error": "name is required"
+}
+
+// 400 Bad Request - Cannot publish imported group
+{
+  "error": "Cannot publish question groups that were imported from templates. This protects copyright and prevents circular attribution issues."
+}
+
+// 403 Forbidden - Not an org admin
+{
+  "error": "You must be an ADMIN in the organization to publish at organization level"
+}
+
+// 403 Forbidden - Not a superuser
+{
+  "error": "Only administrators can publish global templates"
+}
+
+// 404 Not Found - Question group doesn't exist
+{
+  "error": "Question group not found"
+}
+```

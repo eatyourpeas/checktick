@@ -1,4 +1,7 @@
-# Data Protection Policy
+---
+title: Data Protection Policy
+category: None
+---
 
 **Version:** 1.0
 **Last Updated:** {{ site.updated_date | default: "Please update in admin settings" }}

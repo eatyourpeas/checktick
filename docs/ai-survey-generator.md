@@ -1,4 +1,8 @@
-# AI-Assisted Survey Generator
+---
+title: AI-Assisted Survey Generator
+category: features
+priority: 3
+---
 
 The AI-assisted survey generator helps you create healthcare surveys through natural conversation with a large language model (LLM). This feature is available alongside the manual markdown import option.
 

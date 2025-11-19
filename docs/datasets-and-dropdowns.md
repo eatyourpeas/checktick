@@ -1,4 +1,8 @@
-# Datasets and Dropdowns
+---
+title: Datasets and Dropdowns
+category: features
+priority: 5
+---
 
 When creating surveys, you often need validated dropdown lists of options. CheckTick's dataset system makes this easy by providing ready-to-use lists and the ability to create your own.
 

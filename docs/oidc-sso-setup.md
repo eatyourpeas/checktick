@@ -1,4 +1,8 @@
-# OIDC SSO Setup for Healthcare Organizations
+---
+title: OIDC SSO Setup
+category: configuration
+priority: 5
+---
 
 This guide provides step-by-step instructions for setting up Single Sign-On (SSO) authentication for healthcare organizations using Google OAuth and Microsoft Azure AD.
 

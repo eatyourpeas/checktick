@@ -1,4 +1,8 @@
-# Testing the API
+---
+title: Testing API
+category: testing
+priority: 2
+---
 
 This document provides guidance on testing the CheckTick API, including patterns, best practices, and examples from the existing test suite.
 

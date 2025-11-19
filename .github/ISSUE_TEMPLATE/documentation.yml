@@ -95,7 +95,7 @@ body:
         - Your experience level with CheckTick
         - What you were trying to accomplish
         - Where you got stuck
-        - Suggestions for better organization
+        - Suggestions for better organisation
 
   - type: checkboxes
     id: contribution-interest

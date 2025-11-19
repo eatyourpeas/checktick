@@ -366,3 +366,103 @@ def require_can_hard_delete_survey(user, survey: Survey) -> None:
         raise PermissionDenied(
             "You do not have permission to permanently delete this survey."
         )
+
+
+# Published Question Group Permissions
+
+
+def can_publish_question_group(user, group, level: str, survey=None) -> bool:
+    """Check if user can publish a question group at given level."""
+    from .models import OrganizationMembership
+
+    if not user.is_authenticated:
+        return False
+
+    # Must be owner of the group
+    if group.owner_id != user.id:
+        return False
+
+    if level == "global":
+        # Anyone (except org VIEWERs) can publish globally
+        # Check if user is an org VIEWER
+        if OrganizationMembership.objects.filter(
+            user=user, role=OrganizationMembership.Role.VIEWER
+        ).exists():
+            # If they're a VIEWER in any org, they can't publish
+            return False
+        return True
+
+    if level == "organization":
+        # Must have an organization associated with the survey
+        if not survey or not survey.organization:
+            return False
+        # Must be CREATOR or ADMIN in that organization
+        membership = OrganizationMembership.objects.filter(
+            user=user,
+            organization=survey.organization,
+            role__in=[
+                OrganizationMembership.Role.ADMIN,
+                OrganizationMembership.Role.CREATOR,
+            ],
+        ).exists()
+        return membership
+
+    return False
+
+
+def can_import_published_template(user, template) -> bool:
+    """Check if user can import a published template."""
+    from .models import OrganizationMembership, PublishedQuestionGroup
+
+    if not user.is_authenticated:
+        return False
+
+    # Must be active
+    if template.status != PublishedQuestionGroup.Status.ACTIVE:
+        return False
+
+    # Global templates available to all authenticated users
+    if template.publication_level == PublishedQuestionGroup.PublicationLevel.GLOBAL:
+        return True
+
+    # Organization templates only for org members
+    if (
+        template.publication_level
+        == PublishedQuestionGroup.PublicationLevel.ORGANIZATION
+    ):
+        if template.organization:
+            return OrganizationMembership.objects.filter(
+                user=user, organization=template.organization
+            ).exists()
+
+    return False
+
+
+def can_delete_published_template(user, template) -> bool:
+    """Check if user can delete a published template."""
+    if not user.is_authenticated:
+        return False
+
+    # Superusers can delete any template
+    if user.is_superuser:
+        return True
+
+    # Publishers can delete their own templates
+    return template.publisher_id == user.id
+
+
+def require_can_publish_question_group(user, group, level: str) -> None:
+    if not can_publish_question_group(user, group, level):
+        raise PermissionDenied(
+            "You do not have permission to publish this question group."
+        )
+
+
+def require_can_import_published_template(user, template) -> None:
+    if not can_import_published_template(user, template):
+        raise PermissionDenied("You do not have permission to import this template.")
+
+
+def require_can_delete_published_template(user, template) -> None:
+    if not can_delete_published_template(user, template):
+        raise PermissionDenied("You do not have permission to delete this template.")

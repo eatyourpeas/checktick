@@ -1,4 +1,8 @@
-# Email Notifications
+---
+title: Email Notifications
+category: configuration
+priority: 4
+---
 
 CheckTick includes a comprehensive email notification system with customizable templates, granular user preferences, and two-level theming support.
 

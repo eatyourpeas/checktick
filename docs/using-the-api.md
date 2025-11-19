@@ -1,4 +1,8 @@
-# Using the API
+---
+title: Using the API
+category: api
+priority: 2
+---
 
 This guide provides comprehensive documentation for creating and managing surveys via the API, including all supported question types, JSON structure, and advanced features.
 

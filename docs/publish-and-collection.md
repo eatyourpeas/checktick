@@ -1,4 +1,8 @@
-# Publish & Collect Responses
+---
+title: Publish & Collect Responses
+category: features
+priority: 7
+---
 
 This guide explains how to publish a survey, the different participation modes (Authenticated, Public, Unlisted, Invite Token), and the security protections applied at each step.
 
@@ -76,7 +80,7 @@ Our CSP is already configured to allow hCaptcha domains; no inline scripts are u
 ## Participant flow and Thank-you page
 
 - While live, the participant route renders the survey form (and CAPTCHA when required)
-- **Survey progress tracking**: Participants can save their progress and resume later. See [Survey Progress Tracking](survey-progress-tracking.md) for details on auto-save, progress restoration, and data retention.
+- **Survey progress tracking**: Participants can save their progress and resume later. See [Survey Progress Tracking](/docs/survey-progress-tracking/) for details on auto-save, progress restoration, and data retention.
 - On successful submission, participants are redirected to `/surveys/<slug>/thank-you/`
 - Responses count toward the survey's totals and analytics tiles
 

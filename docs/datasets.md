@@ -1,4 +1,7 @@
-# Using Datasets
+---
+title: Using Datasets (Legacy)
+category: None
+---
 
 Datasets provide ready-to-use dropdown options for survey questions, saving time and ensuring consistency. CheckTick offers three types of datasets that power your dropdown fields.
 

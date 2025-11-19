@@ -37,6 +37,11 @@ router.register(
     r"survey-memberships", views.SurveyMembershipViewSet, basename="survey-membership"
 )
 router.register(r"scoped-users", views.ScopedUserViewSet, basename="scoped-user")
+router.register(
+    r"question-group-templates",
+    views.PublishedQuestionGroupViewSet,
+    basename="question-group-template",
+)
 
 urlpatterns = [
     path("health", views.healthcheck, name="healthcheck"),

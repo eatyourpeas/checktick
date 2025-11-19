@@ -1,0 +1,285 @@
+name: 📋 Question Group Template Request
+description: Request a new global Question Group Template to be added to CheckTick
+title: "[Template]: "
+labels: ["question-group-template", "enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Request a new global Question Group Template**
+
+        CheckTick maintains a collection of validated, reusable Question Group Templates (such as PHQ-9, GAD-7, etc.) that are available to all users. These templates help users quickly add standardized questionnaires to their surveys.
+
+        Before requesting a new template, please:
+        1. Check the [existing templates](https://checktick.eatyourpeas.com/templates/) to see if it already exists
+        2. Search existing issues to avoid duplicates
+        3. Ensure this is a validated, published questionnaire (not a custom/draft instrument)
+        4. Verify you have permission to share this questionnaire (check licensing/copyright)
+
+        **Note**: Templates must be validated instruments with proper attribution. Custom questionnaires should be published at organisation level first.
+
+  - type: input
+    id: template-name
+    attributes:
+      label: Template Name
+      description: The official name of the questionnaire/instrument
+      placeholder: "e.g., PHQ-9, GAD-7, WEMWBS, UCLA Loneliness Scale"
+    validations:
+      required: true
+
+  - type: input
+    id: full-name
+    attributes:
+      label: Full Name/Acronym Expansion
+      description: The full name if an acronym is used
+      placeholder: "e.g., Patient Health Questionnaire-9, Generalized Anxiety Disorder-7"
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Brief description of what this questionnaire measures
+      placeholder: |
+        - What does this questionnaire assess?
+        - What is it commonly used for?
+        - Target population (if specific)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: template-type
+    attributes:
+      label: Template Type
+      description: What category does this questionnaire fall into?
+      options:
+        - Screening tool
+        - Assessment scale
+        - Diagnostic tool
+        - Outcome measure
+        - Quality of life measure
+        - Demographic survey
+        - Research instrument
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: domain
+    attributes:
+      label: Clinical Domain
+      description: Select all domains this questionnaire covers
+      options:
+        - label: Mental health (depression, anxiety, etc.)
+        - label: Physical health
+        - label: Quality of life
+        - label: Pain assessment
+        - label: Functional assessment
+        - label: Cognitive assessment
+        - label: Patient satisfaction
+        - label: Social determinants of health
+        - label: Substance use
+        - label: Other
+
+  - type: textarea
+    id: attribution
+    attributes:
+      label: Attribution Information
+      description: Provide citation and authorship details
+      placeholder: |
+        **Authors**: [List primary authors]
+        **Citation**: [Full citation]
+        **PMID**: [PubMed ID if applicable]
+        **DOI**: [DOI if applicable]
+        **Year**: [Publication year]
+
+        Example:
+        Authors: Kurt Kroenke, Robert L. Spitzer, Janet B.W. Williams
+        Citation: Kroenke, K., Spitzer, R. L., & Williams, J. B. (2001). The PHQ-9: validity of a brief depression severity measure. Journal of General Internal Medicine, 16(9), 606-613.
+        PMID: 11556941
+        DOI: 10.1046/j.1525-1497.2001.016009606.x
+        Year: 2001
+    validations:
+      required: true
+
+  - type: dropdown
+    id: license
+    attributes:
+      label: License/Copyright Status
+      description: What is the licensing status of this questionnaire?
+      options:
+        - Public Domain
+        - CC0 (Public Domain Dedication)
+        - CC-BY-4.0 (Attribution)
+        - CC-BY-SA-4.0 (Attribution-ShareAlike)
+        - Open Access with attribution
+        - Permission required (I have obtained permission)
+        - Unknown (needs investigation)
+    validations:
+      required: true
+
+  - type: textarea
+    id: license-details
+    attributes:
+      label: License Details/Permission
+      description: Additional details about licensing or permission to use
+      placeholder: |
+        - Link to official licensing information
+        - Details of permission obtained (if applicable)
+        - Any restrictions on use
+        - Copyright holder information
+
+  - type: textarea
+    id: template-content
+    attributes:
+      label: Template Content
+      description: Provide the questions in markdown format (see [documentation](https://checktick.eatyourpeas.com/docs/import/))
+      placeholder: |
+        # Template Name {template-id}
+
+        ## Question 1* {q1}
+        (radio)
+        - Option 1
+        - Option 2
+        - Option 3
+
+        ## Question 2* {q2}
+        (radio)
+        - Option 1
+        - Option 2
+
+        (Continue for all questions...)
+    validations:
+      required: true
+
+  - type: input
+    id: official-url
+    attributes:
+      label: Official Source URL
+      description: Link to official documentation or source for this questionnaire
+      placeholder: "https://..."
+
+  - type: dropdown
+    id: validation-status
+    attributes:
+      label: Validation Status
+      description: How well validated is this questionnaire?
+      options:
+        - Extensively validated (multiple studies, widely used)
+        - Well validated (published validation studies)
+        - Limited validation (some evidence)
+        - Not formally validated
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: suggested-tags
+    attributes:
+      label: Suggested Tags
+      description: Select all tags that apply to help users discover this template
+      options:
+        - label: depression
+        - label: anxiety
+        - label: screening
+        - label: validated
+        - label: research
+        - label: clinical-assessment
+        - label: quality-of-life
+        - label: mental-health
+        - label: physical-health
+        - label: paediatric
+        - label: geriatric
+        - label: pain
+        - label: outcome-measure
+
+  - type: dropdown
+    id: usage-frequency
+    attributes:
+      label: Expected Usage Frequency
+      description: How commonly used is this questionnaire?
+      options:
+        - Very Common (gold standard, used daily)
+        - Common (regularly used in specialty)
+        - Moderate (used in specific contexts)
+        - Rare (niche but validated)
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case Description
+      description: Describe how this questionnaire is typically used
+      placeholder: |
+        - What settings is it used in? (clinical, research, etc.)
+        - What populations is it validated for?
+        - Who else might benefit from having this available?
+        - Any special considerations for use?
+    validations:
+      required: true
+
+  - type: textarea
+    id: scoring
+    attributes:
+      label: Scoring Information (Optional)
+      description: How is this questionnaire scored/interpreted?
+      placeholder: |
+        - Scoring method
+        - Score ranges and interpretations
+        - Cut-off scores (if applicable)
+        - Any special scoring considerations
+
+  - type: input
+    id: language
+    attributes:
+      label: Language
+      description: Language of the questionnaire
+      placeholder: "e.g., English (UK), English (US), Spanish, etc."
+      value: "English (UK)"
+
+  - type: textarea
+    id: organisation-context
+    attributes:
+      label: Organisation Context (Optional)
+      description: Context about your organisation's needs (helps us prioritize)
+      placeholder: |
+        - Type of healthcare organisation
+        - How you're currently using or plan to use this
+        - Scale of usage
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      options:
+        - label: I've checked this template doesn't already exist in the library
+          required: true
+        - label: I've searched existing issues for duplicates
+          required: true
+        - label: This is a validated/published instrument (not a custom questionnaire)
+          required: true
+        - label: I've verified the licensing allows sharing/use in this way
+          required: true
+        - label: The attribution information is accurate and complete
+          required: true
+        - label: I'm willing to help validate the template once it's added
+          required: false
+        - label: I can help with translations if needed
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        **What happens next?**
+
+        1. Maintainers review the request and verify licensing/attribution
+        2. If approved, the template is added to the global repository
+        3. Template becomes available to all users on next deployment
+        4. You'll be notified when it's live
+
+        **Alternative**: If you need this immediately, you can:
+        1. Create the question group in your own survey
+        2. Publish it at organisation level (if you're in an organisation)
+        3. Once reviewed and approved, we can promote it to global level
+
+        **For more information**, see the [Question Group Template documentation](https://checktick.eatyourpeas.com/docs/publish-question-groups/).

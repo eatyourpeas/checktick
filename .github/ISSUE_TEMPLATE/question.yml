@@ -51,7 +51,7 @@ body:
       options:
         - Healthcare Professional (clinician, researcher)
         - Survey Administrator
-        - Organization Admin
+        - Organisation Admin
         - Developer/Technical User
         - System Administrator
         - End User/Survey Respondent

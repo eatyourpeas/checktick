@@ -31,7 +31,8 @@
     <!-- Right: Title, subtitle, CTAs -->
     <div class="w-full lg:flex-1 min-w-0 text-center lg:text-left lg:pl-8">
       <h1 class="text-5xl md:text-6xl font-bold font-heading">{% trans "CheckTick" %}</h1>
-      <p class="mt-3 text-xl md:text-2xl opacity-80">{% trans "Surveys for health care" %}</p>
+      <p class="mt-3 text-xl md:text-2xl opacity-80">{% trans "Surveys for Healthcare" %}</p>
+      <p class="mt-2 text-base md:text-lg opacity-70">{% trans "Build intelligent surveys with validated questionnaires, AI assistance, and NHS-level security" %}</p>
 
       <div class="mt-8 flex flex-wrap items-center gap-3 justify-center lg:justify-start">
         {% if user.is_authenticated %}
@@ -51,18 +52,18 @@
 
 
 <section class="mt-12">
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
   <div class="card bg-secondary/10 border border-secondary/20 hover:bg-secondary/20 transition-colors flex flex-col">
     <div class="card-body flex flex-col flex-1">
         <div class="flex-1">
           <div class="flex items-center gap-3">
             <span class="text-base-content/80">{% include "components/icons/hammer_wrench.html" with classes="w-8 h-8" %}</span>
-            <h3 class="card-title text-base-content">{% trans "Build" %}</h3>
+            <h3 class="card-title text-base-content">{% trans "Powerful Question Builder" %}</h3>
           </div>
-          <div class="h5 text-secondary">{% trans "Drag-and-drop question blocks" %}</div>
-          <div class="h5 text-secondary">{% trans "custom designs for each survey " %}</div>
-          <div class="h5 text-secondary">{% trans "Conditional branching logic" %}</div>
-          <div class="h5 text-secondary">{% trans "select from a range of pre-built question templates optimized for the NHS." %}</div>
+          <div class="h5 text-secondary">{% trans "Visual drag-and-drop interface with multiple question types" %}</div>
+          <div class="h5 text-secondary">{% trans "Conditional branching logic and repeatable sections" %}</div>
+          <div class="h5 text-secondary">{% trans "Text Entry mode for rapid survey creation from existing content" %}</div>
+          <div class="h5 text-secondary">{% trans "Custom styling and theming for individual surveys" %}</div>
         </div>
         <div class="card-actions justify-end pt-2">
           {% if user.is_authenticated %}
@@ -79,12 +80,12 @@
         <div class="flex-1">
           <div class="flex items-center gap-3">
             <span class="text-base-content/80">{% include "components/icons/llm.html" with classes="w-8 h-8" %}</span>
-            <h3 class="card-title text-base-content">{% trans "AI-Assisted" %}</h3>
+            <h3 class="card-title text-base-content">{% trans "AI-Powered Survey Generation" %}</h3>
           </div>
-          <div class="h5 text-primary">{% trans "Generate surveys using AI conversation" %}</div>
-          <div class="h5 text-primary">{% trans "Self-hosted LLM with transparent prompts" %}</div>
-          <div class="h5 text-primary">{% trans "No third-party AI services" %}</div>
-          <div class="h5 text-primary">{% trans "Export to markdown for review and refinement" %}</div>
+          <div class="h5 text-primary">{% trans "Generate complete surveys through conversational AI" %}</div>
+          <div class="h5 text-primary">{% trans "Self-hosted LLM with transparent, auditable prompts" %}</div>
+          <div class="h5 text-primary">{% trans "No third-party AI services - your data stays secure" %}</div>
+          <div class="h5 text-primary">{% trans "Export to text for clinician-in-the-loop review and refinement" %}</div>
         </div>
         <div class="card-actions justify-end pt-2">
           {% if user.is_authenticated %}
@@ -96,21 +97,45 @@
       </div>
     </div>
 
-  <div class="card bg-secondary/10 border border-secondary/20 hover:bg-secondary/20 transition-colors flex flex-col">
+  <div class="card bg-accent/10 border border-accent/20 hover:bg-accent/20 transition-colors flex flex-col">
     <div class="card-body flex flex-col flex-1">
         <div class="flex-1">
           <div class="flex items-center gap-3">
             <span class="text-base-content/80">{% include "components/icons/documents.html" with classes="w-8 h-8" %}</span>
-            <h3 class="card-title text-base-content">{% trans "Distribute" %}</h3>
+            <h3 class="card-title text-base-content">{% trans "Validated Questionnaires" %}</h3>
           </div>
-          <div class="h5 text-secondary">{% trans "Publish surveys via email, SMS, or web links." %}</div>
-          <div class="h5 text-secondary">{% trans "Track responses in real-time." %}</div>
+          <div class="h5 text-accent">{% trans "Access published, validated questionnaires (PHQ-9, GAD-7, etc.)" %}</div>
+          <div class="h5 text-accent">{% trans "Community-maintained question group templates" %}</div>
+          <div class="h5 text-accent">{% trans "Share and reuse question groups across your organisation" %}</div>
+          <div class="h5 text-accent">{% trans "Full attribution and citation support" %}</div>
         </div>
         <div class="card-actions justify-end pt-2">
           {% if user.is_authenticated %}
-            <a class="btn btn-sm btn-secondary" href="/surveys/">{% trans "Manage surveys" %}</a>
+            <a class="btn btn-sm btn-accent" href="{% url 'surveys:published_templates_list' %}">{% trans "Browse templates" %}</a>
           {% else %}
-            <a class="btn btn-sm btn-secondary" href="{% url 'core:docs_page' slug='surveys' %}">{% trans "Explore docs" %}</a>
+            <a class="btn btn-sm btn-accent" href="{% url 'core:docs_page' slug='question-group-template-library' %}">{% trans "Learn more" %}</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card bg-info/10 border border-info/20 hover:bg-info/20 transition-colors flex flex-col">
+    <div class="card-body flex flex-col flex-1">
+        <div class="flex-1">
+          <div class="flex items-center gap-3">
+            <span class="text-base-content/80">{% include "components/icons/shield-check.html" with classes="w-8 h-8" %}</span>
+            <h3 class="card-title text-base-content">{% trans "NHS-Grade Security" %}</h3>
+          </div>
+          <div class="h5 text-info">{% trans "End-to-end encryption for patient data" %}</div>
+          <div class="h5 text-info">{% trans "Role-based access control and audit logs, single sign on support" %}</div>
+          <div class="h5 text-info">{% trans "GDPR, NHS DSPT, and Caldicott compliant" %}</div>
+          <div class="h5 text-info">{% trans "Automated data governance and retention" %}</div>
+        </div>
+        <div class="card-actions justify-end pt-2">
+          {% if user.is_authenticated %}
+            <a class="btn btn-sm btn-info" href="{% url 'core:docs_page' slug='data-governance' %}">{% trans "Security docs" %}</a>
+          {% else %}
+            <a class="btn btn-sm btn-info" href="{% url 'core:docs_page' slug='data-governance' %}">{% trans "Learn about security" %}</a>
           {% endif %}
         </div>
       </div>
@@ -120,21 +145,41 @@
     <div class="card-body flex flex-col flex-1">
         <div class="flex-1">
           <div class="flex items-center gap-3">
-            <span class="text-base-content/80">{% include "components/icons/shield-check.html" with classes="w-8 h-8" %}</span>
-            <h3 class="card-title text-base-content">{% trans "Secure" %}</h3>
+            <span class="text-base-content/80">{% include "components/icons/checktick.html" with classes="w-8 h-8" %}</span>
+            <h3 class="card-title text-base-content">{% trans "NHS-Optimized Data" %}</h3>
           </div>
-          <div class="h5 text-secondary">{% trans "End-to-end encryption for patient data" %}</div>
-          <div class="h5 text-secondary">{% trans "Role-based access control (RBAC)" %}</div>
-          <div class="h5 text-secondary">{% trans "GDPR, NHS DSPT, and Caldicott compliance" %}</div>
-          <div class="h5 text-secondary">{% trans "Audit logs for compliance and data governance" %}</div>
+          <div class="h5 text-secondary">{% trans "Pre-populated with NHS Data Dictionary standards" %}</div>
+          <div class="h5 text-secondary">{% trans "Standardised hospital, trust, and organisational datasets" %}</div>
+          <div class="h5 text-secondary">{% trans "Automatically synchronised and community and admin maintained" %}</div>
+          <div class="h5 text-secondary">{% trans "Consistent dropdown options across all surveys" %}</div>
         </div>
         <div class="card-actions justify-end pt-2">
           {% if user.is_authenticated %}
-            <a class="btn btn-sm btn-secondary" href="{% url 'core:docs_page' slug='data-governance' %}#security-best-practices">{% trans "Security documentation" %}</a>
-            <a class="btn btn-sm btn-outline" href="{% url 'core:docs_page' slug='data-governance' %}#data-policy">{% trans "Data policy" %}</a>
+            <a class="btn btn-sm btn-secondary" href="{% url 'core:docs_page' slug='nhs-data-dictionary-datasets' %}">{% trans "View datasets" %}</a>
           {% else %}
-            <a class="btn btn-sm btn-secondary" href="{% url 'core:docs_page' slug='data-governance' %}#security-best-practices">{% trans "Learn about security" %}</a>
-            <a class="btn btn-sm btn-outline" href="{% url 'core:docs_page' slug='data-governance' %}#data-policy">{% trans "Data policy" %}</a>
+            <a class="btn btn-sm btn-secondary" href="{% url 'core:docs_page' slug='datasets' %}">{% trans "Explore datasets" %}</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-colors flex flex-col">
+    <div class="card-body flex flex-col flex-1">
+        <div class="flex-1">
+          <div class="flex items-center gap-3">
+            <span class="text-base-content/80">{% include "components/icons/language.html" with classes="w-8 h-8" %}</span>
+            <h3 class="card-title text-base-content">{% trans "Built for Global Health" %}</h3>
+          </div>
+          <div class="h5 text-primary">{% trans "Multi-language support for diverse patient populations" %}</div>
+          <div class="h5 text-primary">{% trans "Individual and organisation accounts with custom branding" %}</div>
+          <div class="h5 text-primary">{% trans "Flexible deployment: cloud-hosted or self-hosted" %}</div>
+          <div class="h5 text-primary">{% trans "Originally designed for UK health services, suitable worldwide" %}</div>
+        </div>
+        <div class="card-actions justify-end pt-2">
+          {% if user.is_authenticated %}
+            <a class="btn btn-sm btn-primary" href="{% url 'core:docs_page' slug='i18n' %}">{% trans "Internationalization" %}</a>
+          {% else %}
+            <a class="btn btn-sm btn-primary" href="{% url 'core:docs_page' slug='getting-started' %}">{% trans "Get started" %}</a>
           {% endif %}
         </div>
       </div>

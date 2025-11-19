@@ -1,4 +1,8 @@
-# Encryption for Organisation Users
+---
+title: Encryption for Organisation Users
+category: security
+priority: 5
+---
 
 This guide explains how encryption works for CheckTick users who are members of an organisation, including organisation owners and administrators.
 

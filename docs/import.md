@@ -1,11 +1,26 @@
-# Bulk survey import
+---
+title: Text Entry
+category: features
+priority: 4
+---
 
-The survey builder supports uploading a complete survey definition written in Markdown. This is convenient when:
+The survey builder supports multiple ways to create survey content: Text Entry (importing from text format) and detailed follow-up question configuration. This is convenient when:
 
 - You already have the survey designed in a document and prefer to import the structure instead of dragging and dropping questions in the visual builder.
 - You want to lay out complex flows with repeatable sections or branching logic before wiring the final details in the UI.
+- You need fine-grained control over follow-up text inputs for specific options.
 
 > **New:** You can also create surveys using our [AI-Assisted Survey Generator](/docs/ai-survey-generator/), which helps you design surveys through natural conversation instead of writing markdown manually.
+
+This document covers:
+
+- [Bulk survey import](#bulk-survey-import) - Complete markdown syntax for importing surveys
+- [Follow-up questions](#follow-up-questions) - Adding conditional text inputs to question options
+- [Repeats](#repeats-nested-repeatable-sections) - Creating nested, repeatable sections
+
+For more details on repeats, see [Repeats (Nested, Repeatable Sections)](/docs/collections/).
+
+## Bulk survey import
 
 This document captures the grammar the importer recognises and the conventions that keep identifiers stable when you later edit the survey.
 
@@ -89,6 +104,57 @@ Spacing is flexible, but keep the relative order (heading → optional descripti
 - Not all options need follow-ups—only add them where additional context is needed
 - Follow-up responses are stored alongside the selected option in the survey response
 
+## Follow-up questions
+
+Follow-up text inputs allow you to conditionally show additional text fields based on respondents' answers. This is useful when you need more detail for specific options (e.g., "If you selected 'Other', please explain").
+
+### Compatible question types
+
+Follow-up text inputs work with:
+
+- Multiple choice — single (`mc_single`)
+- Multiple choice — multiple (`mc_multi`)
+- Dropdown (`dropdown`)
+- Yes/No (`yesno`)
+- Orderable list (`orderable`)
+
+### Configuration methods
+
+You can add follow-up text inputs in three ways:
+
+1. **Text Entry** (this document) - Use the `+` syntax shown above
+2. **Visual builder** - Check "Enable follow-up text" for each option in the question editor
+3. **API** - Include `followup_text` in the options structure
+
+### How it works for respondents
+
+When a respondent selects an option that has follow-up text enabled:
+
+- A text input field appears with your custom label
+- The field is hidden if they select a different option
+- For multiple-choice questions with multiple selections, they see follow-up fields for each selected option that has it enabled
+
+### Visual indicator
+
+Questions with follow-up inputs configured show a badge in the question card listing which options have follow-up text. This helps you quickly identify questions with this feature when managing your survey.
+
+### Data structure
+
+Options with follow-up text are stored as:
+
+```json
+{
+  "label": "Employed part-time",
+  "value": "Employed part-time",
+  "followup_text": {
+    "enabled": true,
+    "label": "Please specify your hours per week"
+  }
+}
+```
+
+For complete implementation details and examples, see [Follow-up Questions & Text Entry](/docs/FOLLOWUP_FEATURE_SUMMARY/).
+
 ## Required questions
 
 Mark a question as required by adding an asterisk `*` immediately after the question title. Required questions must be answered before participants can submit the form.
@@ -117,11 +183,11 @@ Please provide your email
 
 ## Preview Viewer
 
-The bulk upload also has a real-time preview viewer. As the user enters markdown the view renders it below - this is helpful because a unique identifier for each question and question-group automatically renders in the preview. This is needed if you choose to use the branching notation (see below).
+Text Entry also has a real-time preview viewer. As you enter text the view renders it below - this is helpful because a unique identifier for each question and question-group automatically renders in the preview. This is needed if you choose to use the branching notation (see below).
 
 ## Additional Function
 
-Users may not want to use this function and the bulk uploader works without it. Users may simply want to convert a word document to mark down and import the questions wholesale - they can add function for repeat questions (such as patients) or conditional branching in the question builder afterwards. But for those who wish to use the importer here, then it is possible to use the notation described below for some questions or groups to be iterative or show conditionally depending on answers that users give. This is detailed below.
+You may not want to use this function and Text Entry works without it. You may simply want to convert a Word document to text format and import the questions wholesale - you can add function for repeat questions (such as patients) or conditional branching in the Question Builder afterwards. But if you wish to use advanced features during import, it is possible to use the notation described below for some questions or groups to be iterative or show conditionally depending on answers that users give. This is detailed below.
 
 ### Repeatable collections
 
@@ -170,7 +236,7 @@ Notes:
 
 ## Error handling and validation
 
-The bulk import system provides comprehensive error detection and reporting at two levels:
+Text Entry provides comprehensive error detection and reporting at two levels:
 
 ### Live preview (immediate feedback)
 
@@ -209,7 +275,7 @@ This two-layer validation approach ensures that formatting and syntax errors are
 ## Workflow tips
 
 1. Draft the structure in Markdown using a familiar editor or export from a specification document.
-2. Paste the Markdown into the bulk import form and review the live preview to confirm IDs, repeat badges, and branch targets look correct.
+2. Paste the text into the Text Entry form and review the live preview to confirm IDs, repeat badges, and branch targets look correct.
 3. When ready, choose **Create survey**, acknowledge the overwrite warning, and import. The importer recreates question groups, questions, branching conditions, and collections.
 4. Use the visual builder to fine-tune wording, add advanced logic, or connect the imported sections with additional navigation rules.
 

@@ -1,6 +1,9 @@
-# Follow-up Questions & Bulk Import
+---
+title: Follow-up Questions & Text Entry
+category: None
+---
 
-Complete guide to creating surveys with follow-up text inputs using markdown bulk import.
+Complete guide to creating surveys with follow-up text inputs using Text Entry.
 
 ## Overview
 
@@ -8,13 +11,13 @@ CheckTick supports follow-up text inputs on question options through three metho
 
 1. **API** - Programmatically create surveys with follow-ups
 2. **Web Builder** - Use the visual survey builder interface
-3. **Markdown Import** - Bulk import surveys from markdown files (this guide)
+3. **Text Entry** - Import surveys from text format (this guide)
 
 This guide focuses on the markdown import syntax for adding follow-up questions to your surveys.
 
 ## Quick Start
 
-For a complete guide to bulk importing surveys, see the [Import Documentation](import.md).
+For a complete guide to importing surveys, see the [Import Documentation](import.md).
 
 Follow-up text inputs are added using indented lines starting with `+` immediately after an option:
 
@@ -63,10 +66,10 @@ For `yesno` questions, you can optionally provide explicit options with follow-u
    - Updated type conversions for mc_single, mc_multi, dropdown, orderable, yesno, and image types
 
 2. **checktick_app/surveys/views.py**
-   - Updated `_bulk_upload_example_md()` to demonstrate follow-up syntax
+   - Updated `_text_entry_example()` to demonstrate follow-up syntax
    - Added examples in both parent and nested collection groups
 
-3. **checktick_app/surveys/templates/surveys/bulk_upload.html**
+3. **checktick_app/surveys/templates/surveys/text_entry.html**
    - Added follow-up text to format reference list
    - Created new "Optional: Follow-up text inputs" section with:
      - Syntax explanation
@@ -143,7 +146,7 @@ test_followup_import.py::test_followup_data_structure_matches_api_format PASSED 
 
 ## Examples in Documentation
 
-The bulk upload form now shows live examples with follow-up questions:
+The Text Entry form now shows live examples with follow-up questions:
 
 1. Gender question with "Non-binary" → "Please specify"
 2. Visit reason (multi-select) with:
@@ -167,6 +170,6 @@ These examples appear in both:
 The feature is complete and tested. Users can now:
 1. Use the visual builder (webapp forms)
 2. Use the API (JSON with `has_followup`/`followup_label`)
-3. Use markdown bulk import (indented `+ ` notation)
+3. Use Text Entry (indented `+ ` notation)
 
 All three methods produce the same data structure and behave identically in surveys.

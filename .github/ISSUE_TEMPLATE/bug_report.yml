@@ -63,7 +63,7 @@ body:
         - Survey Builder (drag-and-drop interface)
         - Survey Taking (respondent experience)
         - User Management/Authentication
-        - Organization Management
+        - Organisation Management
         - API (REST endpoints)
         - Admin Interface
         - Email Notifications

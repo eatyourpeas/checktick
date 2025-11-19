@@ -195,13 +195,8 @@
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
   </svg>
   <div>
-    <div class="font-semibold">{% trans "Replace existing questions?" %}</div>
-    <div class="text-sm">{% trans "You can add questions using the builder below, or use markdown/AI to recreate your survey. Note: Using markdown or AI will replace all existing questions." %}</div>
-    <div class="flex gap-2 mt-2">
-      <a href="{% url 'surveys:groups' slug=survey.slug %}" class="btn btn-sm btn-outline">{% trans "Question Builder" %}</a>
-      <a href="{% url 'surveys:bulk_upload' slug=survey.slug %}?tab=manual" class="btn btn-sm btn-outline">{% trans "Manual Input" %}</a>
-      <a href="{% url 'surveys:bulk_upload' slug=survey.slug %}?tab=ai" class="btn btn-sm btn-outline">{% trans "Use AI Assistant" %}</a>
-    </div>
+    <div class="font-semibold">{% trans "Edit your questions" %}</div>
+    <div class="text-sm">{% trans "You can edit questions in" %} <strong>{{ survey.name }}</strong> {% trans "using the" %} <a href="{% url 'surveys:groups' slug=survey.slug %}" class="link link-primary font-semibold">{% trans "Question Builder" %}</a>, <a href="{% url 'surveys:bulk_upload' slug=survey.slug %}?tab=manual" class="link link-primary font-semibold">{% trans "Text Entry" %}</a>, {% trans "or the" %} <a href="{% url 'surveys:bulk_upload' slug=survey.slug %}?tab=ai" class="link link-primary font-semibold">{% trans "CheckTick AI Assistant" %}</a>.</div>
   </div>
 </div>
 {% else %}
@@ -211,20 +206,7 @@
   </svg>
   <div>
     <div class="font-semibold">{% trans "Get started by adding questions" %}</div>
-    <div class="text-sm">{% trans "Choose how you'd like to build your survey:" %}</div>
-    <div class="flex flex-wrap gap-2 mt-2">
-      <a href="{% url 'surveys:groups' slug=survey.slug %}" class="btn btn-sm btn-primary">
-        {% trans "Question Builder" %}
-      </a>
-      <a href="{% url 'surveys:bulk_upload' slug=survey.slug %}?tab=manual" class="btn btn-sm btn-outline">
-        {% include "components/icons/document.html" with classes="w-4 h-4 mr-1" %}
-        {% trans "Manual Input" %}
-      </a>
-      <a href="{% url 'surveys:bulk_upload' slug=survey.slug %}?tab=ai" class="btn btn-sm btn-outline">
-        {% include "components/icons/llm.html" with classes="w-4 h-4 mr-1" %}
-        {% trans "Use AI Assistant" %}
-      </a>
-    </div>
+    <div class="text-sm">{% trans "You can add questions to" %} <strong>{{ survey.name }}</strong> {% trans "using the" %} <a href="{% url 'surveys:groups' slug=survey.slug %}" class="link link-primary font-semibold">{% trans "Question Builder" %}</a>, <a href="{% url 'surveys:bulk_upload' slug=survey.slug %}?tab=manual" class="link link-primary font-semibold">{% trans "Text Entry" %}</a>, {% trans "or the" %} <a href="{% url 'surveys:bulk_upload' slug=survey.slug %}?tab=ai" class="link link-primary font-semibold">{% trans "CheckTick AI Assistant" %}</a>.</div>
   </div>
 </div>
 {% endif %}

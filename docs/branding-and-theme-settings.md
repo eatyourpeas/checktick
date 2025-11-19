@@ -1,4 +1,8 @@
-# Branding and Theme Settings
+---
+title: Branding & Theme Settings
+category: configuration
+priority: 1
+---
 
 This guide explains CheckTick's 3-tier theme system and how to customize the appearance at different levels. Whether you're a platform admin, organization owner, or survey creator, you can control the look and feel of your CheckTick instance.
 
