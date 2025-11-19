@@ -1,4 +1,7 @@
-# Data Governance Special Cases
+---
+title: Data Governance Special Cases
+category: None
+---
 
 This guide covers edge cases and special situations in data governance, including legal holds, ownership transfers, and the data custodian role.
 

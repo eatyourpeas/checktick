@@ -1,4 +1,8 @@
-# Testing the Web Application
+---
+title: Testing Web Application
+category: testing
+priority: 1
+---
 
 This document provides guidance on testing the CheckTick webapp, including patterns for testing views, forms, question builder functionality, and HTMX interactions.
 

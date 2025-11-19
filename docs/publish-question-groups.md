@@ -1,15 +1,11 @@
-# Reusing and Sharing Questions
+---
+title: Publishing Question Groups
+category: None
+---
 
-Checktick allows you to publish question groups as reusable templates that can be shared with your organization or the entire Checktick community.
+This guide explains how to publish your question groups as reusable templates that can be shared with your organization or the global CheckTick community.
 
-## Overview
-
-Instead of recreating the same questions for every survey, you can:
-
-- **Publish your question groups** as templates for others to import
-- **Browse published templates** from your organization or globally
-- **Import templates** into your surveys with one click
-- **Customize after import** - templates are starting points, not locked
+> **Note:** For an overview of question groups and their features, see [Question Groups](/docs/groups-view/). To browse and import templates, see [Question Group Template Library](/docs/question-group-template-library/).
 
 ## Publication Levels
 

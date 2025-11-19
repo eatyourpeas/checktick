@@ -1,4 +1,8 @@
-# User management and permissions
+---
+title: User Management
+category: configuration
+priority: 3
+---
 
 This document explains how organization- and survey-level user management works across SSR (server-rendered UI) and the API, including roles, permissions, endpoints, and security protections. The app follows a single-organisation admin model and enforces username=email.
 

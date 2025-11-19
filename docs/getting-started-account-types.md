@@ -1,4 +1,8 @@
-# Account Types and Organization Setup
+---
+title: Account Types & Organizations
+category: getting-started
+priority: 2
+---
 
 This guide explains the differences between individual and organization accounts in CheckTick, helping you choose the right option for your needs.
 

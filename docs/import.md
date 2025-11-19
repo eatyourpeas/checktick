@@ -1,11 +1,26 @@
-# Bulk survey import
+---
+title: Manual Entry
+category: features
+priority: 4
+---
 
-The survey builder supports uploading a complete survey definition written in Markdown. This is convenient when:
+The survey builder supports multiple ways to manually create survey content: bulk import from Markdown and detailed follow-up question configuration. This is convenient when:
 
 - You already have the survey designed in a document and prefer to import the structure instead of dragging and dropping questions in the visual builder.
 - You want to lay out complex flows with repeatable sections or branching logic before wiring the final details in the UI.
+- You need fine-grained control over follow-up text inputs for specific options.
 
 > **New:** You can also create surveys using our [AI-Assisted Survey Generator](/docs/ai-survey-generator/), which helps you design surveys through natural conversation instead of writing markdown manually.
+
+This document covers:
+
+- [Bulk survey import](#bulk-survey-import) - Complete markdown syntax for importing surveys
+- [Follow-up questions](#follow-up-questions) - Adding conditional text inputs to question options
+- [Repeats](#repeats-nested-repeatable-sections) - Creating nested, repeatable sections
+
+For more details on repeats, see [Repeats (Nested, Repeatable Sections)](/docs/collections/).
+
+## Bulk survey import
 
 This document captures the grammar the importer recognises and the conventions that keep identifiers stable when you later edit the survey.
 
@@ -88,6 +103,57 @@ Spacing is flexible, but keep the relative order (heading → optional descripti
 - For `yesno` questions, you can optionally provide 2 options (for Yes and No) with follow-up labels
 - Not all options need follow-ups—only add them where additional context is needed
 - Follow-up responses are stored alongside the selected option in the survey response
+
+## Follow-up questions
+
+Follow-up text inputs allow you to conditionally show additional text fields based on respondents' answers. This is useful when you need more detail for specific options (e.g., "If you selected 'Other', please explain").
+
+### Compatible question types
+
+Follow-up text inputs work with:
+
+- Multiple choice — single (`mc_single`)
+- Multiple choice — multiple (`mc_multi`)
+- Dropdown (`dropdown`)
+- Yes/No (`yesno`)
+- Orderable list (`orderable`)
+
+### Configuration methods
+
+You can add follow-up text inputs in three ways:
+
+1. **Markdown bulk import** (this document) - Use the `+` syntax shown above
+2. **Visual builder** - Check "Enable follow-up text" for each option in the question editor
+3. **API** - Include `followup_text` in the options structure
+
+### How it works for respondents
+
+When a respondent selects an option that has follow-up text enabled:
+
+- A text input field appears with your custom label
+- The field is hidden if they select a different option
+- For multiple-choice questions with multiple selections, they see follow-up fields for each selected option that has it enabled
+
+### Visual indicator
+
+Questions with follow-up inputs configured show a badge in the question card listing which options have follow-up text. This helps you quickly identify questions with this feature when managing your survey.
+
+### Data structure
+
+Options with follow-up text are stored as:
+
+```json
+{
+  "label": "Employed part-time",
+  "value": "Employed part-time",
+  "followup_text": {
+    "enabled": true,
+    "label": "Please specify your hours per week"
+  }
+}
+```
+
+For complete implementation details and examples, see [Follow-up Questions & Bulk Import](/docs/FOLLOWUP_FEATURE_SUMMARY/).
 
 ## Required questions
 

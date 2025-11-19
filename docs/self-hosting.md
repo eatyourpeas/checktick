@@ -1,4 +1,8 @@
-# Self-Hosting CheckTick
+---
+title: Self-Hosting Guide
+category: self-hosting
+priority: 1
+---
 
 Complete guide to deploying and maintaining your own CheckTick instance using Docker.
 
@@ -191,7 +195,7 @@ server {
 
     ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
-    
+
     # ... rest of config
 }
 ```

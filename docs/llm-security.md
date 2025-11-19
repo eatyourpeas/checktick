@@ -1,4 +1,8 @@
-# AI Survey Generator - Security & Safety
+---
+title: AI Security & Safety
+category: security
+priority: 7
+---
 
 This document outlines the security measures and safety controls implemented in CheckTick's AI-assisted survey generation feature.
 

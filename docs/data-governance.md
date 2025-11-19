@@ -1,4 +1,8 @@
-# Data Governance
+---
+title: Data Governance
+category: data-governance
+priority: 1
+---
 
 CheckTick takes data protection and governance seriously. This comprehensive guide explains how we handle your survey data, who can access it, compliance requirements, and your responsibilities as a data custodian.
 
@@ -286,20 +290,20 @@ Organization Owner
     ├── Full access to all org surveys
     ├── Can assign any role
     └── Can place legal holds
-    
+
 Survey Creator
     ├── Full access to own surveys
     ├── Can assign Editor, Viewer, Custodian
     └── Can extend retention
-    
+
 Data Custodian
     ├── Can download data (assigned surveys only)
     └── Receives deletion warnings
-    
+
 Editor
     ├── Can edit survey structure
     └── Cannot access data
-    
+
 Viewer
     └── Read-only access to survey structure
 ```
@@ -567,11 +571,11 @@ When the retention period expires:
    - All survey responses removed
    - Participant data deleted
    - Question group data retained (for survey structure)
-   
+
 2. **Backup deletion**:
    - Data removed from all backups within 30 days
    - Follows backup rotation schedule
-   
+
 3. **Audit log retention**:
    - Audit logs kept for 7 years (compliance requirement)
    - Personal data redacted
@@ -1151,14 +1155,14 @@ class Survey(models.Model):
     name = models.CharField(max_length=255)
     owner = models.ForeignKey(User, on_delete=models.PROTECT)
     organization = models.ForeignKey(Organization, null=True, on_delete=models.SET_NULL)
-    
+
     # Lifecycle
     status = models.CharField(max_length=20, choices=STATUS_CHOICES)
     # choices: 'draft', 'published', 'closed', 'archived'
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     closed_at = models.DateTimeField(null=True, blank=True)
-    
+
     # Retention
     retention_period_months = models.IntegerField(default=6)
     deletion_scheduled_at = models.DateTimeField(null=True, blank=True)
@@ -1174,14 +1178,14 @@ class Survey(models.Model):
 class DataExportLog(models.Model):
     survey = models.ForeignKey(Survey, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.PROTECT)
-    
+
     exported_at = models.DateTimeField(auto_now_add=True)
     export_format = models.CharField(max_length=10)  # 'csv', 'json', 'xlsx'
     purpose = models.TextField()
-    
+
     ip_address = models.GenericIPAddressField()
     user_agent = models.TextField()
-    
+
     # Compliance
     governance_acknowledged = models.BooleanField(default=False)
     terms_version = models.CharField(max_length=20)
@@ -1193,11 +1197,11 @@ class DataExportLog(models.Model):
 class RetentionExtension(models.Model):
     survey = models.ForeignKey(Survey, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.PROTECT)
-    
+
     extended_at = models.DateTimeField(auto_now_add=True)
     previous_deletion_date = models.DateTimeField()
     new_deletion_date = models.DateTimeField()
-    
+
     justification = models.TextField()
     approved = models.BooleanField(default=True)
     approved_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name='retention_approvals')
@@ -1216,7 +1220,7 @@ def require_data_access(view_func):
     @wraps(view_func)
     def wrapper(request, survey_slug, *args, **kwargs):
         survey = get_object_or_404(Survey, slug=survey_slug)
-        
+
         # Check permissions
         if not (
             request.user == survey.owner or
@@ -1224,13 +1228,13 @@ def require_data_access(view_func):
             survey.data_custodians.filter(user=request.user).exists()
         ):
             raise PermissionDenied("You do not have data access permission.")
-        
+
         # Check survey is closed
         if survey.status != 'closed':
             raise PermissionDenied("Survey must be closed before data export.")
-        
+
         return view_func(request, survey_slug, *args, **kwargs)
-    
+
     return wrapper
 ```
 
@@ -1239,25 +1243,25 @@ def require_data_access(view_func):
 ```python
 class Survey(models.Model):
     # ... fields ...
-    
+
     def can_download_data(self, user):
         """Check if user has permission to download data."""
         if not self.is_closed():
             return False
-        
+
         return (
             user == self.owner or
             user == self.organization.owner or
             self.data_custodians.filter(user=user).exists()
         )
-    
+
     def can_extend_retention(self, user):
         """Check if user can extend retention period."""
         return (
             user == self.owner or
             user == self.organization.owner
         )
-    
+
     def can_place_legal_hold(self, user):
         """Check if user can place legal hold."""
         return (
@@ -1280,47 +1284,47 @@ from django.core.mail import send_mail
 def send_deletion_warnings():
     """Send deletion warning emails at 1 month, 1 week, 1 day."""
     now = timezone.now()
-    
+
     # Surveys to be deleted in 1 month
     one_month_surveys = Survey.objects.filter(
         deletion_scheduled_at__gte=now + timedelta(days=29),
         deletion_scheduled_at__lt=now + timedelta(days=31),
         legal_hold=False
     )
-    
+
     for survey in one_month_surveys:
         send_deletion_warning(survey, days_remaining=30)
-    
+
     # Surveys to be deleted in 1 week
     one_week_surveys = Survey.objects.filter(
         deletion_scheduled_at__gte=now + timedelta(days=6),
         deletion_scheduled_at__lt=now + timedelta(days=8),
         legal_hold=False
     )
-    
+
     for survey in one_week_surveys:
         send_deletion_warning(survey, days_remaining=7)
-    
+
     # Surveys to be deleted in 1 day
     one_day_surveys = Survey.objects.filter(
         deletion_scheduled_at__gte=now + timedelta(hours=22),
         deletion_scheduled_at__lt=now + timedelta(hours=26),
         legal_hold=False
     )
-    
+
     for survey in one_day_surveys:
         send_deletion_warning(survey, days_remaining=1)
 
 def send_deletion_warning(survey, days_remaining):
     """Send warning email to survey owner, org owner, and custodians."""
     recipients = [survey.owner.email]
-    
+
     if survey.organization:
         recipients.append(survey.organization.owner.email)
-    
+
     for custodian in survey.data_custodians.all():
         recipients.append(custodian.user.email)
-    
+
     send_mail(
         subject=f'WARNING: Survey data will be deleted in {days_remaining} day(s)',
         message=f'Survey "{survey.name}" is scheduled for deletion.',
@@ -1336,12 +1340,12 @@ def send_deletion_warning(survey, days_remaining):
 def delete_expired_surveys():
     """Delete surveys whose retention period has expired."""
     now = timezone.now()
-    
+
     expired_surveys = Survey.objects.filter(
         deletion_scheduled_at__lt=now,
         legal_hold=False
     )
-    
+
     for survey in expired_surveys:
         delete_survey_data(survey)
 
@@ -1350,7 +1354,7 @@ def delete_survey_data(survey):
     # Delete all responses
     response_count = survey.responses.count()
     survey.responses.all().delete()
-    
+
     # Log deletion
     DeletionLog.objects.create(
         survey=survey,
@@ -1358,7 +1362,7 @@ def delete_survey_data(survey):
         response_count=response_count,
         reason='retention_expired'
     )
-    
+
     # Send confirmation email
     send_mail(
         subject=f'Survey data deleted: {survey.name}',
@@ -1366,7 +1370,7 @@ def delete_survey_data(survey):
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[survey.owner.email],
     )
-    
+
     # Update survey status
     survey.status = 'archived'
     survey.save()
@@ -1383,12 +1387,12 @@ from django.http import HttpResponse
 @require_data_access
 def export_csv(request, survey_slug):
     survey = get_object_or_404(Survey, slug=survey_slug)
-    
+
     # Get purpose from form
     purpose = request.POST.get('purpose', '')
     if not purpose:
         return JsonResponse({'error': 'Purpose required'}, status=400)
-    
+
     # Log export
     DataExportLog.objects.create(
         survey=survey,
@@ -1399,23 +1403,23 @@ def export_csv(request, survey_slug):
         user_agent=request.META.get('HTTP_USER_AGENT', ''),
         governance_acknowledged=True
     )
-    
+
     # Send notification to org owner
     if survey.organization:
         notify_data_export(survey, request.user, 'csv', purpose)
-    
+
     # Generate CSV
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = f'attachment; filename="{survey.slug}_export.csv"'
-    
+
     writer = csv.writer(response)
-    
+
     # Write headers
     headers = ['response_id', 'timestamp', 'user_id']
     for question in survey.questions.all():
         headers.append(question.key)
     writer.writerow(headers)
-    
+
     # Write data
     for response_obj in survey.responses.all():
         row = [
@@ -1427,7 +1431,7 @@ def export_csv(request, survey_slug):
             value = response_obj.data.get(question.key, '')
             row.append(value)
         writer.writerow(row)
-    
+
     return response
 ```
 
@@ -1439,21 +1443,21 @@ def export_csv(request, survey_slug):
 class AuditLog(models.Model):
     # Who
     user = models.ForeignKey(User, on_delete=models.PROTECT)
-    
+
     # What
     action = models.CharField(max_length=50)
-    # choices: 'data_export', 'retention_extension', 'legal_hold_placed', 
+    # choices: 'data_export', 'retention_extension', 'legal_hold_placed',
     #          'legal_hold_lifted', 'survey_closed', 'ownership_transferred'
-    
+
     # Where
     survey = models.ForeignKey(Survey, on_delete=models.CASCADE)
-    
+
     # When
     timestamp = models.DateTimeField(auto_now_add=True)
-    
+
     # Why
     reason = models.TextField(blank=True)
-    
+
     # How
     ip_address = models.GenericIPAddressField()
     metadata = models.JSONField(default=dict)
@@ -1483,7 +1487,7 @@ def notify_data_export(survey, user, format, purpose):
     """Notify org owner of data export."""
     if not survey.organization:
         return
-    
+
     send_mail(
         subject=f'Data Export: {survey.name}',
         message=f'''

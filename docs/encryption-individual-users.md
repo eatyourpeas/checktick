@@ -1,4 +1,8 @@
-# Encryption for Individual Users
+---
+title: Encryption for Individual Users
+category: security
+priority: 4
+---
 
 This guide explains how encryption works for CheckTick users who are not part of an organisation.
 

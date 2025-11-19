@@ -1,4 +1,7 @@
-# Data Export Guide
+---
+title: Data Export Guide
+category: None
+---
 
 This guide explains how to download survey data from CheckTick, including who can download, when downloads are available, and what security measures are in place.
 

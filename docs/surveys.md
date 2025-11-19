@@ -1,4 +1,8 @@
-# Surveys
+---
+title: Surveys
+category: features
+priority: 1
+---
 
 This guide explains how to create an organization, create a survey, and how content is structured into question groups and questions.
 
@@ -102,7 +106,32 @@ The logic engine evaluates conditions in order, so place the most specific rule 
 - Organization Admins can manage any survey within their org
 - Survey Creators can edit structure and manage members for that survey
 
+## Progress tracking
+
+CheckTick automatically saves respondents' progress as they complete surveys, allowing them to:
+
+- See their completion progress with a visual progress bar
+- Leave and return later without losing their work
+- Have previous answers automatically restored
+
+Progress tracking works with all survey access methods (authenticated, unlisted, and token-based) and all question types. The feature uses auto-save (3 seconds after changes) and provides real-time feedback on save status.
+
+For complete technical details, see [Survey Progress Tracking](/docs/survey-progress-tracking/).
+
+## Repeats (nested, repeatable sections)
+
+Repeats allow you to model repeatable structures in surveys, such as collecting data for multiple patients, visits, or treatments. Key features:
+
+- Create collections from question groups (e.g., "Patient" collection)
+- Support one level of nesting (e.g., Patient → Visits)
+- Set minimum and maximum instances
+- Respondents can add/remove instances as needed
+- Answers stored as nested JSON structures
+
+Repeats are managed from the Groups page using the "Create repeat from selection" button. For complete details on data models, response structure, and implementation, see [Repeats (Nested, Repeatable Sections)](/docs/collections/).
+
 ## Next steps
 
-- See Branding and Theme Settings to customize appearance
-- See Getting Started with the API to seed questions programmatically
+- See [Question Groups](/docs/groups-view/) to learn about organizing and sharing questions
+- See [Branding and Theme Settings](/docs/branding-and-theme-settings/) to customize appearance
+- See [Getting Started with the API](/docs/getting-started-api/) to seed questions programmatically

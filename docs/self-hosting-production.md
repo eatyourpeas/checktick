@@ -1,4 +1,8 @@
-# Self-Hosting Production Setup
+---
+title: Production Deployment
+category: self-hosting
+priority: 8
+---
 
 Complete guide for deploying CheckTick in production with SSL, nginx, and security hardening.
 

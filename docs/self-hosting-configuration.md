@@ -1,4 +1,8 @@
-# Self-Hosting Configuration
+---
+title: Configuration
+category: self-hosting
+priority: 3
+---
 
 Complete configuration guide for customizing your CheckTick deployment.
 

@@ -1,4 +1,8 @@
-# Getting Started with CheckTick
+---
+title: Getting Started
+category: getting-started
+priority: 1
+---
 
 Welcome to CheckTick! This guide will help you get started with creating surveys, understanding account types, and using the API.
 

@@ -1,4 +1,8 @@
-# Issues vs Discussions Quick Guide
+---
+title: Issues vs Discussions
+category: getting-involved
+priority: 2
+---
 
 ## 💬 Use [Discussions](https://github.com/eatyourpeas/checktick/discussions) for:
 

@@ -1,4 +1,7 @@
-# Data Security Guide
+---
+title: Data Security Guide
+category: None
+---
 
 This guide explains security best practices for handling survey data downloaded from CheckTick, your responsibilities as a data handler, and what to do if something goes wrong.
 

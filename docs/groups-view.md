@@ -1,10 +1,54 @@
-# Groups View (Question Groups)
+---
+title: Question Groups
+category: features
+priority: 6
+---
 
-This page lets survey editors order question groups and create "repeats" (collections) from selected groups. It replaces any previous Collections screen.
+Question groups are containers that organize related questions together in your surveys. They help structure your questionnaires logically (e.g., "Demographics", "Medical History", "PHQ-9 Depression Screening") and enable powerful features like repeating sections and template sharing.
 
-For information about importing pre-built question groups from validated questionnaires, see the [Question Group Template Library](question-group-template-library.md) documentation.
+## What are Question Groups?
 
-## Who can access
+A question group is a named collection of questions that:
+
+- **Organizes questions logically** - Group related questions together for easier management
+- **Enables repeating sections** - Create "collections" that participants can fill out multiple times (e.g., "Add another medication", "Add family member")
+- **Can be published and shared** - Publish validated questionnaires as reusable templates for your organization or the entire CheckTick community
+- **Maintains question order** - Questions within a group stay together and maintain their sequence
+- **Supports attribution** - When importing validated instruments, attribution information is preserved
+
+## Key Features
+
+### 1. Question Group Management
+
+The Groups View page lets you:
+- **Reorder groups** - Drag and drop to arrange groups in your survey
+- **Create repeats (collections)** - Turn groups into repeatable sections
+- **Nest repeats** - Create one level of nesting (e.g., "People" containing "Visits")
+- **Remove from repeats** - Unlink groups from collections
+
+### 2. Publishing Templates
+
+Share your question groups with others:
+- **Organization templates** - Share validated questionnaires within your team
+- **Global templates** - Contribute to the community library of validated instruments
+- **Attribution support** - Include proper citations for published instruments (PHQ-9, GAD-7, etc.)
+- **Copyright protection** - Prevent republishing of imported templates
+
+See [Publishing Question Groups](/docs/publish-question-groups/) for detailed publishing instructions.
+
+### 3. Template Library
+
+Browse and import pre-built question groups:
+- **Search and filter** - Find templates by name, tags, or language
+- **View details** - Preview questions and attribution before importing
+- **One-click import** - Add complete questionnaires to your surveys
+- **Global repository** - Access curated validated instruments maintained by CheckTick
+
+See [Question Group Template Library](/docs/question-group-template-library/) for browsing and importing templates.
+
+## Managing Groups in the Groups View
+
+### Who can access
 
 - Owner of the survey
 - Organization ADMINs of the survey's organization
@@ -61,5 +105,14 @@ Vitals
 ## Troubleshooting
 
 - If buttons are disabled, ensure at least one row is selected.
-- If the selection highlight doesn’t show, check your theme's primary color; we derive selection styles from the primary token.
+- If the selection highlight doesn't show, check your theme's primary color; we derive selection styles from the primary token.
 - If you see a CSP error in the browser console, ensure static files are collected and the CSP settings include the SortableJS CDN.
+
+## Related Documentation
+
+- [Publishing Question Groups](/docs/publish-question-groups/) - Share your question groups as templates
+- [Question Group Template Library](/docs/question-group-template-library/) - Browse and import templates
+- [Global Templates Index](/docs/question-group-templates-index/) - List of curated global templates
+- [Bulk Upload Format](/docs/import/) - Markdown syntax for importing questions
+- [Collections](/docs/collections/) - Advanced repeat and nesting features
+- [Surveys](/docs/surveys/) - Creating and managing surveys

@@ -1,4 +1,8 @@
-# Patient Data Encryption
+---
+title: Patient Data Encryption
+category: security
+priority: 6
+---
 
 CheckTick implements a security-first approach to handling sensitive patient data, using per-survey encryption keys with AES-GCM encryption. This document describes the current implementation and planned enhancements for organizational and individual users.
 

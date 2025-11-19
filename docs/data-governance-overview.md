@@ -1,4 +1,7 @@
-# Data Governance Overview
+---
+title: Data Governance Overview
+category: None
+---
 
 CheckTick takes data protection and governance seriously. This guide explains how we handle your survey data, who can access it, and your responsibilities as a data custodian.
 

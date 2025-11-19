@@ -1,4 +1,8 @@
-# Data Encryption
+---
+title: Data Encryption
+category: security
+priority: 2
+---
 
 CheckTick supports encryption of sensitive patient data at rest. This guide explains how encryption works, when to use it, and how to configure it for different account types.
 
@@ -725,7 +729,7 @@ Encryption is **part** of comprehensive security:
   - Disable encryption (if appropriate)
   - Set up organization encryption instead
 
-- **Organization encryption**: 
+- **Organization encryption**:
   - Contact organization owner to share passphrase with colleague
   - Ensure colleague is authorized to access data
   - Use secure sharing method

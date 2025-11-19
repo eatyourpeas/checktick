@@ -1,4 +1,8 @@
-# Survey Encryption: Quick Reference
+---
+title: Encryption Quick Reference
+category: security
+priority: 3
+---
 
 This guide helps you understand your encryption options when publishing a CheckTick survey.
 

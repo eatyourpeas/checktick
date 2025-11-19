@@ -1,4 +1,8 @@
-# Self-Hosting Quick Start
+---
+title: Self-Hosting Quickstart
+category: self-hosting
+priority: 2
+---
 
 Get CheckTick running on your own infrastructure in minutes using pre-built Docker images.
 

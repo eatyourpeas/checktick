@@ -1,4 +1,7 @@
-# Data Retention Policy
+---
+title: Data Retention Policy
+category: None
+---
 
 This guide explains how long survey data is kept in CheckTick, when it will be deleted, how to extend retention periods, and what happens during deletion.
 

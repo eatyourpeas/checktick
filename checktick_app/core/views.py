@@ -603,6 +603,9 @@ def _discover_doc_pages():
     """
     Auto-discover all markdown files in docs/ directory and organize by category.
 
+    All markdown files MUST have YAML frontmatter with 'title' and 'category' fields.
+    Files without frontmatter or with invalid categories will be skipped.
+
     Returns a dict mapping slug -> file path, and a categorized structure for navigation.
     """
     pages = {}
@@ -615,13 +618,13 @@ def _discover_doc_pages():
             file_path = DOCS_DIR / file_path
         pages[slug] = file_path
 
-        # Add to category if specified
+        # Add to category if specified and valid
         category = config.get("category")
         if category and category in categorized:
             categorized[category].append(
                 {
                     "slug": slug,
-                    "title": config.get("title") or _doc_title(slug),
+                    "title": config.get("title") or slug.replace("-", " ").title(),
                     "file": file_path,
                 }
             )
@@ -640,11 +643,38 @@ def _discover_doc_pages():
             if slug in pages:
                 continue
 
-            # Determine category by filename patterns
-            category = _infer_category(slug)
+            # Parse frontmatter - REQUIRED for all docs
+            frontmatter = _parse_frontmatter(md_file)
 
-            # Extract title from file (first H1) or use slug
-            title = _extract_title_from_file(md_file) or _doc_title(slug)
+            # Skip files without required frontmatter
+            if not frontmatter:
+                continue
+
+            # Get category from frontmatter (required)
+            category = frontmatter.get("category")
+
+            # Skip if no category specified
+            if not category:
+                continue
+
+            # Handle category: None (hide from menu but keep accessible via URL)
+            if category == "None" or category is None:
+                pages[slug] = md_file
+                continue
+
+            # Validate category exists in DOC_CATEGORIES
+            if category not in categorized:
+                # Invalid category - skip this file
+                continue
+
+            # Get title from frontmatter (required)
+            title = frontmatter.get("title")
+            if not title:
+                # No title in frontmatter - skip this file
+                continue
+
+            # Get priority for sorting (default to 999 for items without priority)
+            priority = frontmatter.get("priority", 999)
 
             pages[slug] = md_file
             categorized[category].append(
@@ -652,6 +682,7 @@ def _discover_doc_pages():
                     "slug": slug,
                     "title": title,
                     "file": md_file,
+                    "priority": priority,
                 }
             )
 
@@ -710,124 +741,70 @@ def _discover_doc_pages():
                 p for p in categorized[category_name] if p.get("slug") != hidden_slug
             ]
 
+    # Sort items within each category by priority (lower priority = earlier in list)
+    for category_name in categorized.keys():
+        categorized[category_name].sort(key=lambda x: (x.get("priority", 999), x.get("title", "")))
+
     return pages, categorized
 
 
-def _infer_category(slug: str) -> str:
-    """Infer category from slug/filename patterns."""
-    slug_lower = slug.lower()
+def _parse_frontmatter(file_path: Path) -> dict:
+    """
+    Parse YAML frontmatter from markdown file.
 
-    # Getting Started
-    if any(x in slug_lower for x in ["getting-started", "quickstart"]):
-        return "getting-started"
-
-    # Self-Hosting (check before Configuration since some keywords overlap)
-    if any(
-        x in slug_lower
-        for x in [
-            "self-hosting",
-            "deployment",
-            "production",
-            "backup",
-            "database",
-            "scheduled-tasks",
-        ]
-    ):
-        return "self-hosting"
-
-    # Features
-    if any(
-        x in slug_lower
-        for x in ["surveys", "collections", "groups", "import", "publish", "dataset"]
-    ):
-        return "features"
-
-    # Configuration
-    if any(
-        x in slug_lower
-        for x in [
-            "branding",
-            "theme",
-            "user-management",
-            "prefilled-datasets-setup",
-            "email",
-            "notifications",
-            "oidc",
-        ]
-    ):
-        return "configuration"
-
-    # Security
-    if any(
-        x in slug_lower
-        for x in [
-            "security",
-            "encryption",
-            "patient-data",
-            "authentication",
-            "permissions",
-        ]
-    ):
-        return "security"
-
-    # Data Governance
-    if any(
-        x in slug_lower
-        for x in [
-            "data-governance",
-            "data-export",
-            "data-retention",
-            "data-policy",
-            "data-deletion",
-            "data-management",
-        ]
-    ):
-        return "data-governance"
-
-    # API & Development
-    if any(x in slug_lower for x in ["api", "adding-", "development"]):
-        return "api"
-
-    # Testing
-    if any(x in slug_lower for x in ["testing", "test-"]):
-        return "testing"
-
-    # Internationalization
-    if any(
-        x in slug_lower
-        for x in ["i18n", "internationalization", "translation", "locale"]
-    ):
-        return "internationalization"
-
-    # Getting Involved (contributing, documentation, etc.)
-    if any(
-        x in slug_lower
-        for x in [
-            "advanced",
-            "custom",
-            "extend",
-            "contributing",
-            "documentation-system",
-            "issues",
-        ]
-    ):
-        return "getting-involved"
-
-    # Default to features for uncategorized docs
-    return "features"
-
-
-def _extract_title_from_file(file_path: Path) -> str | None:
-    """Extract title from first # heading in markdown file."""
+    Returns dict with 'title', 'category', 'priority' if found in frontmatter,
+    otherwise returns empty dict.
+    """
     try:
         content = file_path.read_text(encoding="utf-8")
-        for line in content.split("\n"):
+        lines = content.split("\n")
+
+        # Check if file starts with ---
+        if not lines or lines[0].strip() != "---":
+            return {}
+
+        # Find closing ---
+        frontmatter_lines = []
+        in_frontmatter = False
+        for i, line in enumerate(lines[1:], 1):
+            if line.strip() == "---":
+                in_frontmatter = True
+                break
+            frontmatter_lines.append(line)
+
+        if not in_frontmatter:
+            return {}
+
+        # Parse simple YAML (key: value pairs)
+        result = {}
+        for line in frontmatter_lines:
             line = line.strip()
-            if line.startswith("# "):
-                return line[2:].strip()
+            if ":" in line:
+                key, value = line.split(":", 1)
+                key = key.strip()
+                value = value.strip()
+
+                # Handle quoted values
+                if value.startswith('"') and value.endswith('"'):
+                    value = value[1:-1]
+                elif value.startswith("'") and value.endswith("'"):
+                    value = value[1:-1]
+
+                # Convert None string to actual None
+                if value == "None":
+                    value = None
+                # Try to convert to int for priority
+                elif key == "priority":
+                    try:
+                        value = int(value)
+                    except (ValueError, TypeError):
+                        pass
+
+                result[key] = value
+
+        return result
     except Exception:
-        pass
-    return None
+        return {}
 
 
 # Build the pages dict and categorized structure
@@ -872,7 +849,7 @@ def _nav_pages():
                 "title": cat_info.get("title", cat_key.title()),
                 "icon": cat_info.get("icon", ""),
                 "order": cat_info.get("order", 99),
-                "pages": sorted(pages_list, key=lambda p: p["title"]),
+                "pages": pages_list,  # Already sorted by priority in _discover_doc_pages()
                 "standalone": False,
             }
         )
@@ -913,8 +890,21 @@ def docs_page(request, slug: str):
     if not file_path.exists():
         raise Http404("Page not found")
 
+    # Read file and strip YAML frontmatter before rendering
+    content = file_path.read_text(encoding="utf-8")
+    lines = content.split("\n")
+
+    # Check if file starts with YAML frontmatter
+    if lines and lines[0].strip() == "---":
+        # Find closing --- and skip frontmatter
+        for i, line in enumerate(lines[1:], 1):
+            if line.strip() == "---":
+                # Skip frontmatter and join remaining content
+                content = "\n".join(lines[i + 1:])
+                break
+
     html = mdlib.markdown(
-        file_path.read_text(encoding="utf-8"),
+        content,
         extensions=["fenced_code", "tables", "toc"],
     )
     return render(

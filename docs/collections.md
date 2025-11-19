@@ -1,4 +1,7 @@
-# Repeats (Nested, repeatable sections)
+---
+title: Repeats (Nested, repeatable sections)
+category: None
+---
 
 This document describes repeatable sections of a survey ("Repeats"): logical entities like Patient or Visit that can contain one or more question groups, and optionally one level of nested repeats (e.g., Patient → Visit).
 

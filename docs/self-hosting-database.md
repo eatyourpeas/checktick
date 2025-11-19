@@ -1,4 +1,8 @@
-# Self-Hosting Database Options
+---
+title: Database Setup
+category: self-hosting
+priority: 4
+---
 
 Choose between included PostgreSQL or external managed database services.
 

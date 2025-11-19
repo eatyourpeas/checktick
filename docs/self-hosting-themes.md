@@ -1,4 +1,8 @@
-# Self-Hosting: Platform Theme Configuration
+---
+title: Theme Configuration
+category: self-hosting
+priority: 9
+---
 
 This guide covers platform-level theme configuration for self-hosted CheckTick deployments. These settings control the default appearance for all users and can be overridden by organization owners.
 
@@ -45,13 +49,13 @@ CheckTick uses **daisyUI v5.4.7** with 32 built-in theme presets:
 BRAND_THEME="checktick-light"
 
 # Light mode preset (default: nord)
-# Available: light, cupcake, bumblebee, emerald, corporate, retro, 
-# cyberpunk, valentine, garden, lofi, pastel, fantasy, nord, 
+# Available: light, cupcake, bumblebee, emerald, corporate, retro,
+# cyberpunk, valentine, garden, lofi, pastel, fantasy, nord,
 # cmyk, autumn, acid, lemonade, winter, nord, sunset
 BRAND_THEME_PRESET_LIGHT="nord"
 
 # Dark mode preset (default: business)
-# Available: dark, synthwave, halloween, forest, aqua, black, 
+# Available: dark, synthwave, halloween, forest, aqua, black,
 # luxury, dracula, business, night, coffee, dim
 BRAND_THEME_PRESET_DARK="business"
 ```
@@ -168,7 +172,7 @@ Key differences from Tailwind v3:
 Configuration example:
 ```css
 @import "tailwindcss";
-@plugin "daisyui" { 
+@plugin "daisyui" {
   themes: all;  /* Loads all 39 themes */
 }
 @plugin "@tailwindcss/typography";

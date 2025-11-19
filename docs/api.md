@@ -1,4 +1,8 @@
-# API reference and protections
+---
+title: API Reference
+category: api
+priority: 1
+---
 
 Use the interactive documentation for the full, always-up-to-date list of endpoints and schemas:
 

@@ -1,4 +1,8 @@
-# Authentication and permissions
+---
+title: Authentication & Permissions
+category: security
+priority: 1
+---
 
 This document explains how users authenticate and what they can access in the system (SSR UI and API). It also describes the role model and how authorization is enforced in code.
 

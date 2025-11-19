@@ -1,4 +1,8 @@
-# Getting started with the API
+---
+title: Getting Started with API
+category: getting-started
+priority: 3
+---
 
 This quick guide shows how to authenticate with JWT and call the API using curl, plus a small Python example.
 

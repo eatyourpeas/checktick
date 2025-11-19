@@ -1,6 +1,11 @@
-# Question Group Template Library
+---
+title: Question Group Template Library
+category: None
+---
 
-The Question Group Template Library allows users to discover, browse, and import validated questionnaires and question collections into their surveys. Templates are published by CheckTick administrators or organization admins and can be imported as complete question groups.
+The template library lets you discover, browse, and import validated questionnaires and question collections into your surveys.
+
+> **Note:** For an overview of question groups, see [Question Groups](/docs/groups-view/). To publish your own templates, see [Publishing Question Groups](/docs/publish-question-groups/).
 
 ## Who can access
 
@@ -100,26 +105,11 @@ When you import an attributed template:
 
 ## Publishing your own templates
 
-Organization admins can publish question groups from their surveys as organization-level templates. To publish:
+Organization admins can publish question groups from their surveys as templates. Published templates can be:
+- **Organization-level**: Visible only to your organization members
+- **Global**: Visible to all CheckTick users
 
-1. Navigate to the question group in your survey builder
-2. Click the "Publish as Template" button
-3. Fill in required information:
-   - Template name
-   - Description
-   - Language
-   - Tags
-   - Attribution information (if applicable)
-4. Choose publication level:
-   - **Organization**: Visible only to users in your organization
-   - **Global**: Requires CheckTick admin approval
-
-### Copyright protection
-
-- You can only publish question groups you created yourself
-- You cannot publish question groups that were imported from other templates
-- This protects copyright and prevents circular attribution issues
-- If you modify an imported template significantly, create a new question group from scratch
+For detailed instructions on publishing templates, including attribution requirements and copyright protection, see [Publishing Question Groups](/docs/publish-question-groups/).
 
 ## Specialist templates vs. question group templates
 
@@ -152,7 +142,8 @@ The template library contains **question group templates** - complete questionna
 
 ## Related documentation
 
-- [Groups View (Question Groups)](groups-view.md) - Managing question groups and repeats
-- [Surveys](surveys.md) - Creating and managing surveys
-- [Question Builder](surveys.md#question-builder) - Adding and editing questions
-- [Collections](collections.md) - Using repeats for multiple entries
+- [Question Groups](/docs/groups-view/) - Overview and managing question groups
+- [Publishing Question Groups](/docs/publish-question-groups/) - How to publish templates
+- [Global Templates Index](/docs/question-group-templates-index/) - List of available global templates
+- [Surveys](/docs/surveys/) - Creating and managing surveys
+- [Collections](/docs/collections/) - Using repeats for multiple entries
