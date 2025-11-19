@@ -653,165 +653,39 @@ OIDC_USERNAME_ALGO=checktick_app.auth.generate_username
 
 ## Scheduled Tasks
 
-CheckTick requires scheduled tasks for data governance operations including deletion warnings and automatic cleanup.
+CheckTick requires several scheduled tasks for proper operation and GDPR compliance.
 
-### Overview
+### Required Tasks
 
-The `process_data_governance` management command runs daily to:
+CheckTick uses **five scheduled tasks**:
 
-1. **Send deletion warnings** - Email notifications 30 days, 7 days, and 1 day before automatic deletion
-2. **Soft-delete expired surveys** - Automatically soft-delete surveys that have reached their retention period
-3. **Hard-delete surveys** - Permanently delete surveys 30 days after soft deletion
+1. **Data Governance** (GDPR Required) - Daily deletion warnings and automatic survey cleanup
+2. **Survey Progress Cleanup** (Recommended) - Remove expired incomplete survey sessions
+3. **External Dataset Sync** (Recommended) - Update hospital lists and organizational data
+4. **NHS Data Dictionary Sync** (Recommended) - Scrape standardized NHS codes and values
+5. **Global Question Group Templates Sync** (Optional) - Import reusable question templates
 
-**Legal Requirement**: These tasks are required for GDPR compliance. Failure to run them may result in data being retained longer than legally allowed.
+### Quick Setup
 
-### Platform-Specific Setup
-
-#### Docker Cron (Self-Hosted Servers)
-
-**Option 1: Host Cron (Recommended)**
-
-Add to your server's crontab:
+The minimum required task for GDPR compliance:
 
 ```bash
-# Edit crontab
-crontab -e
-
-# Add this line (runs daily at 2 AM)
+# Add to crontab (runs daily at 2 AM UTC)
 0 2 * * * cd /path/to/checktick && docker compose exec -T web python manage.py process_data_governance >> /var/log/checktick-cron.log 2>&1
 ```
 
-**Option 2: Container Cron**
+**For complete setup instructions** including all five tasks with platform-specific guides (Northflank, Docker Compose, Kubernetes, AWS ECS, Heroku), see:
 
-Create a separate cron container:
+👉 **[Scheduled Tasks Documentation](/docs/self-hosting-scheduled-tasks/)**
 
-```yaml
-# docker-compose.cron.yml
-services:
-  cron:
-    image: ghcr.io/eatyourpeas/checktick:latest
-    command: >
-      sh -c "echo '0 2 * * * python manage.py process_data_governance' | crontab - && crond -f"
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      SECRET_KEY: ${SECRET_KEY}
-      # ... other environment variables
-```
+This comprehensive guide covers:
 
-Start with:
-
-```bash
-docker compose -f docker-compose.registry.yml -f docker-compose.cron.yml up -d
-```
-
-#### Northflank
-
-Northflank provides native cron job support.
-
-**1. Create a Cron Job Service**
-
-1. Go to your Northflank project
-2. Click **"Add Service"** → **"Cron Job"**
-3. Configure:
-   - **Name**: `checktick-data-governance`
-   - **Docker Image**: Same as web service (`ghcr.io/eatyourpeas/checktick:latest`)
-   - **Schedule**: `0 2 * * *` (2 AM UTC daily)
-   - **Command**: `python manage.py process_data_governance`
-
-**2. Copy Environment Variables**
-
-The cron job needs the same environment variables as your web service. Copy all variables from your web service to the cron job.
-
-#### AWS ECS
-
-Use AWS EventBridge (formerly CloudWatch Events) to trigger ECS tasks.
-
-**1. Create Task Definition**
-
-Same as your web task, but with:
-- **Command override**: `["python", "manage.py", "process_data_governance"]`
-
-**2. Create EventBridge Rule**
-
-```bash
-# Create rule
-aws events put-rule \
-  --name checktick-data-governance \
-  --schedule-expression "cron(0 2 * * ? *)"
-
-# Add target
-aws events put-targets \
-  --rule checktick-data-governance \
-  --targets "Id=1,Arn=arn:aws:ecs:region:account:cluster/your-cluster,RoleArn=arn:aws:iam::account:role/ecsEventsRole,EcsParameters={TaskDefinitionArn=arn:aws:ecs:region:account:task-definition/checktick-governance,LaunchType=FARGATE}"
-```
-
-#### Heroku
-
-Use Heroku Scheduler add-on.
-
-```bash
-# Add scheduler
-heroku addons:create scheduler:standard
-
-# Open scheduler dashboard
-heroku addons:open scheduler
-
-# Add job:
-# - Frequency: Daily at 2:00 AM
-# - Command: python manage.py process_data_governance
-```
-
-#### Google Cloud Run
-
-Use Cloud Scheduler to trigger a Cloud Run job.
-
-**1. Create Cloud Run Job**
-
-```bash
-gcloud run jobs create checktick-governance \
-  --image=gcr.io/your-project/checktick \
-  --command="python,manage.py,process_data_governance" \
-  --set-env-vars="DATABASE_URL=..."
-```
-
-**2. Create Scheduler Job**
-
-```bash
-gcloud scheduler jobs create http checktick-daily-governance \
-  --schedule="0 2 * * *" \
-  --http-method=POST \
-  --uri="https://your-region-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/your-project/jobs/checktick-governance:run"
-```
-
-### Manual Execution
-
-For testing or one-time runs:
-
-```bash
-# Docker
-docker compose exec web python manage.py process_data_governance
-
-# Check what would be processed (dry run)
-docker compose exec web python manage.py process_data_governance --dry-run
-
-# Process specific actions only
-docker compose exec web python manage.py process_data_governance --warnings-only
-docker compose exec web python manage.py process_data_governance --deletions-only
-```
-
-### Monitoring
-
-Check that scheduled tasks are running:
-
-```bash
-# View logs
-docker compose logs web | grep process_data_governance
-
-# Check last run (Django admin)
-# Go to /admin/ → Scheduled Tasks → View last execution
-```
-
-Set up monitoring alerts if tasks fail to run for more than 48 hours.
+- Detailed task descriptions and requirements
+- Platform-specific setup (Northflank, Docker, Kubernetes, AWS, Heroku, Railway)
+- Initial setup and maintenance commands
+- Command reference with dry-run options
+- Testing and monitoring procedures
+- Troubleshooting tips
 
 ---
 
