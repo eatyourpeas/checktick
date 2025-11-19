@@ -4,22 +4,22 @@ category: features
 priority: 1
 ---
 
-This guide explains how to create an organization, create a survey, and how content is structured into question groups and questions.
+This guide explains how to create an organisation, create a survey, and how content is structured into question groups and questions.
 
-## Organizations
+## Organisations
 
-Organizations own surveys and manage access. Each organization has:
+Organisations own surveys and manage access. Each organisation has:
 
 - Owner — the user who created the org
 - Members — users with roles: Admin, Creator, Viewer
 
 Admins can manage members and surveys. Creators can build and manage surveys. Viewers can view responses/analytics (when enabled) but cannot edit structure.
 
-## Create an organization
+## Create an organisation
 
 1. Sign up or log in
 2. Go to Profile
-3. Click “Upgrade to organization” and enter a name
+3. Click “Upgrade to organisation” and enter a name
 
 You’ll become an Admin and can invite others from the User management area.
 
@@ -103,7 +103,7 @@ The logic engine evaluates conditions in order, so place the most specific rule 
 ## Managing access to surveys
 
 - Add survey members with roles (Creator, Viewer)
-- Organization Admins can manage any survey within their org
+- Organisation Admins can manage any survey within their org
 - Survey Creators can edit structure and manage members for that survey
 
 ## Progress tracking

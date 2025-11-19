@@ -1,0 +1,194 @@
+name: 📊 Dataset Request
+description: Request a new global dataset to be added to CheckTick
+title: "[Dataset]: "
+labels: ["dataset", "enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Request a new global dataset**
+
+        CheckTick maintains a collection of commonly-used datasets that are available to all users. These can be standardized lists, lookup tables, or curated options that are useful across multiple surveys.
+
+        Before requesting a new dataset, please:
+        1. Check if a similar dataset already exists in the system
+        2. Search existing issues to avoid duplicates
+        3. Consider if this is a commonly-needed list that would benefit multiple users
+        4. For NHS Data Dictionary datasets, use the [NHS DD Dataset Request](https://github.com/eatyourpeas/checktick/issues/new?template=nhs_dd_dataset_request.yml) template instead
+
+        **Note**: After approval, datasets are added to the global repository and will be available after the next deployment.
+
+  - type: input
+    id: dataset-name
+    attributes:
+      label: Dataset Name
+      description: A clear, descriptive name for the dataset
+      placeholder: "e.g., Common Drug Allergies, Medical Device Types"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: dataset-type
+    attributes:
+      label: Dataset Type
+      description: What kind of data does this dataset contain?
+      options:
+        - Clinical/Medical terminology
+        - Administrative/operational codes
+        - Demographic options
+        - Geographic/location data
+        - Equipment/devices
+        - Medications/treatments
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: dataset-description
+    attributes:
+      label: Dataset Description
+      description: Describe what this dataset contains and what it's used for
+      placeholder: |
+        - What type of data does it contain?
+        - What is the source or standard (if any)?
+        - How should it be structured?
+    validations:
+      required: true
+
+  - type: textarea
+    id: sample-data
+    attributes:
+      label: Sample Data
+      description: Provide examples of the data items this dataset should contain
+      placeholder: |
+        - Item 1
+        - Item 2
+        - Item 3
+        - ...
+
+        Or if structured:
+        | Code | Display Name | Description |
+        |------|--------------|-------------|
+        | ABC  | Example A    | ...         |
+    validations:
+      required: true
+
+  - type: input
+    id: source-url
+    attributes:
+      label: Source URL (if applicable)
+      description: Link to official documentation, standard, or source for this data
+      placeholder: "https://..."
+
+  - type: dropdown
+    id: usage-frequency
+    attributes:
+      label: Expected Usage Frequency
+      description: How often do you expect this dataset to be used?
+      options:
+        - Very Common (daily/weekly across multiple surveys)
+        - Common (used regularly in specific areas)
+        - Occasional (used in specific scenarios)
+        - Rare (niche use case but valuable)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: suggested-tags
+    attributes:
+      label: Suggested Tags
+      description: Select all tags that apply to help users discover this dataset
+      options:
+        - label: clinical
+        - label: administrative
+        - label: demographic
+        - label: procedural
+        - label: surgical
+        - label: medical
+        - label: mental-health
+        - label: maternity
+        - label: paediatric
+        - label: research
+        - label: screening
+        - label: assessment
+
+  - type: dropdown
+    id: specialty-area
+    attributes:
+      label: Primary Specialty Area (if applicable)
+      description: Which clinical specialty is this most relevant to?
+      options:
+        - General/Cross-specialty
+        - Paediatrics
+        - Maternity/Obstetrics
+        - Mental Health
+        - Surgery
+        - Emergency Care
+        - Primary Care
+        - Neonatology
+        - Oncology
+        - Radiology
+        - Other
+        - Not applicable
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case Description
+      description: Describe how you plan to use this dataset in your surveys
+      placeholder: |
+        - What surveys or workflows need this?
+        - Why is having this as a global dataset important?
+        - Who else might benefit from having this available?
+    validations:
+      required: true
+
+  - type: textarea
+    id: update-frequency
+    attributes:
+      label: Update Frequency
+      description: How often does this data need to be updated? Is it static or dynamic?
+      placeholder: |
+        - Static (rarely changes)
+        - Annual updates needed
+        - Quarterly/Monthly updates
+        - Needs to track a changing standard
+
+  - type: textarea
+    id: organization-context
+    attributes:
+      label: Organization Context (Optional)
+      description: Context about your organization's needs (helps us prioritize)
+      placeholder: |
+        - Type of healthcare organization
+        - Scale of usage (number of surveys/users)
+        - Whether this is part of a standardization initiative
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      options:
+        - label: I've checked that a similar dataset doesn't already exist
+          required: true
+        - label: I've searched existing issues for duplicates
+          required: true
+        - label: This dataset would benefit multiple users, not just my specific use case
+          required: false
+        - label: I'm willing to help validate the dataset once it's added
+          required: false
+        - label: I can help maintain/update this dataset if needed
+          required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        **What happens next?**
+
+        1. Maintainers review the request and assess feasibility
+        2. If approved, the dataset is added to the global repository with appropriate tags
+        3. Dataset becomes available to all users on next deployment
+        4. You'll be notified when it's live
+
+        **Alternative**: If you need this urgently, you can create a custom dataset in your organization. Once the global version is added, you can switch to using that instead.
