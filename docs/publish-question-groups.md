@@ -48,7 +48,7 @@ Publish templates visible to all Checktick users:
 Access the template library from:
 
 - Survey question groups page: **Browse & Import Templates** button
-- Bulk upload page: Link in the information banner
+- Text Entry page: Link in the information banner
 
 Filter templates by:
 
@@ -147,7 +147,7 @@ All contributions must meet quality standards for validated instruments. See the
 
 ### Markdown Format
 
-Templates are stored as markdown using the bulk upload format:
+Templates are stored as text using the Text Entry format:
 
 ```markdown
 # Question Group Name {group-id}
@@ -158,7 +158,7 @@ Templates are stored as markdown using the bulk upload format:
 - Option 2
 ```
 
-See [Bulk Upload Documentation](/docs/import/) for complete syntax.
+See [Text Entry Documentation](/docs/import/) for complete syntax.
 
 ### Template Metadata
 
@@ -180,7 +180,7 @@ This should run on deployment to ensure all instances have the latest templates.
 
 ## Related Documentation
 
-- [Bulk Upload Format](/docs/import/) - Markdown syntax for questions
+- [Text Entry Format](/docs/import/) - Text format syntax for questions
 - [Groups View](/docs/groups-view/) - Managing question groups
 - [Global Templates Appendix](/docs/question-group-templates-index/) - Available templates
 - [Collections](/docs/collections/) - Repeatable question groups

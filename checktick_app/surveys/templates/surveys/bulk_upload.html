@@ -24,7 +24,7 @@
   <div class="space-y-6">
     <!-- Main Tabs Navigation -->
     <div role="tablist" class="tabs tabs-bordered">
-      <input type="radio" name="import_tabs" role="tab" class="tab" aria-label="{% trans 'Manual Input' %}" id="tab-manual" checked />
+      <input type="radio" name="import_tabs" role="tab" class="tab" aria-label="{% trans 'Text Entry' %}" id="tab-manual" checked />
       <input type="radio" name="import_tabs" role="tab" class="tab" aria-label="{% trans 'AI Assistant' %}" id="tab-ai" />
       <input type="radio" name="import_tabs" role="tab" class="tab" aria-label="{% trans 'Session History' %}" id="tab-history" />
     </div>
@@ -33,7 +33,7 @@
     <div id="manual-tab-content" class="space-y-6">
       <!-- Sub-tabs for Manual Input -->
       <div role="tablist" class="tabs tabs-bordered">
-        <input type="radio" name="manual_subtabs" role="tab" class="tab" aria-label="{% trans 'Markdown Input' %}" id="tab-markdown-input" checked />
+        <input type="radio" name="manual_subtabs" role="tab" class="tab" aria-label="{% trans 'Text Input' %}" id="tab-markdown-input" checked />
         <input type="radio" name="manual_subtabs" role="tab" class="tab" aria-label="{% trans 'Format Reference' %}" id="tab-format-reference" />
       </div>
 
@@ -49,7 +49,7 @@
         </div>
         <form method="post" id="bulk-import-form">
           {% csrf_token %}
-          <label class="label">{% trans "Markdown" %}</label>
+          <label class="label">{% trans "Text format" %}</label>
           <textarea class="textarea textarea-bordered w-full min-h-[500px]" name="markdown" id="markdown-input" required>{{ markdown|default:example }}</textarea>
           <div class="mt-3">
             <button class="btn btn-primary" type="button" id="bulk-import-open-modal">
@@ -69,7 +69,7 @@
           <div class="card-body space-y-4">
             <div>
               <h2 class="card-title">{% trans "Format reference" %}</h2>
-              <p class="text-base-content/80">{% trans "Use markdown with the following structure:" %}</p>
+              <p class="text-base-content/80">{% trans "Use text format with the following structure:" %}</p>
             </div>
             <ul class="list-disc pl-5 space-y-1 text-sm">
               <li>{% trans "<code># Group Title</code>, followed by a line for the group description" %}</li>

@@ -479,16 +479,16 @@ def test_whitespace_trimmed_from_options(self, client):
 
 ## Testing Bulk Markdown Import
 
-The bulk import feature allows users to create surveys from markdown. Tests verify that the markdown parser correctly handles group and question syntax, follow-up questions, required fields, IDs, and collections.
+Text Entry allows users to create surveys from text format. Tests verify that the parser correctly handles group and question syntax, follow-up questions, required fields, IDs, and collections.
 
-### Bulk Import Test Files
+### Text Entry Test Files
 
 - `/test_followup_import.py` - Comprehensive markdown import tests (10 tests)
 
-### Running Bulk Import Tests
+### Running Text Entry Tests
 
 ```bash
-# Run all bulk import tests
+# Run all Text Entry tests
 docker compose exec web pytest test_followup_import.py -v
 
 # Run specific test
@@ -670,7 +670,7 @@ def test_followup_data_structure_matches_api_format(test_markdown):
     assert option_with_followup["followup_text"]["enabled"] is True
 ```
 
-### Key Test Patterns for Bulk Import
+### Key Test Patterns for Text Entry
 
 1. **Parse Validation**: Verify markdown parses without errors
 2. **Structure Verification**: Check groups, questions, and options are created correctly

@@ -93,7 +93,7 @@ Store nested instances inside `Response.answers`:
 - Same permission model as existing surveys: editors manage definitions; authenticated respondents create instances within limits.
 - CSRF/CSP remain unchanged; no inline scripts.
 
-## Authoring via bulk upload (REPEAT syntax)
+## Authoring via Text Entry (REPEAT syntax)
 
 To mark a group as repeatable in bulk markdown:
 
