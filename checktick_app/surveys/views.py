@@ -2076,6 +2076,15 @@ def survey_publish_settings(request: HttpRequest, slug: str) -> HttpResponse:
             survey.captcha_required = captcha_required
             survey.no_patient_data_ack = no_patient_data_ack
 
+            # Handle allow_any_authenticated for authenticated surveys
+            if visibility == Survey.Visibility.AUTHENTICATED:
+                allow_any_authenticated = (
+                    request.POST.get("allow_any_authenticated") == "on"
+                )
+                survey.allow_any_authenticated = allow_any_authenticated
+            else:
+                survey.allow_any_authenticated = False
+
             # Set status to PUBLISHED
             survey.status = Survey.Status.PUBLISHED
 
@@ -2097,11 +2106,22 @@ def survey_publish_settings(request: HttpRequest, slug: str) -> HttpResponse:
 
             survey.save()
 
-            # Process invite emails if provided and visibility is TOKEN
-            if invite_emails and visibility == Survey.Visibility.TOKEN:
+            # Process invite emails if provided
+            if invite_emails and visibility in [
+                Survey.Visibility.TOKEN,
+                Survey.Visibility.AUTHENTICATED,
+            ]:
                 import secrets
 
-                from checktick_app.core.email_utils import send_survey_invite_email
+                from django.contrib.auth import get_user_model
+
+                from checktick_app.core.email_utils import (
+                    send_authenticated_survey_invite_existing_user,
+                    send_authenticated_survey_invite_new_user,
+                    send_survey_invite_email,
+                )
+
+                User = get_user_model()
 
                 # Parse email addresses (supports Outlook format and various separators)
                 email_list = _parse_email_addresses(invite_emails)
@@ -2121,26 +2141,62 @@ def survey_publish_settings(request: HttpRequest, slug: str) -> HttpResponse:
                         failed_emails.append(f"{email_address} (invalid format)")
                         continue
 
-                    # Create token for this email
-                    token = SurveyAccessToken(
-                        survey=survey,
-                        token=secrets.token_urlsafe(24),
-                        created_by=request.user,
-                        expires_at=end_at if end_at else None,
-                        note=f"Invited: {email_address}",
-                    )
-                    token.save()
+                    if visibility == Survey.Visibility.TOKEN:
+                        # Create anonymous token
+                        token = SurveyAccessToken(
+                            survey=survey,
+                            token=secrets.token_urlsafe(24),
+                            created_by=request.user,
+                            expires_at=end_at if end_at else None,
+                            note=f"Invited: {email_address}",
+                            for_authenticated=False,
+                        )
+                        token.save()
 
-                    # Send invitation email
-                    if send_survey_invite_email(
-                        to_email=email_address,
-                        survey=survey,
-                        token=token.token,
-                        contact_email=contact_email,
-                    ):
-                        sent_count += 1
-                    else:
-                        failed_emails.append(email_address)
+                        # Send invitation email
+                        if send_survey_invite_email(
+                            to_email=email_address,
+                            survey=survey,
+                            token=token.token,
+                            contact_email=contact_email,
+                        ):
+                            sent_count += 1
+                        else:
+                            failed_emails.append(email_address)
+
+                    elif visibility == Survey.Visibility.AUTHENTICATED:
+                        # Create authenticated invitation token
+                        token = SurveyAccessToken(
+                            survey=survey,
+                            token=secrets.token_urlsafe(24),
+                            created_by=request.user,
+                            expires_at=end_at if end_at else None,
+                            note=f"Invited: {email_address}",
+                            for_authenticated=True,
+                        )
+                        token.save()
+
+                        # Check if user exists
+                        user_exists = User.objects.filter(email=email_address).exists()
+
+                        # Send appropriate email
+                        if user_exists:
+                            email_sent = send_authenticated_survey_invite_existing_user(
+                                to_email=email_address,
+                                survey=survey,
+                                contact_email=contact_email,
+                            )
+                        else:
+                            email_sent = send_authenticated_survey_invite_new_user(
+                                to_email=email_address,
+                                survey=survey,
+                                contact_email=contact_email,
+                            )
+
+                        if email_sent:
+                            sent_count += 1
+                        else:
+                            failed_emails.append(email_address)
 
                 # Show summary message
                 if sent_count > 0:
@@ -2166,6 +2222,15 @@ def survey_publish_settings(request: HttpRequest, slug: str) -> HttpResponse:
             survey.max_responses = max_responses
             survey.captcha_required = captcha_required
             survey.no_patient_data_ack = no_patient_data_ack
+
+            # Handle allow_any_authenticated for authenticated surveys
+            if visibility == Survey.Visibility.AUTHENTICATED:
+                allow_any_authenticated = (
+                    request.POST.get("allow_any_authenticated") == "on"
+                )
+                survey.allow_any_authenticated = allow_any_authenticated
+            else:
+                survey.allow_any_authenticated = False
 
             # Generate unlisted key if needed
             if (
@@ -2749,6 +2814,28 @@ def survey_take(request: HttpRequest, slug: str) -> HttpResponse:
         # Enforce login
         messages.info(request, "Please sign in to take this survey.")
         return redirect("/accounts/login/?next=" + request.path)
+
+    # For authenticated surveys, check invitation if not allowing any authenticated
+    if (
+        survey.visibility == Survey.Visibility.AUTHENTICATED
+        and request.user.is_authenticated
+        and not survey.allow_any_authenticated
+    ):
+        # Check if user has a valid invitation
+        user_email = request.user.email
+        has_invitation = SurveyAccessToken.objects.filter(
+            survey=survey,
+            for_authenticated=True,
+            note__icontains=f"Invited: {user_email}",
+        ).exists()
+
+        if not has_invitation:
+            messages.error(
+                request,
+                "You do not have permission to access this survey. "
+                "This survey is invitation-only.",
+            )
+            return redirect("surveys:closed", slug=slug)
 
     # If survey requires CAPTCHA for anonymous users
     if (

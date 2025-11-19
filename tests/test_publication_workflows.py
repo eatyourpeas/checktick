@@ -112,6 +112,7 @@ class TestAuthenticatedPublication:
         """Logged-in users should be able to access AUTHENTICATED survey."""
         basic_survey.status = Survey.Status.PUBLISHED
         basic_survey.visibility = Survey.Visibility.AUTHENTICATED
+        basic_survey.allow_any_authenticated = True  # Allow any authenticated user
         basic_survey.save()
 
         client.login(username="participant@example.com", password=TEST_PASSWORD)

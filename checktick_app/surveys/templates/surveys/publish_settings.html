@@ -94,7 +94,17 @@
             placeholder="{% trans 'Enter email addresses, one per line' %}&#10;example1@email.com&#10;example2@email.com"
           ></textarea>
           <label class="label">
-            <span class="label-text-alt opacity-70">{% trans "Enter one email address per line. A unique one-time invitation link will be sent to each address." %}</span>
+            <span class="label-text-alt opacity-70">{% trans "Enter one email address per line. Outlook contact format is supported (Name <email@domain.com>)." %}</span>
+          </label>
+        </div>
+
+        <div class="form-control mb-6" id="allow-any-authenticated-section" style="display: none;">
+          <label class="cursor-pointer flex items-start gap-3">
+            <input type="checkbox" class="checkbox mt-0.5" name="allow_any_authenticated" {% if survey.allow_any_authenticated %}checked{% endif %} />
+            <div>
+              <span class="label-text font-medium">{% trans "Allow any authenticated user to access" %}</span>
+              <p class="text-sm opacity-70 mt-1">{% trans "When enabled, any logged-in user can complete this survey (not just invited users). When disabled, only users whose email addresses you've invited can access the survey." %}</p>
+            </div>
           </label>
         </div>
 
@@ -177,6 +187,7 @@
   const patientDataWarning = document.getElementById('patient-data-warning');
   const noPatientDataCheckbox = document.getElementById('no_patient_data');
   const inviteEmailsSection = document.getElementById('invite-emails-section');
+  const allowAnyAuthenticatedSection = document.getElementById('allow-any-authenticated-section');
   const publishForm = document.getElementById('publish-form');
 
   function updatePatientDataWarning() {
@@ -191,16 +202,25 @@
   }
 
   function updateInviteEmailsSection() {
-    if (visibilitySelect.value === 'token') {
+    if (visibilitySelect.value === 'token' || visibilitySelect.value === 'authenticated') {
       inviteEmailsSection.style.display = 'block';
     } else {
       inviteEmailsSection.style.display = 'none';
     }
   }
 
+  function updateAllowAnyAuthenticatedSection() {
+    if (visibilitySelect.value === 'authenticated') {
+      allowAnyAuthenticatedSection.style.display = 'block';
+    } else {
+      allowAnyAuthenticatedSection.style.display = 'none';
+    }
+  }
+
   function updateVisibility() {
     updatePatientDataWarning();
     updateInviteEmailsSection();
+    updateAllowAnyAuthenticatedSection();
   }
 
   visibilitySelect.addEventListener('change', updateVisibility);

@@ -437,3 +437,144 @@ def send_survey_invite_email(
             "contact_email": contact_email,
         },
     )
+
+
+def send_authenticated_survey_invite_existing_user(
+    to_email: str,
+    survey,
+    contact_email: Optional[str] = None,
+) -> bool:
+    """Send survey invitation to existing authenticated user.
+
+    Args:
+        to_email: Recipient email address (existing user)
+        survey: Survey object
+        contact_email: Optional contact email for questions
+
+    Returns:
+        True if email sent successfully, False otherwise
+    """
+    from django.conf import settings
+
+    logger.info(
+        f"Attempting to send authenticated survey invite to existing user {to_email} for survey: {survey.name} ({survey.slug})"
+    )
+
+    branding = get_survey_branding(survey)
+
+    # Build the survey link (requires login)
+    site_url = getattr(settings, "SITE_URL", "http://localhost:8000")
+    survey_link = f"{site_url}/surveys/{survey.slug}/take/"
+
+    # Get organization name if available
+    organization_name = None
+    if survey.organization:
+        organization_name = survey.organization.name
+
+    # Format end date if available
+    end_date = None
+    if survey.end_at:
+        from django.utils.formats import date_format
+
+        end_date = date_format(survey.end_at, "DATETIME_FORMAT")
+
+    subject = f"You're invited to complete: {survey.name}"
+
+    markdown_content = render_to_string(
+        "emails/survey_invite_authenticated.md",
+        {
+            "survey_name": survey.name,
+            "survey_link": survey_link,
+            "organization_name": organization_name,
+            "end_date": end_date,
+            "contact_email": contact_email,
+            "brand_title": branding["title"],
+        },
+    )
+
+    return send_branded_email(
+        to_email=to_email,
+        subject=subject,
+        markdown_content=markdown_content,
+        branding=branding,
+        context={
+            "survey_name": survey.name,
+            "survey_link": survey_link,
+            "organization_name": organization_name,
+            "end_date": end_date,
+            "contact_email": contact_email,
+        },
+    )
+
+
+def send_authenticated_survey_invite_new_user(
+    to_email: str,
+    survey,
+    contact_email: Optional[str] = None,
+) -> bool:
+    """Send survey invitation to new user (needs to create account).
+
+    Args:
+        to_email: Recipient email address (no existing account)
+        survey: Survey object
+        contact_email: Optional contact email for questions
+
+    Returns:
+        True if email sent successfully, False otherwise
+    """
+    from django.conf import settings
+
+    logger.info(
+        f"Attempting to send authenticated survey invite to new user {to_email} for survey: {survey.name} ({survey.slug})"
+    )
+
+    branding = get_survey_branding(survey)
+
+    # Build signup link with redirect to survey
+    site_url = getattr(settings, "SITE_URL", "http://localhost:8000")
+    signup_link = (
+        f"{site_url}/signup/?next=/surveys/{survey.slug}/take/&email={to_email}"
+    )
+    survey_link = f"{site_url}/surveys/{survey.slug}/take/"
+
+    # Get organization name if available
+    organization_name = None
+    if survey.organization:
+        organization_name = survey.organization.name
+
+    # Format end date if available
+    end_date = None
+    if survey.end_at:
+        from django.utils.formats import date_format
+
+        end_date = date_format(survey.end_at, "DATETIME_FORMAT")
+
+    subject = f"You're invited to join CheckTick and complete: {survey.name}"
+
+    markdown_content = render_to_string(
+        "emails/survey_invite_authenticated_new.md",
+        {
+            "survey_name": survey.name,
+            "signup_link": signup_link,
+            "survey_link": survey_link,
+            "organization_name": organization_name,
+            "end_date": end_date,
+            "contact_email": contact_email,
+            "brand_title": branding["title"],
+        },
+    )
+
+    return send_branded_email(
+        to_email=to_email,
+        subject=subject,
+        markdown_content=markdown_content,
+        branding=branding,
+        context={
+            "survey_name": survey.name,
+            "signup_link": signup_link,
+            "survey_link": survey_link,
+            "organization_name": organization_name,
+            "end_date": end_date,
+            "contact_email": contact_email,
+        },
+    )
