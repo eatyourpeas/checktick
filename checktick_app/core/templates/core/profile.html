@@ -55,7 +55,7 @@
           </div>
         {% endif %}
         {% if stats.orgs_owned %}
-          <div class="tooltip" data-tip="{% blocktrans count orgs=stats.orgs_owned %}You own {{ orgs }} organization{% plural %}You own {{ orgs }} organizations{% endblocktrans %}">
+          <div class="tooltip" data-tip="{% blocktrans count orgs=stats.orgs_owned %}You own {{ orgs }} organisation{% plural %}You own {{ orgs }} organisations{% endblocktrans %}">
             <div class="indicator">
               <span class="indicator-item badge badge-primary text-xs">{{ stats.orgs_owned }}</span>
               <div class="bg-primary text-primary-content rounded-full w-12 h-12 flex items-center justify-center">
@@ -65,7 +65,7 @@
           </div>
         {% endif %}
         {% if stats.org_admin_count %}
-          <div class="tooltip" data-tip="{% blocktrans count orgs=stats.org_admin_count %}You are an administrator in {{ orgs }} organization{% plural %}You are an administrator in {{ orgs }} organizations{% endblocktrans %}">
+          <div class="tooltip" data-tip="{% blocktrans count orgs=stats.org_admin_count %}You are an administrator in {{ orgs }} organisation{% plural %}You are an administrator in {{ orgs }} organisations{% endblocktrans %}">
             <div class="indicator">
               <span class="indicator-item badge badge-accent text-xs">{{ stats.org_admin_count }}</span>
               <div class="bg-accent text-accent-content rounded-full w-12 h-12 flex items-center justify-center">
@@ -75,7 +75,7 @@
           </div>
         {% endif %}
         {% if stats.org_memberships %}
-          <div class="tooltip" data-tip="{% blocktrans count orgs=stats.org_memberships %}You are a member of {{ orgs }} organization{% plural %}You are a member of {{ orgs }} organizations{% endblocktrans %}">
+          <div class="tooltip" data-tip="{% blocktrans count orgs=stats.org_memberships %}You are a member of {{ orgs }} organisation{% plural %}You are a member of {{ orgs }} organisations{% endblocktrans %}">
             <div class="indicator">
               <span class="indicator-item badge badge-neutral text-xs">{{ stats.org_memberships }}</span>
               <div class="bg-neutral text-neutral-content rounded-full w-12 h-12 flex items-center justify-center">
@@ -331,10 +331,10 @@
     <div class="card-body">
       <h2 class="card-title inline-flex items-center gap-2 text-base-content">
         {% include "components/icons/users.html" with classes="w-5 h-5 text-base-content" %}
-        <span>{% trans "Organization Theme Settings" %}</span>
+        <span>{% trans "Organisation Theme Settings" %}</span>
       </h2>
-      <p class="opacity-80">{% trans "Customize the theme for your organization. These settings override platform defaults and apply to all organization members." %}</p>
-      
+      <p class="opacity-80">{% trans "Customize the theme for your organisation. These settings override platform defaults and apply to all organisation members." %}</p>
+
       <!-- Current theme display -->
       <div class="grid md:grid-cols-2 gap-4 my-4">
         <div class="flex flex-col gap-1">
@@ -402,7 +402,7 @@
               </select>
             </label>
           </div>
-          
+
           <!-- Advanced CSS section (collapsible) -->
           <details class="collapse collapse-arrow bg-base-200 mt-4">
             <summary class="collapse-title text-sm font-medium">
@@ -559,7 +559,7 @@
       <div class="card-body">
         <h2 class="card-title inline-flex items-center gap-2 text-base-content">
           {% include "components/icons/building.html" with classes="w-5 h-5 text-base-content" %}
-          <span>Upgrade to organisation</span>
+          <span>Upgrade to Organisation</span>
         </h2>
         <p class="opacity-80">Upgrading creates an organisation that you administer. You’ll be able to host surveys and build a team. Simple users cannot gain permissions inside someone else’s organisation, but you can create your own organisation at any time.</p>
         <form method="post" class="space-y-3">
@@ -595,7 +595,7 @@
           </svg>
           <div>
             <strong>{% trans "Administrator Access:" %}</strong>
-            {% trans "As a superuser, you can manage users and organizations through the Django Admin interface." %}
+            {% trans "As a superuser, you can manage users and organisations through the Django Admin interface." %}
           </div>
         </div>
 
@@ -611,12 +611,12 @@
           </div>
 
           <div class="border border-warning/20 rounded-lg p-4">
-            <h3 class="font-semibold text-warning mb-2">{% trans "Organization Management" %}</h3>
+            <h3 class="font-semibold text-warning mb-2">{% trans "Organisation Management" %}</h3>
             <p class="text-sm opacity-80 mb-3">
-              {% trans "Organization deletion cascades to all associated surveys and data. This operation should only be performed by administrators after careful consideration." %}
+              {% trans "Organisation deletion cascades to all associated surveys and data. This operation should only be performed by administrators after careful consideration." %}
             </p>
             <a href="/admin/surveys/organization/" class="btn btn-warning btn-outline btn-sm">
-              {% trans "Manage Organizations" %}
+              {% trans "Manage Organisations" %}
             </a>
           </div>
         </div>
@@ -666,7 +666,7 @@
           <div class="border border-warning/20 rounded-lg p-4">
             <h3 class="font-semibold text-warning mb-2">{% trans "Delete Account" %}</h3>
             <p class="text-sm opacity-80 mb-3">
-              {% trans "As an individual user with no collaborators or organization memberships, you can safely delete your own account." %}
+              {% trans "As an individual user with no collaborators or organisation memberships, you can safely delete your own account." %}
             </p>
             {% if stats.surveys_owned > 0 %}
               <div class="alert alert-warning text-sm mb-3">

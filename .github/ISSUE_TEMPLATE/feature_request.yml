@@ -20,7 +20,7 @@ body:
         - New Question Type
         - Survey Taking Experience
         - User Management/Permissions
-        - Organization Features
+        - Organisation Features
         - API Enhancement
         - Data Export/Import
         - Security/Privacy Feature
@@ -69,7 +69,7 @@ body:
       options:
         - Survey Creator/Administrator
         - Survey Respondent
-        - Organization Admin
+        - Organisation Admin
         - Super Admin
         - API User/Developer
         - All Users

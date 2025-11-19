@@ -324,6 +324,11 @@ def profile(request):
         [(theme, theme) for theme in DARK_THEMES] if DARK_THEMES else []
     )
 
+    # Check if user can manage any users (owns org, is admin, or is staff)
+    can_manage_any_users = (
+        user.is_staff or stats["orgs_owned"] > 0 or stats["org_admin_count"] > 0
+    )
+
     return render(
         request,
         "core/profile.html",
@@ -334,6 +339,7 @@ def profile(request):
             "language_form": language_form,
             "email_prefs_form": email_prefs_form,
             "can_safely_delete_account": can_user_safely_delete_own_account(user),
+            "can_manage_any_users": can_manage_any_users,
             "light_theme_choices": light_theme_choices,
             "dark_theme_choices": dark_theme_choices,
         },

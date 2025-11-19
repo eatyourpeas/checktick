@@ -117,7 +117,7 @@ body:
       description: What level of data sensitivity does this template handle?
       options:
         - High (patient identifiable information, requires encryption)
-        - Medium (professional details, organization data)
+        - Medium (professional details, organisation data)
         - Low (non-identifiable, statistical data)
         - None (public information)
     validations:
@@ -188,12 +188,12 @@ body:
         - Browser/device compatibility needs
 
   - type: textarea
-    id: organization-context
+    id: organisation-context
     attributes:
-      label: Organization Context (Optional)
-      description: Context about your organization's needs (helps us prioritize)
+      label: Organisation Context (Optional)
+      description: Context about your organisation's needs (helps us prioritize)
       placeholder: |
-        - Type of organization
+        - Type of organisation
         - Scale of usage (number of surveys/users)
         - Urgency or timeline
         - Whether this is part of a larger initiative
