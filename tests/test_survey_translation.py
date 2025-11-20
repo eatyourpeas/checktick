@@ -12,6 +12,7 @@ Tests cover:
 from django.contrib.auth import get_user_model
 import pytest
 
+from checktick_app.surveys.llm_client import ConversationalSurveyLLM
 from checktick_app.surveys.models import (
     Organization,
     QuestionGroup,
@@ -497,3 +498,102 @@ class TestTranslationEdgeCases:
 
         assert cloned.style == basic_survey.style
         assert cloned.style is not basic_survey.style  # Different dict object
+
+
+class TestLLMTranslation:
+    """Tests for LLM-powered translation functionality."""
+
+    def test_translate_survey_content_without_llm(self, basic_survey):
+        """Translation without LLM should return warning."""
+        translation = basic_survey.create_translation("fr")
+
+        results = basic_survey.translate_survey_content(translation, use_llm=False)
+
+        assert results["success"] is False
+        assert len(results["warnings"]) > 0
+        assert "LLM translation disabled" in results["warnings"][0]
+
+    def test_translate_survey_content_wrong_target(self, owner, organization):
+        """Translation should fail if target is not a translation of source."""
+        survey1 = Survey.objects.create(
+            owner=owner,
+            organization=organization,
+            name="Survey 1",
+            slug="survey-1",
+            language="en",
+        )
+        survey2 = Survey.objects.create(
+            owner=owner,
+            organization=organization,
+            name="Survey 2",
+            slug="survey-2",
+            language="fr",
+        )
+
+        results = survey1.translate_survey_content(survey2, use_llm=False)
+
+        assert results["success"] is False
+        assert len(results["errors"]) > 0
+        assert "not a translation" in results["errors"][0]
+
+    def test_translate_survey_content_with_llm(self, basic_survey, monkeypatch):
+        """Test translate_survey_content with mocked LLM."""
+        source_survey = basic_survey
+
+        # Mock LLM to return translations
+        def mock_chat(self, history, temperature=None):
+            # Extract the text being translated from the user message
+            user_message = history[-1]["content"]
+            if "Patient Survey" in user_message:
+                return "Encuesta del Paciente"
+            elif "survey about patient care" in user_message:
+                return "una encuesta sobre atención al paciente"
+            elif "Demographics" in user_message:
+                return "Demografía"
+            elif "Basic demographic questions" in user_message:
+                return "Preguntas demográficas básicas"
+            elif "What is your age?" in user_message:
+                return "¿Cuál es tu edad?"
+            elif "Do you have diabetes?" in user_message:
+                return "¿Tienes diabetes?"
+            elif "What type of diabetes?" in user_message:
+                return "¿Qué tipo de diabetes?"
+            elif "Type 1" in user_message:
+                return "Tipo 1, Tipo 2, Gestacional, Otro"
+            else:
+                return "Traducción"
+
+        monkeypatch.setattr(ConversationalSurveyLLM, "chat", mock_chat)
+
+        # Create translation survey
+        target_survey = source_survey.create_translation(target_language="es")
+
+        # Translate content
+        results = source_survey.translate_survey_content(target_survey)
+
+        # Should succeed
+        assert results["success"] is True
+        assert results["translated_fields"] > 0
+        assert len(results["errors"]) == 0
+
+        # Check that survey name was translated
+        target_survey.refresh_from_db()
+        assert target_survey.name == "Encuesta del Paciente"
+
+    def test_translate_survey_content_preserves_structure(self, basic_survey):
+        """Translation should preserve survey structure even without LLM."""
+        translation = basic_survey.create_translation("de")
+
+        # Verify structure is preserved before translation
+        assert translation.questions.count() == basic_survey.questions.count()
+        assert (
+            translation.question_groups.count() == basic_survey.question_groups.count()
+        )
+
+        # Translation without LLM shouldn't break structure
+        basic_survey.translate_survey_content(translation, use_llm=False)
+
+        assert translation.questions.count() == basic_survey.questions.count()
+        assert (
+            translation.question_groups.count() == basic_survey.question_groups.count()
+        )

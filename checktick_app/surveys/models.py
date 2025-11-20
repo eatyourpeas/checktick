@@ -959,6 +959,238 @@ class Survey(models.Model):
 
         return cloned_survey
 
+    def translate_survey_content(
+        self, target_survey: "Survey", use_llm: bool = True
+    ) -> dict[str, any]:
+        """
+        Translate the text content of this survey into the target survey.
+
+        This method translates:
+        - Survey name and description
+        - Question text and options
+        - Question group names and descriptions
+
+        Args:
+            target_survey: The survey to populate with translated content
+            use_llm: Whether to use LLM for translation (default: True)
+
+        Returns:
+            Dictionary with translation results:
+            {
+                'success': bool,
+                'translated_fields': int,
+                'errors': list,
+                'warnings': list
+            }
+
+        Note: Target survey must already exist (created via create_translation).
+        This method updates the target survey in place.
+        """
+        from .llm_client import ConversationalSurveyLLM
+
+        results = {
+            "success": False,
+            "translated_fields": 0,
+            "errors": [],
+            "warnings": [],
+        }
+
+        # Verify target is a translation
+        if target_survey.translated_from_id != self.id:
+            results["errors"].append(
+                "Target survey is not a translation of this survey"
+            )
+            return results
+
+        target_lang = target_survey.language
+        target_lang_name = LANGUAGE_NAMES.get(target_lang, target_lang)
+
+        if not use_llm:
+            results["warnings"].append(
+                "LLM translation disabled - content must be translated manually"
+            )
+            return results
+
+        try:
+            llm = ConversationalSurveyLLM()
+        except Exception as e:
+            results["errors"].append(f"Failed to initialize LLM: {str(e)}")
+            return results
+
+        # Translate survey metadata
+        try:
+            system_msg = f"""You are a professional translator specializing in healthcare and medical surveys.
+Your task is to translate survey content to {target_lang_name} ({target_lang}).
+
+CRITICAL RULES:
+1. Translate naturally while preserving meaning
+2. Keep medical/technical terms accurate
+3. Maintain formal/professional tone
+4. Preserve any placeholders like {{variable_name}}
+5. Keep markdown formatting intact
+6. Return ONLY the translation, no explanations
+
+Context: This is for a healthcare survey platform. Accuracy is critical."""
+
+            # Translate survey name
+            if self.name:
+                conversation = [
+                    {
+                        "role": "user",
+                        "content": f"Translate this survey title to {target_lang_name}:\n\n{self.name}",
+                    }
+                ]
+                translated_name = llm.chat(
+                    [{"role": "system", "content": system_msg}] + conversation,
+                    temperature=0.3,
+                )
+                if translated_name:
+                    target_survey.name = translated_name.strip()
+                    results["translated_fields"] += 1
+
+            # Translate survey description
+            if self.description:
+                conversation = [
+                    {
+                        "role": "user",
+                        "content": f"Translate this survey description to {target_lang_name}:\n\n{self.description}",
+                    }
+                ]
+                translated_desc = llm.chat(
+                    [{"role": "system", "content": system_msg}] + conversation,
+                    temperature=0.3,
+                )
+                if translated_desc:
+                    target_survey.description = translated_desc.strip()
+                    results["translated_fields"] += 1
+
+            target_survey.save(update_fields=["name", "description"])
+
+        except Exception as e:
+            results["errors"].append(f"Error translating survey metadata: {str(e)}")
+
+        # Translate questions and question groups
+        try:
+            # Get all question groups from source survey
+            for source_qg in self.question_groups.all():
+                # Find corresponding group in target survey
+                target_qg = target_survey.question_groups.filter(
+                    name=source_qg.name
+                ).first()
+                if not target_qg:
+                    continue
+
+                # Translate question group name
+                if source_qg.name:
+                    conversation = [
+                        {
+                            "role": "user",
+                            "content": f"Translate this question group name to {target_lang_name}:\n\n{source_qg.name}",
+                        }
+                    ]
+                    translated_qg_name = llm.chat(
+                        [{"role": "system", "content": system_msg}] + conversation,
+                        temperature=0.3,
+                    )
+                    if translated_qg_name:
+                        target_qg.name = translated_qg_name.strip()
+                        results["translated_fields"] += 1
+
+                # Translate question group description
+                if source_qg.description:
+                    conversation = [
+                        {
+                            "role": "user",
+                            "content": f"Translate this question group description to {target_lang_name}:\n\n{source_qg.description}",
+                        }
+                    ]
+                    translated_qg_desc = llm.chat(
+                        [{"role": "system", "content": system_msg}] + conversation,
+                        temperature=0.3,
+                    )
+                    if translated_qg_desc:
+                        target_qg.description = translated_qg_desc.strip()
+                        results["translated_fields"] += 1
+
+                target_qg.save(update_fields=["name", "description"])
+
+                # Translate questions in this group
+                source_questions = self.questions.filter(group=source_qg).order_by(
+                    "order"
+                )
+                target_questions = target_survey.questions.filter(
+                    group=target_qg
+                ).order_by("order")
+
+                for source_q, target_q in zip(source_questions, target_questions):
+                    # Translate question text
+                    if source_q.text:
+                        conversation = [
+                            {
+                                "role": "user",
+                                "content": f"Translate this survey question to {target_lang_name}:\n\n{source_q.text}",
+                            }
+                        ]
+                        translated_text = llm.chat(
+                            [{"role": "system", "content": system_msg}] + conversation,
+                            temperature=0.3,
+                        )
+                        if translated_text:
+                            target_q.text = translated_text.strip()
+                            results["translated_fields"] += 1
+
+                    # Translate question options (for multiple choice, dropdown, etc.)
+                    if source_q.options and isinstance(source_q.options, dict):
+                        if "choices" in source_q.options:
+                            choices = source_q.options["choices"]
+                            if choices:
+                                # Translate all choices in one go for consistency
+                                choices_text = "\n".join(
+                                    [f"- {choice}" for choice in choices]
+                                )
+                                conversation = [
+                                    {
+                                        "role": "user",
+                                        "content": f"Translate these answer choices to {target_lang_name}. Return ONLY the translated choices, one per line with '- ' prefix:\n\n{choices_text}",
+                                    }
+                                ]
+                                translated_choices_text = llm.chat(
+                                    [{"role": "system", "content": system_msg}]
+                                    + conversation,
+                                    temperature=0.3,
+                                )
+                                if translated_choices_text:
+                                    # Parse back into list
+                                    translated_choices = [
+                                        line.strip("- ").strip()
+                                        for line in translated_choices_text.strip().split(
+                                            "\n"
+                                        )
+                                        if line.strip()
+                                    ]
+                                    target_q.options = {
+                                        **target_q.options,
+                                        "choices": translated_choices,
+                                    }
+                                    results["translated_fields"] += 1
+
+                    target_q.save(update_fields=["text", "options"])
+
+        except Exception as e:
+            results["errors"].append(f"Error translating questions: {str(e)}")
+
+        # Set success flag
+        results["success"] = (
+            len(results["errors"]) == 0 and results["translated_fields"] > 0
+        )
+
+        if results["success"]:
+            results["warnings"].append(
+                "Please review translations for accuracy before publishing"
+            )
+
+        return results
+
     # Data Governance Methods
 
     def close_survey(self, user: User) -> None:
