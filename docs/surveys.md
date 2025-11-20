@@ -26,11 +26,53 @@ You’ll become an Admin and can invite others from the User management area.
 ## Create a survey
 
 1. Go to Surveys
-2. Click “Create survey”
+2. Click "Create survey"
 3. Choose an organisation (optional), name, and slug (this is the name that appears in the url so should have no spaces but words can be hyphenated)
 4. Save to open the survey dashboard
 
 From the dashboard you can set style/branding, manage members, and build content.
+
+## Create a copy
+
+You can create a copy of any survey you own or have Creator access to. This is useful for:
+
+- Creating variations of a survey for different audiences
+- Making a template for reuse
+- Starting a new survey based on an existing structure
+
+**How to clone a survey:**
+
+1. Open the survey dashboard
+2. Click the "Create a copy" button
+3. The copy opens immediately with a new slug (original-slug-copy)
+4. Edit the name and slug as needed
+
+**What gets copied:**
+
+- All question groups and questions
+- Question types, options, and logic
+- Follow-up text configurations
+- Conditional branching rules
+- Repeat/collection structures
+- Styling and branding settings
+
+**What does NOT get copied:**
+
+- Survey responses
+- Translations (you'll need to create these separately for the cloned survey)
+- Member access (only you have access to the new survey)
+- Publication status (clone starts as draft)
+- Access tokens
+
+## Edit survey title
+
+You can update the survey title after creation:
+
+1. From the survey dashboard, click the edit icon next to the survey name
+2. Enter the new title in the dialog
+3. Save - the title updates immediately
+
+**Note:** Only users with Creator or Admin permissions can edit survey titles.
 
 ## Question groups vs questions
 
@@ -117,6 +159,91 @@ CheckTick automatically saves respondents' progress as they complete surveys, al
 Progress tracking works with all survey access methods (authenticated, unlisted, and token-based) and all question types. The feature uses auto-save (3 seconds after changes) and provides real-time feedback on save status.
 
 For complete technical details, see [Survey Progress Tracking](/docs/survey-progress-tracking/).
+
+## Multi-language surveys
+
+CheckTick supports creating and publishing surveys in multiple languages. This is essential for reaching diverse populations and ensuring healthcare surveys are accessible to all respondents.
+
+### Creating translations
+
+You can create translations in two ways:
+
+**1. AI-assisted translation (recommended for initial draft):**
+
+1. Open the survey dashboard
+2. Go to "Manage Translations"
+3. Click "Create translation"
+4. Select the target language
+5. The system uses AI (LLM) to translate all content:
+   - Survey name and description
+   - Question group names and descriptions
+   - Question text
+   - Multiple choice options
+   - Follow-up text prompts
+6. Review and edit the translation (see important notes below)
+
+**2. Manual translation:**
+
+1. Create a translation as above
+2. Go to the translation's Question Builder
+3. Manually edit all text content
+
+### Important notes about AI translations
+
+**AI translations should always be reviewed by a native speaker before publication**, especially for:
+
+- Medical terminology accuracy
+- Cultural appropriateness
+- Idiomatic expressions
+- Technical precision
+
+The AI provides confidence levels:
+
+- **High**: Generally accurate, but still review
+- **Medium**: Some terms may need professional review
+- **Low**: Significant uncertainty, professional translator recommended
+
+**Best practice:** Have a healthcare professional who speaks the target language review all AI-generated translations before publishing to patients.
+
+### Publishing translations
+
+Each language version can be published independently:
+
+1. Go to the survey's Publish Settings
+2. You'll see separate sections for:
+   - **Published translations** (live versions with view links)
+   - **Draft translations** (not yet published)
+3. Test draft translations using the preview link
+4. Publish translations individually or together
+5. Each translation gets its own URL: `/surveys/{slug}/take/`
+
+**Language badges:**
+
+Throughout the interface, you'll see language flags indicating:
+
+- Which languages are published (green badge)
+- Which are still in draft (yellow badge)
+- Click flags to switch between language versions
+
+### What gets translated
+
+- Survey name and description
+- Question group names and descriptions
+- Question text
+- Multiple choice options
+- Dropdown options
+- Follow-up text input labels
+- Likert scale labels
+- Yes/No button text
+
+### What stays the same across languages
+
+- Question IDs and structure
+- Conditional logic rules
+- Data validation rules
+- Survey settings and permissions
+
+For complete details on translation implementation and security, see [AI Security & Safety](/docs/llm-security/).
 
 ## Repeats (nested, repeatable sections)
 
