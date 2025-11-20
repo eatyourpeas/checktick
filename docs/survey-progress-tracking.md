@@ -1,6 +1,7 @@
 ---
 title: Survey Progress Tracking
-category: None
+category: features
+priority: 8
 ---
 
 CheckTick includes a survey progress tracking feature that allows users to save their progress while completing surveys and resume later. This feature works with all survey access methods and provides a visual progress bar to help respondents track their completion.

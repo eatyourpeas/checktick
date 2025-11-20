@@ -81,6 +81,7 @@ def published_survey(survey_owner, test_organization):
         slug="test-survey",
         status=Survey.Status.PUBLISHED,
         visibility=Survey.Visibility.AUTHENTICATED,
+        allow_any_authenticated=True,  # Allow any authenticated user for testing
         organization=test_organization,
     )
 

@@ -4,101 +4,224 @@ category: features
 priority: 7
 ---
 
-This guide explains how to publish a survey, the different participation modes (Authenticated, Public, Unlisted, Invite Token), and the security protections applied at each step.
+# Publish & Collect Responses
 
-## Lifecycle: status and window
+When you're ready to share your survey, CheckTick offers multiple ways to publish it based on your security needs and audience. This guide helps you choose the right approach for your survey.
 
-- Status: `draft`, `published`, `closed`
-  - Draft: builder-only. Participant routes are disabled.
-  - Published: participant routes are enabled, subject to visibility rules and time/response limits.
-  - Closed: submissions disabled, preview remains read-only.
-- Window: optional `Start at` and `End at` datetimes further restrict when a survey is live.
-- Capacity: optional `Max responses` caps total accepted responses.
+## Getting Started
 
-The dashboard shows badges for Status, Visibility, Window, and Total responses, plus simple analytics (Today, Last 7 days).
+From your survey dashboard, click **Publish Settings** to configure:
 
-## Visibility modes (how participants complete a survey)
+- **When it's available**: Set start and end dates (optional)
+- **How many responses**: Set a maximum number of responses (optional)
+- **Who can access it**: Choose a visibility mode (see below)
+- **Security features**: Enable CAPTCHA for anonymous surveys
 
-All participant pages are server-rendered (SSR). The exact URL depends on the visibility you choose:
+## Choosing a Visibility Mode
 
-### Authenticated
+CheckTick provides four ways to share your survey, from most secure to most open:
 
-- URL: `/surveys/<slug>/take/`
-- Requires a logged-in account. Enforced by session auth + CSRF.
-- Recommended for surveys that include patient-identifiable data (see below).
+### 1. Authenticated Users (Most Secure)
 
-### Public
+**Best for:** Healthcare surveys, research studies, internal assessments
 
-- URL: `/surveys/<slug>/take/`
-- Anyone can view and submit without an account. You must confirm “No patient-identifiable data.”
-- Recommended: enable CAPTCHA and rate limiting (defaults are already on).
+**How it works:**
+- Only people with CheckTick accounts can access your survey
+- Participants must log in before completing
+- You can invite specific people by email, or allow any authenticated user
+- Perfect for surveys with patient-identifiable or sensitive data
 
-### Unlisted (secret link)
+**Two access options:**
 
-- URL: `/surveys/<slug>/take/unlisted/<unlisted_key>/`
-- Link is not discoverable in navigation or the API; only users with the key can access.
-- Anyone with the link can submit without an account. You must confirm “No patient-identifiable data.”
+**Invite-Only Mode** (default):
+- Paste email addresses into the invitation box (one per line)
+- Outlook contact format is supported: `John Smith <user@example.com>`
+- System checks if each person has a CheckTick account:
+  - **Existing users** get a direct link to the survey
+  - **New users** get a signup link that redirects to the survey after registration
+- Track who was invited and who completed the survey
+- Resend invitations from the dashboard if needed
 
-### Invite token (one-time codes)
+**Self-Service Mode**:
+- Check "Allow any authenticated user to access"
+- Any logged-in user can access the survey
+- No invitation required, but users still need an account
+- Good for public surveys that need accountability
 
-- Flow:
-  - Generate tokens from Dashboard → Publish settings → Manage invite tokens
-  - Distribute links: `/surveys/<slug>/take/token/<token>/`
-  - Each token is one-time-use; after a successful submission it is marked used.
-- Optional expiry per token batch. CSV export is available.
-- You must confirm “No patient-identifiable data.” if submissions are anonymous.
+### 2. Anonymous with Invite Codes
 
-See also: docs/authentication-and-permissions.md for broader access control.
+**Best for:** Controlled distribution without requiring accounts
 
-## Patient-identifiable data safeguard
+**How it works:**
+- Generate unique one-time codes for each participant
+- Share links like: `/surveys/your-survey/take/token/ABC123/`
+- Each code works only once
+- Participants don't need to create an account
+- You can set expiry dates and export usage data
 
-When using Public, Unlisted, or Invite token modes, publishers must acknowledge that the survey does not collect patient-identifiable data. This is enforced on the server; if your survey collects sensitive demographics, prefer the Authenticated mode so responses are tied to authenticated users and protected accordingly.
+**When to use:**
+- You want to control who can access the survey
+- You don't need to know participants' identities
+- You want to track individual completion without accounts
 
-Demographic fields are encrypted per-survey; the decryption key is handled server-side and never exposed in public pages or APIs.
+**Note:** Must confirm that your survey doesn't collect patient-identifiable data.
 
-## Security protections
+### 3. Unlisted (Secret Link)
 
-- CSRF protection and secure session cookies (production: Secure/HttpOnly)
-- Strict Content Security Policy (CSP) via django-csp; static assets served by WhiteNoise
-- Rate limiting via django-ratelimit for participant POSTs
-- Brute-force login protection via django-axes
-- CAPTCHA (hCaptcha) for anonymous submissions when enabled on the survey
-- One-time-use Invite tokens, server-validated, with optional expiry
-- Publish window and capacity guard (start/end times, max responses)
+**Best for:** Semi-private surveys with known audience
 
-### hCaptcha configuration
+**How it works:**
+- Get a secret link like: `/surveys/your-survey/take/unlisted/secret-key/`
+- Anyone with the link can complete the survey
+- Link is not discoverable on your site or through the API
+- No account required
 
-Set these environment variables to enable the widget and server-side verification:
+**When to use:**
+- Sharing with a specific group (e.g., email list, internal team)
+- You trust recipients not to share the link publicly
+- You don't need to track individual access
 
-- `HCAPTCHA_SITEKEY`
-- `HCAPTCHA_SECRET`
+**Note:** Must confirm that your survey doesn't collect patient-identifiable data.
 
-When set and the survey’s “Require CAPTCHA” box is ticked, the participant page renders the hCaptcha widget and submission is validated server-side using `siteverify`.
+### 4. Public (Fully Open)
 
-Our CSP is already configured to allow hCaptcha domains; no inline scripts are used.
+**Best for:** General feedback, public surveys, anonymous data collection
 
-## Participant flow and Thank-you page
+**How it works:**
+- Survey is openly accessible at: `/surveys/your-survey/take/`
+- Anyone can complete it without an account
+- Recommended to enable CAPTCHA to prevent spam
+- Rate limiting is automatically enabled
 
-- While live, the participant route renders the survey form (and CAPTCHA when required)
-- **Survey progress tracking**: Participants can save their progress and resume later. See [Survey Progress Tracking](/docs/survey-progress-tracking/) for details on auto-save, progress restoration, and data retention.
-- On successful submission, participants are redirected to `/surveys/<slug>/thank-you/`
-- Responses count toward the survey's totals and analytics tiles
+**When to use:**
+- Public feedback forms
+- Anonymous surveys where you want maximum participation
+- Non-sensitive data collection
 
-## Invite tokens (details)
+**Note:** Must confirm that your survey doesn't collect patient-identifiable data.
 
-- One-time-use: a token cannot be used to submit more than once
-- Optional expiry per token; expired tokens are rejected
-- CSV export includes token, created/expiry, used-at, and used-by (if applicable)
-- Tokens are not API-browsable and are only visible to survey managers
+## Protecting Patient Data
+
+When your survey collects patient-identifiable information:
+
+✅ **Use Authenticated visibility mode**
+- Links responses to verified user accounts
+- Provides full audit trail
+- Enables proper data governance
+- Meets healthcare compliance requirements
+
+❌ **Don't use** Public, Unlisted, or Anonymous Invite Codes
+- These modes require confirmation that no patient data is collected
+- System enforces this protection when publishing
+
+All demographic fields are automatically encrypted. The encryption keys are managed server-side and never exposed in public pages.
+
+## Managing Your Published Survey
+
+### Survey Status
+
+- **Draft**: Only visible to you while building
+- **Published**: Live and accepting responses
+- **Closed**: No longer accepting responses, but you can still view data
+
+### Time Windows
+
+Set optional start and end dates to automatically control when your survey is available. The dashboard shows clear status badges so you always know if your survey is live.
+
+### Response Limits
+
+Set a maximum number of responses. When reached, the survey automatically closes to new submissions.
+
+### Tracking Progress
+
+Your dashboard shows:
+- Current status and visibility mode
+- Total responses received
+- Today's responses
+- Last 7 days activity
+- Time remaining (if end date is set)
+
+### Managing Invitations (Authenticated & Token modes)
+
+From your dashboard:
+- View pending invitations
+- See who has completed the survey
+- Resend invitations to non-responders
+- Export invitation data to CSV
+
+## Participant Experience
+
+### Progress Saving
+
+Participants can save their progress and resume later. This is especially helpful for longer surveys. See [Survey Progress Tracking](/docs/survey-progress-tracking/) for details.
+
+### Completion
+
+After submitting, participants see a customizable thank-you page. You can include:
+- Confirmation message
+- Next steps
+- Contact information
+- Custom branding
+
+## Security Features
+
+CheckTick includes enterprise-grade security:
+
+- **CSRF protection** on all forms
+- **Rate limiting** to prevent abuse
+- **CAPTCHA support** (hCaptcha) for anonymous surveys
+- **Brute-force protection** on login attempts
+- **Encrypted data storage** for sensitive information
+- **One-time invite codes** that can't be reused
+- **Secure session handling** in production
+
+## Quick Start Guide
+
+**For maximum security (healthcare/research):**
+1. Choose **Authenticated** visibility
+2. Leave "Allow any authenticated user" **unchecked**
+3. Paste email addresses to invite
+4. Publish!
+
+**For controlled anonymous surveys:**
+1. Choose **Anonymous with Invite Codes**
+2. Generate codes for your participants
+3. Confirm no patient data collected
+4. Enable CAPTCHA
+5. Publish!
+
+**For public feedback:**
+1. Choose **Public** visibility
+2. Confirm no patient data collected
+3. Enable CAPTCHA
+4. Set end date if needed
+5. Publish!
 
 ## Troubleshooting
 
-- “Submission blocked: CAPTCHA required”: ensure both `HCAPTCHA_SITEKEY` and `HCAPTCHA_SECRET` are configured and the widget renders; then retry.
-- “Survey not live”: check Status is Published, within Start/End window, and below Max responses.
-- “Token invalid or used”: regenerate a fresh token or remove expiry.
+**"Survey not live"**
+- Check status is **Published** (not Draft or Closed)
+- Verify you're within the start/end date window
+- Check if maximum responses has been reached
 
-## Related docs
+**"Need to log in" (Authenticated mode)**
+- This is correct! Participants need accounts for authenticated surveys
+- New users will be prompted to create an account
+- Invitation emails include clear instructions
 
-- Authentication and permissions
-- API reference and protections
-- Themes and UI
+**"Invalid or used token"**
+- Tokens can only be used once
+- Generate a new token for the participant
+- Check if the token has expired
+
+**"CAPTCHA failed"**
+- Ensure CAPTCHA is properly configured (see technical docs)
+- Participant may need to try again
+- Check browser isn't blocking the CAPTCHA widget
+
+## Related Documentation
+
+- [Survey Progress Tracking](/docs/survey-progress-tracking/) - Auto-save and resume functionality
+- [Authentication and Permissions](/docs/authentication-and-permissions/) - User access control
+- [Branding & Theme Settings](/docs/branding-and-theme-settings/) - Customize the look of your surveys
+- [Publishing Surveys (Technical)](/docs/publishing-surveys/) - API and technical details

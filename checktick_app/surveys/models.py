@@ -274,6 +274,10 @@ class Survey(models.Model):
         default=False,
         help_text="Publisher confirms no patient data is collected when using non-authenticated visibility",
     )
+    allow_any_authenticated = models.BooleanField(
+        default=False,
+        help_text="Allow any authenticated user to access this survey (not just invited users)",
+    )
     # One-time survey key: store only hash + salt for verification
     key_salt = models.BinaryField(blank=True, null=True, editable=False)
     key_hash = models.BinaryField(blank=True, null=True, editable=False)
@@ -1103,6 +1107,10 @@ class SurveyAccessToken(models.Model):
         related_name="used_access_tokens",
     )
     note = models.CharField(max_length=255, blank=True)
+    for_authenticated = models.BooleanField(
+        default=False,
+        help_text="True if this token is for authenticated user invitation (not anonymous token)",
+    )
 
     class Meta:
         indexes = [
