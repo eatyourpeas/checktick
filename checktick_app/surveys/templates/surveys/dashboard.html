@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load i18n %}
+{% load survey_extras %}
 {% block head_theme_overrides %}
   {% if survey.style.theme_css_light or survey.style.theme_css_dark %}
   <style>
@@ -32,10 +33,70 @@
   {% trans "Survey Dashboard" as bc_survey_dashboard %}
   {% include 'components/breadcrumbs.html' with crumb1_label=bc_surveys crumb1_href="/surveys/" crumb2_label=bc_survey_dashboard crumb2_href="/surveys/"|add:survey.slug|add:"/dashboard/" %}
 </div>
-<h2 class="text-2xl font-bold mt-2"><a class="link link-accent" href="/surveys/{{ survey.slug }}/groups/">{{ survey.name }}</a></h2>
+<div class="flex items-center gap-3 mt-2">
+  <h2 class="text-2xl font-bold">
+    <a class="link link-accent" href="/surveys/{{ survey.slug }}/groups/" id="survey-title-display">{{ survey.name }}</a>
+  </h2>
+  <button class="btn btn-ghost btn-sm btn-circle" id="edit-title-btn" title="{% trans 'Edit survey title' %}">
+    {% include "components/icons/pencil.html" with classes="w-4 h-4" %}
+  </button>
+</div>
 
 <div class="flex flex-wrap gap-2 items-center mb-2">
-  <span class="badge badge-primary badge-outline">{% trans "Status" %}: {{ survey.status }}</span>
+  <!-- Status with languages -->
+  {% if survey.status == 'published' %}
+    <span class="badge badge-success badge-outline flex items-center gap-1">
+      <span>{% trans "Published" %}:</span>
+      <a href="/surveys/{{ survey.slug }}/dashboard/"
+         class="text-base hover:scale-110 transition-transform"
+         title="{{ survey.language|language_name }}"
+         aria-label="{% trans 'View' %} {{ survey.language|language_name }} {% trans 'version' %}">
+        {{ survey.language|default:'en'|language_flag }}
+      </a>
+      {% for trans in available_translations %}
+        {% if trans.status == 'published' %}
+          <a href="/surveys/{{ trans.slug }}/dashboard/"
+             class="text-base hover:scale-110 transition-transform"
+             title="{{ trans.language|language_name }}"
+             aria-label="{% trans 'View' %} {{ trans.language|language_name }} {% trans 'translation' %}">
+            {{ trans.language|language_flag }}
+          </a>
+        {% endif %}
+      {% endfor %}
+    </span>
+  {% else %}
+    <span class="badge badge-warning badge-outline flex items-center gap-1">
+      <span>{% trans "Draft" %}:</span>
+      <a href="/surveys/{{ survey.slug }}/dashboard/"
+         class="text-base hover:scale-110 transition-transform"
+         title="{{ survey.language|language_name }}"
+         aria-label="{% trans 'View' %} {{ survey.language|language_name }} {% trans 'version' %}">
+        {{ survey.language|default:'en'|language_flag }}
+      </a>
+    </span>
+  {% endif %}
+
+  <!-- Draft translations if any -->
+  {% if available_translations %}
+    {% for trans in available_translations %}
+      {% if trans.status == 'draft' %}
+        {% if forloop.first %}
+          <span class="badge badge-warning badge-outline flex items-center gap-1">
+            <span>{% trans "Draft translations" %}:</span>
+        {% endif %}
+        <a href="/surveys/{{ trans.slug }}/dashboard/"
+           class="text-base hover:scale-110 transition-transform"
+           title="{{ trans.language|language_name }}"
+           aria-label="{% trans 'View' %} {{ trans.language|language_name }} {% trans 'translation' %}">
+          {{ trans.language|language_flag }}
+        </a>
+        {% if forloop.last %}
+          </span>
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+
   <span class="badge badge-primary badge-outline">{% trans "Visibility" %}: {{ visible }}</span>
   <span class="badge badge-primary badge-outline">{% trans "Window" %}: {{ survey.start_at|default:'—' }} → {{ survey.end_at|default:'—' }}</span>
   <span class="badge badge-primary badge-outline">{% trans "Total responses" %}: {{ total }}{% if survey.max_responses %} / {{ survey.max_responses }}{% endif %}</span>
@@ -46,17 +107,21 @@
 
 <div class="flex flex-wrap gap-2 mb-4">
   {% if survey.status == 'draft' %}
-    <a class="btn btn-success btn-sm flex-shrink-0" href="{% url 'surveys:publish_settings' slug=survey.slug %}">
+    <a class="btn btn-success btn-sm flex-shrink-0{% if survey.questions.count == 0 %} btn-disabled{% endif %}" href="{% if survey.questions.count > 0 %}{% url 'surveys:publish_settings' slug=survey.slug %}{% else %}#{% endif %}"{% if survey.questions.count == 0 %} aria-disabled="true" title="{% trans 'Add questions before publishing' %}"{% endif %}>
       {% include "components/icons/cloud-upload.html" with classes="w-5 h-5 mr-1" %}
       {% trans "Publish Survey" %}
     </a>
   {% elif survey.status == 'published' %}
-    <a class="btn btn-primary btn-sm flex-shrink-0" href="{% url 'surveys:publish_settings' slug=survey.slug %}">
+    <a class="btn btn-primary btn-sm flex-shrink-0{% if survey.questions.count == 0 %} btn-disabled{% endif %}" href="{% if survey.questions.count > 0 %}{% url 'surveys:publish_settings' slug=survey.slug %}{% else %}#{% endif %}"{% if survey.questions.count == 0 %} aria-disabled="true" title="{% trans 'Add questions before publishing' %}"{% endif %}>
       {% include "components/icons/pencil.html" with classes="w-4 h-4 mr-1" %}
       {% trans "Edit Publication" %}
     </a>
   {% endif %}
-  <a class="btn btn-primary btn-sm flex-shrink-0" href="/surveys/{{ survey.slug }}/preview/">{% trans "Survey Preview (read-only)" %}</a>
+  <a class="btn btn-primary btn-sm flex-shrink-0{% if survey.questions.count == 0 %} btn-disabled{% endif %}" href="{% if survey.questions.count > 0 %}/surveys/{{ survey.slug }}/preview/{% else %}#{% endif %}"{% if survey.questions.count == 0 %} aria-disabled="true" title="{% trans 'Add questions before previewing' %}"{% endif %}>{% trans "Survey Preview (read-only)" %}</a>
+  <a class="btn btn-outline btn-sm flex-shrink-0" href="{% url 'surveys:clone' slug=survey.slug %}" title="{% trans 'Create a copy of this survey' %}">
+    {% include "components/icons/documents.html" with classes="w-4 h-4 mr-1" %}
+    {% trans "Create Copy" %}
+  </a>
   {% if can_manage_users %}
   <a class="btn btn-primary btn-sm flex-shrink-0" href="/surveys/{{ survey.slug }}/users/">{% trans "Manage collaborators" %}</a>
   {% endif %}
@@ -330,6 +395,73 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.body.removeChild(textarea);
   }
+
+  // Edit title functionality
+  const editTitleBtn = document.getElementById('edit-title-btn');
+  const titleModal = document.getElementById('edit_title_modal');
+
+  editTitleBtn.addEventListener('click', function() {
+    const currentTitle = '{{ survey.name|escapejs }}';
+    document.getElementById('survey_title_input').value = currentTitle;
+    titleModal.showModal();
+  });
+
+  document.getElementById('save_title_btn').addEventListener('click', function() {
+    const newTitle = document.getElementById('survey_title_input').value.trim();
+
+    if (!newTitle) {
+      alert('{% trans "Please enter a title" %}');
+      return;
+    }
+
+    // Save the title
+    fetch('/surveys/{{ survey.slug }}/update-title/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({ title: newTitle })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Update the title in the page
+        document.getElementById('survey-title-display').textContent = newTitle;
+        document.title = '{% trans "Dashboard" %} - ' + newTitle;
+        titleModal.close();
+      } else {
+        alert(data.error || '{% trans "Failed to update title" %}');
+      }
+    })
+    .catch(error => {
+      alert('{% trans "Error updating title" %}');
+      console.error('Error:', error);
+    });
+  });
 });
 </script>
+
+<!-- Edit Title Modal -->
+<dialog id="edit_title_modal" class="modal">
+  <div class="modal-box">
+    <h3 class="text-lg font-bold">{% trans "Edit Survey Title" %}</h3>
+
+    <div class="form-control w-full mt-4">
+      <label class="label">
+        <span class="label-text">{% trans "Survey Title" %}</span>
+      </label>
+      <input type="text" id="survey_title_input" class="input input-bordered w-full" maxlength="200" />
+    </div>
+
+    <div class="modal-action">
+      <button class="btn" onclick="edit_title_modal.close()">{% trans "Cancel" %}</button>
+      <button id="save_title_btn" class="btn btn-primary">
+        {% include "components/icons/pencil.html" with classes="w-4 h-4 mr-1" %}
+        {% trans "Save" %}
+      </button>
+    </div>
+  </div>
+</dialog>
+
 {% endblock %}

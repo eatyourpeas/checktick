@@ -155,7 +155,10 @@ class ConversationalSurveyLLM:
             raise ValueError("LLM endpoint and API key must be configured")
 
     def chat(
-        self, conversation_history: List[Dict[str, str]], temperature: float = None
+        self,
+        conversation_history: List[Dict[str, str]],
+        temperature: float = None,
+        max_tokens: int = None,
     ) -> Optional[str]:
         """
         Continue conversation with LLM.
@@ -163,12 +166,15 @@ class ConversationalSurveyLLM:
         Args:
             conversation_history: List of message dicts with 'role' and 'content'
             temperature: Override default temperature
+            max_tokens: Maximum tokens in response (default: 2000)
 
         Returns:
             LLM response or None on failure
         """
         if temperature is None:
             temperature = settings.LLM_TEMPERATURE
+        if max_tokens is None:
+            max_tokens = 2000
 
         messages = [{"role": "system", "content": self.system_prompt}]
         messages.extend(conversation_history)
@@ -189,7 +195,88 @@ class ConversationalSurveyLLM:
                         "model": settings.LLM_MODEL,
                         "messages": messages,
                         "temperature": temperature,
-                        "max_tokens": 2000,
+                        "max_tokens": max_tokens,
+                    },
+                    timeout=self.timeout,
+                )
+
+                response.raise_for_status()
+                data = response.json()
+
+                # Handle OpenAI-compatible response format
+                content = None
+                if "choices" in data:
+                    content = data["choices"][0]["message"]["content"]
+                elif "content" in data:
+                    content = data["content"]
+                else:
+                    logger.error(f"Unexpected response format: {data.keys()}")
+                    return None
+
+                # Strip markdown code fences if present
+                if content:
+                    content = content.strip()
+                    # Remove ```markdown and ``` wrappers
+                    if content.startswith("```markdown"):
+                        content = content[len("```markdown") :].strip()
+                    elif content.startswith("```"):
+                        content = content[3:].strip()
+                    if content.endswith("```"):
+                        content = content[:-3].strip()
+
+                return content
+
+            except requests.RequestException as e:
+                logger.error(f"LLM request failed (attempt {attempt + 1}): {e}")
+                if attempt == settings.LLM_MAX_RETRIES - 1:
+                    return None
+
+        return None
+
+    def chat_with_custom_system_prompt(
+        self,
+        system_prompt: str,
+        conversation_history: List[Dict[str, str]],
+        temperature: float = None,
+        max_tokens: int = None,
+    ) -> Optional[str]:
+        """
+        Chat with LLM using a custom system prompt (for specialized tasks like translation).
+
+        Args:
+            system_prompt: Custom system prompt to use instead of default
+            conversation_history: List of message dicts with 'role' and 'content'
+            temperature: Override default temperature
+            max_tokens: Maximum tokens in response (default: 2000)
+
+        Returns:
+            LLM response or None on failure
+        """
+        if temperature is None:
+            temperature = settings.LLM_TEMPERATURE
+        if max_tokens is None:
+            max_tokens = 2000
+
+        messages = [{"role": "system", "content": system_prompt}]
+        messages.extend(conversation_history)
+
+        for attempt in range(settings.LLM_MAX_RETRIES):
+            try:
+                # Support both Azure APIM and standard OpenAI authentication
+                headers = {"Content-Type": "application/json"}
+                if self.auth_type.lower() == "apim":
+                    headers["Ocp-Apim-Subscription-Key"] = self.api_key
+                else:
+                    headers["Authorization"] = f"Bearer {self.api_key}"
+
+                response = requests.post(
+                    self.endpoint,
+                    headers=headers,
+                    json={
+                        "model": settings.LLM_MODEL,
+                        "messages": messages,
+                        "temperature": temperature,
+                        "max_tokens": max_tokens,
                     },
                     timeout=self.timeout,
                 )

@@ -255,7 +255,7 @@ def language_flag(language_code):
 @register.filter(name="language_name")
 def language_name(language_code):
     """Return language name for language code."""
-    from checktick_app.surveys.models import Survey
+    from checktick_app.surveys.models import SUPPORTED_SURVEY_LANGUAGES
 
-    lang_dict = dict(Survey.SUPPORTED_SURVEY_LANGUAGES)
+    lang_dict = dict(SUPPORTED_SURVEY_LANGUAGES)
     return lang_dict.get(language_code, language_code)

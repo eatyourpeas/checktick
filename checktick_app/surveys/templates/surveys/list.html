@@ -14,7 +14,8 @@
   {% endif %}
   {% if surveys %}
   <ul class="not-prose w-full flex flex-col gap-3">
-      {% for s in surveys %}
+      {% for item in surveys_with_translations %}
+        {% with s=item.survey %}
         <li class="w-full">
           <div class="w-full bg-base-100 rounded-lg border border-base-300 p-3 sm:p-4 hover:border-primary transition-colors">
             <div class="flex items-center gap-4 min-w-0">
@@ -24,7 +25,52 @@
               <div class="min-w-0 w-full">
                 <div class="flex items-center gap-2 min-w-0">
                   <a href="/surveys/{{ s.slug }}/dashboard/" class="font-medium leading-tight truncate link link-accent">{{ s.name }}</a>
-                  <span class="badge badge-primary badge-outline whitespace-nowrap">{{ s.get_status_display|default:s.status }}</span>
+
+                  <!-- Status badges with languages -->
+                  {% if s.status == 'published' %}
+                    <span class="badge badge-success badge-outline whitespace-nowrap flex items-center gap-1">
+                      <span>{% trans "Published" %}</span>
+                      <a href="/surveys/{{ s.slug }}/dashboard/"
+                         class="text-base hover:scale-110 transition-transform"
+                         title="{{ item.language_name }}"
+                         aria-label="{% trans 'View' %} {{ item.language_name }} {% trans 'version' %}">{{ item.flag }}</a>
+                      {% for trans in item.translations %}
+                        {% if trans.status == 'published' %}
+                          <a href="/surveys/{{ trans.survey.slug }}/dashboard/"
+                             class="text-base hover:scale-110 transition-transform"
+                             title="{{ trans.language_name }}"
+                             aria-label="{% trans 'View' %} {{ trans.language_name }} {% trans 'translation' %}">{{ trans.flag }}</a>
+                        {% endif %}
+                      {% endfor %}
+                    </span>
+                  {% else %}
+                    <span class="badge badge-warning badge-outline whitespace-nowrap flex items-center gap-1">
+                      <span>{% trans "Draft" %}</span>
+                      <a href="/surveys/{{ s.slug }}/dashboard/"
+                         class="text-base hover:scale-110 transition-transform"
+                         title="{{ item.language_name }}"
+                         aria-label="{% trans 'View' %} {{ item.language_name }} {% trans 'version' %}">{{ item.flag }}</a>
+                    </span>
+                  {% endif %}
+
+                  <!-- Draft translations badge if any exist -->
+                  {% if item.translations %}
+                    {% for trans in item.translations %}
+                      {% if trans.status == 'draft' %}
+                        {% if forloop.first %}
+                          <span class="badge badge-warning badge-outline whitespace-nowrap flex items-center gap-1">
+                            <span>{% trans "Draft" %}</span>
+                        {% endif %}
+                        <a href="/surveys/{{ trans.survey.slug }}/dashboard/"
+                           class="text-base hover:scale-110 transition-transform"
+                           title="{{ trans.language_name }}"
+                           aria-label="{% trans 'View' %} {{ trans.language_name }} {% trans 'translation' %}">{{ trans.flag }}</a>
+                        {% if forloop.last %}
+                          </span>
+                        {% endif %}
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
                   {% if s.status == 'published' %}
                     {% with days=s.days_remaining %}
                       {% if days is None %}
@@ -50,36 +96,49 @@
             </div>
             <div class="-mx-1 overflow-x-auto mt-3">
               <div class="px-1 min-w-max flex items-center gap-2">
+                <a class="btn btn-secondary btn-sm" href="/surveys/{{ s.slug }}/dashboard/">
+                  {% include "components/icons/clipboard.html" with classes="w-4 h-4 mr-1" %}
+                  {% trans "Dashboard" %}
+                </a>
+                <a class="btn btn-outline btn-sm" href="{% url 'surveys:clone' slug=s.slug %}" title="{% trans 'Create a copy of this survey' %}">
+                  {% include "components/icons/documents.html" with classes="w-4 h-4 mr-1" %}
+                  {% trans "Create Copy" %}
+                </a>
+                {% if s.questions.count > 0 %}
+                  <button class="btn btn-outline btn-sm create-translation-btn" data-survey-slug="{{ s.slug }}" data-survey-id="{{ s.id }}" title="{% trans 'Create a translation of this survey' %}">
+                    {% include "components/icons/language.html" with classes="w-4 h-4 mr-1" %}
+                    {% trans "Create Translation" %}
+                  </button>
+                {% else %}
+                  <button class="btn btn-outline btn-sm btn-disabled" aria-disabled="true" title="{% trans 'Add questions before creating translation' %}">
+                    {% include "components/icons/language.html" with classes="w-4 h-4 mr-1" %}
+                    {% trans "Create Translation" %}
+                  </button>
+                {% endif %}
+                <a class="btn btn-secondary btn-sm{% if s.questions.count == 0 %} btn-disabled{% endif %}" href="{% if s.questions.count > 0 %}/surveys/{{ s.slug }}/preview/{% else %}#{% endif %}"{% if s.questions.count == 0 %} aria-disabled="true" title="{% trans 'Add questions before previewing' %}"{% endif %}>
+                  {% include "components/icons/building.html" with classes="w-4 h-4 mr-1" %}
+                  {% trans "Preview" %}
+                </a>
                 {% if s.status == 'draft' %}
-                  <a class="btn btn-success btn-sm" href="{% url 'surveys:publish_settings' slug=s.slug %}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
+                  <a class="btn btn-success btn-sm{% if s.questions.count == 0 %} btn-disabled{% endif %}" href="{% if s.questions.count > 0 %}{% url 'surveys:publish_settings' slug=s.slug %}{% else %}#{% endif %}"{% if s.questions.count == 0 %} aria-disabled="true" title="{% trans 'Add questions before publishing' %}"{% endif %}>
+                    {% include "components/icons/cloud-upload.html" with classes="w-4 h-4 mr-1" %}
                     {% trans "Publish" %}
                   </a>
                 {% elif s.status == 'published' %}
-                  <a class="btn btn-primary btn-sm" href="{% url 'surveys:publish_settings' slug=s.slug %}">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
+                  <a class="btn btn-primary btn-sm{% if s.questions.count == 0 %} btn-disabled{% endif %}" href="{% if s.questions.count > 0 %}{% url 'surveys:publish_settings' slug=s.slug %}{% else %}#{% endif %}"{% if s.questions.count == 0 %} aria-disabled="true" title="{% trans 'Add questions before publishing' %}"{% endif %}>
+                    {% include "components/icons/pencil.html" with classes="w-4 h-4 mr-1" %}
                     {% trans "Edit Publication" %}
                   </a>
                 {% endif %}
-                <a class="btn btn-secondary btn-sm" href="/surveys/{{ s.slug }}/dashboard/">{% trans "Dashboard" %}</a>
-                <a class="btn btn-secondary btn-sm" href="/surveys/{{ s.slug }}/preview/">{% trans "Preview" %}</a>
                 {% if s.status == 'published' %}
                   {% if s.visibility == 'public' %}
                     <button class="btn btn-outline btn-sm copy-survey-link" data-slug="{{ s.slug }}" data-url="{{ request.scheme }}://{{ request.get_host }}/surveys/{{ s.slug }}/take/">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
+                      {% include "components/icons/documents.html" with classes="w-4 h-4 mr-1" %}
                       {% trans "Copy Link" %}
                     </button>
                   {% elif s.visibility == 'unlisted' and s.unlisted_key %}
                     <button class="btn btn-outline btn-sm copy-survey-link" data-slug="{{ s.slug }}" data-url="{{ request.scheme }}://{{ request.get_host }}/surveys/{{ s.slug }}/take/unlisted/{{ s.unlisted_key }}/">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
+                      {% include "components/icons/documents.html" with classes="w-4 h-4 mr-1" %}
                       {% trans "Copy Link" %}
                     </button>
                   {% endif %}
@@ -88,6 +147,7 @@
             </div>
           </div>
         </li>
+        {% endwith %}
       {% endfor %}
     </ul>
   {% else %}
@@ -95,8 +155,142 @@
   {% endif %}
 </div>
 
+<!-- Translation Creation Modal -->
+<dialog id="translation_modal" class="modal">
+  <div class="modal-box">
+    <h3 class="text-lg font-bold">{% trans "Create Translation" %}</h3>
+    <p class="py-4">{% trans "This will create a copy of the survey in the selected language. The content will be automatically translated using AI, but you should review all translations before publishing." %}</p>
+
+    <div class="form-control w-full">
+      <label class="label">
+        <span class="label-text">{% trans "Target Language" %}</span>
+      </label>
+      <select id="translation_language" class="select select-bordered w-full">
+        <option value="">{% trans "Select a language..." %}</option>
+        {% for code, name in supported_languages %}
+          <option value="{{ code }}">{{ name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="alert alert-warning mt-4">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+      <span>{% trans "AI translation may not be perfect. Always review content before publishing." %}</span>
+    </div>
+
+    <div class="modal-action">
+      <button class="btn" onclick="translation_modal.close()">{% trans "Cancel" %}</button>
+      <button id="create_translation_btn" class="btn btn-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+        </svg>
+        {% trans "Create Translation" %}
+      </button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>{% trans "close" %}</button>
+  </form>
+</dialog>
+
+<!-- Translation Progress Modal -->
+<dialog id="translation_progress_modal" class="modal">
+  <div class="modal-box">
+    <h3 class="text-lg font-bold">{% trans "Creating Translation..." %}</h3>
+    <div class="py-4">
+      <progress class="progress progress-primary w-full"></progress>
+      <p class="text-sm text-center mt-2" id="translation_status_text">{% trans "Translating survey content..." %}</p>
+    </div>
+  </div>
+</dialog>
+
 <script nonce="{{ request.csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
+  let currentSurveySlug = null;
+  let currentSurveyId = null;
+
+  // Create Translation button functionality
+  const createTranslationButtons = document.querySelectorAll('.create-translation-btn');
+
+  createTranslationButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      currentSurveySlug = this.dataset.surveySlug;
+      currentSurveyId = this.dataset.surveyId;
+      translation_modal.showModal();
+    });
+  });
+
+  // Handle translation creation
+  document.getElementById('create_translation_btn').addEventListener('click', function() {
+    const targetLanguage = document.getElementById('translation_language').value;
+
+    if (!targetLanguage) {
+      alert('{% trans "Please select a target language" %}');
+      return;
+    }
+
+    // Close the selection modal and show progress modal
+    translation_modal.close();
+    translation_progress_modal.showModal();
+
+    // Send translation request
+    fetch(`/surveys/${currentSurveySlug}/translations/create/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({
+        survey_id: currentSurveyId,
+        target_language: targetLanguage
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.task_id) {
+        pollTranslationStatus(data.task_id, currentSurveySlug);
+      } else if (data.error) {
+        translation_progress_modal.close();
+        alert(data.error);
+      }
+    })
+    .catch(error => {
+      translation_progress_modal.close();
+      alert('{% trans "Failed to create translation. Please try again." %}');
+      console.error('Translation error:', error);
+    });
+  });
+
+  function pollTranslationStatus(taskId, slug) {
+    const interval = setInterval(() => {
+      fetch(`/surveys/${slug}/translations/status/${taskId}/`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'completed') {
+            clearInterval(interval);
+            translation_progress_modal.close();
+            location.reload(); // Reload to show new translation
+          } else if (data.status === 'error') {
+            clearInterval(interval);
+            translation_progress_modal.close();
+            alert('{% trans "Translation failed. Please try again or contact support." %}');
+          }
+          // Update status text if available
+          if (data.message) {
+            document.getElementById('translation_status_text').textContent = data.message;
+          }
+        })
+        .catch(error => {
+          clearInterval(interval);
+          translation_progress_modal.close();
+          console.error('Status polling error:', error);
+        });
+    }, 1000);
+  }
+
+  // Copy link functionality
   const copyButtons = document.querySelectorAll('.copy-survey-link');
 
   copyButtons.forEach(button => {

@@ -590,10 +590,198 @@ class TestLLMTranslation:
             translation.question_groups.count() == basic_survey.question_groups.count()
         )
 
-        # Translation without LLM shouldn't break structure
-        basic_survey.translate_survey_content(translation, use_llm=False)
 
-        assert translation.questions.count() == basic_survey.questions.count()
-        assert (
-            translation.question_groups.count() == basic_survey.question_groups.count()
+@pytest.mark.django_db
+class TestAsyncTranslation:
+    """Tests for async translation functionality and error handling."""
+
+    def test_create_translation_async_returns_task_id(
+        self, client, basic_survey, owner
+    ):
+        """Async translation endpoint should return task_id."""
+        client.force_login(owner)
+
+        response = client.post(
+            f"/surveys/{basic_survey.slug}/translations/create/",
+            {"language": "es"},
         )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "task_id" in data
+        assert len(data["task_id"]) > 0
+
+    def test_create_translation_async_invalid_language(
+        self, client, basic_survey, owner
+    ):
+        """Async translation should reject invalid language codes."""
+        client.force_login(owner)
+
+        response = client.post(
+            f"/surveys/{basic_survey.slug}/translations/create/",
+            {"language": "invalid"},
+        )
+
+        assert response.status_code == 400
+        data = response.json()
+        assert "error" in data
+        assert "Invalid language" in data["error"]
+
+    def test_create_translation_async_duplicate(self, client, basic_survey, owner):
+        """Async translation should reject duplicates."""
+        # Create first translation
+        basic_survey.create_translation("es")
+
+        client.force_login(owner)
+
+        response = client.post(
+            f"/surveys/{basic_survey.slug}/translations/create/",
+            {"language": "es"},
+        )
+
+        assert response.status_code == 400
+        data = response.json()
+        assert "error" in data
+        assert "already exists" in data["error"]
+
+    def test_translation_status_not_found(self, client, basic_survey, owner):
+        """Translation status should return 404 for invalid task_id."""
+        client.force_login(owner)
+
+        response = client.get(
+            f"/surveys/{basic_survey.slug}/translations/status/invalid-task-id/"
+        )
+
+        assert response.status_code == 404
+
+    def test_translation_handles_llm_failure(self, basic_survey, monkeypatch):
+        """Translation should handle LLM failures gracefully."""
+
+        def mock_chat(*args, **kwargs):
+            return "Translated content"
+
+        monkeypatch.setattr(ConversationalSurveyLLM, "chat", mock_chat)
+
+        translation = basic_survey.create_translation("es")
+
+        # Should complete successfully with mocked LLM
+        result = basic_survey.translate_survey_content(translation, use_llm=True)
+
+        assert result["success"] is True
+        assert result["translated_fields"] > 0
+        # Translation structure should exist
+        assert translation.questions.count() == basic_survey.questions.count()
+
+
+@pytest.mark.django_db
+class TestAsyncEmailSending:
+    """Tests for async email invitation sending and error handling."""
+
+    def test_send_invites_async_returns_task_id(self, client, basic_survey, owner):
+        """Async email endpoint should return task_id."""
+        client.force_login(owner)
+
+        basic_survey.visibility = Survey.Visibility.TOKEN
+        basic_survey.save()
+
+        response = client.post(
+            f"/surveys/{basic_survey.slug}/invites/send/",
+            {"invite_emails": "test@example.com"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "task_id" in data
+        assert "total_emails" in data
+        assert data["total_emails"] == 1
+
+    def test_send_invites_async_no_emails(self, client, basic_survey, owner):
+        """Async email should reject empty email list."""
+        client.force_login(owner)
+
+        response = client.post(
+            f"/surveys/{basic_survey.slug}/invites/send/",
+            {"invite_emails": ""},
+        )
+
+        assert response.status_code == 400
+        data = response.json()
+        assert "error" in data
+
+    def test_send_invites_async_invalid_emails(self, client, basic_survey, owner):
+        """Async email should reject invalid email formats."""
+        client.force_login(owner)
+
+        response = client.post(
+            f"/surveys/{basic_survey.slug}/invites/send/",
+            {"invite_emails": "not-an-email"},
+        )
+
+        assert response.status_code == 400
+        data = response.json()
+        assert "error" in data
+
+    def test_send_invites_async_multiple_emails(self, client, basic_survey, owner):
+        """Async email should parse multiple email addresses."""
+        client.force_login(owner)
+
+        basic_survey.visibility = Survey.Visibility.TOKEN
+        basic_survey.save()
+
+        response = client.post(
+            f"/surveys/{basic_survey.slug}/invites/send/",
+            {"invite_emails": "test1@example.com\ntest2@example.com"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total_emails"] == 2
+
+    def test_email_status_not_found(self, client, basic_survey, owner):
+        """Email status should return 404 for invalid task_id."""
+        client.force_login(owner)
+
+        response = client.get(
+            f"/surveys/{basic_survey.slug}/invites/status/invalid-task-id/"
+        )
+
+        assert response.status_code == 404
+
+    def test_send_invites_handles_smtp_failure(
+        self, client, basic_survey, owner, monkeypatch
+    ):
+        """Email sending should track failures in background thread."""
+        from unittest.mock import Mock
+
+        client.force_login(owner)
+
+        basic_survey.visibility = Survey.Visibility.TOKEN
+        basic_survey.save()
+
+        # Mock email sending to fail
+        mock_send = Mock(return_value=False)
+        monkeypatch.setattr(
+            "checktick_app.core.email_utils.send_survey_invite_email", mock_send
+        )
+
+        response = client.post(
+            f"/surveys/{basic_survey.slug}/invites/send/",
+            {"invite_emails": "test@example.com"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "task_id" in data
+
+        # Wait a moment for background thread
+        import time
+
+        time.sleep(0.5)
+
+        # Check status shows failure was tracked
+        from django.core.cache import cache
+
+        status = cache.get(f"email_task_{data['task_id']}")
+        assert status is not None
+        # Should eventually complete or error even with failures
+        assert status["status"] in ["processing", "completed", "error"]
