@@ -249,7 +249,7 @@ class PublishedQuestionGroup(models.Model):
         ]
         constraints = [
             models.CheckConstraint(
-                check=(
+                condition=(
                     Q(publication_level="organization", organization__isnull=False)
                     | Q(publication_level="global")
                 ),
@@ -2517,13 +2517,13 @@ class DataSet(models.Model):
         constraints = [
             # NHS DD lists must be global and not have an organization
             models.CheckConstraint(
-                check=~models.Q(category="nhs_dd", organization__isnull=False),
+                condition=~models.Q(category="nhs_dd", organization__isnull=False),
                 name="nhs_dd_must_be_global",
             ),
             # Platform global datasets (not published) cannot have an organization
             # Published datasets CAN have organization for attribution
             models.CheckConstraint(
-                check=~models.Q(
+                condition=~models.Q(
                     is_global=True,
                     organization__isnull=False,
                     published_at__isnull=True,
