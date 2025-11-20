@@ -2208,14 +2208,13 @@ def survey_publish_settings(request: HttpRequest, slug: str) -> HttpResponse:
             survey.save()
 
             # Publish selected translations if any are checked
+            published_count = 0
             publish_translations = request.POST.getlist("publish_translations")
             if publish_translations:
-                published_count = 0
                 for translation_slug in publish_translations:
                     try:
                         translation = Survey.objects.get(
-                            slug=translation_slug,
-                            translated_from=survey
+                            slug=translation_slug, translated_from=survey
                         )
                         if translation.status != Survey.Status.PUBLISHED:
                             translation.status = Survey.Status.PUBLISHED
@@ -2227,10 +2226,15 @@ def survey_publish_settings(request: HttpRequest, slug: str) -> HttpResponse:
                             translation.max_responses = survey.max_responses
                             translation.captcha_required = survey.captcha_required
                             translation.no_patient_data_ack = survey.no_patient_data_ack
-                            translation.allow_any_authenticated = survey.allow_any_authenticated
+                            translation.allow_any_authenticated = (
+                                survey.allow_any_authenticated
+                            )
                             if survey.visibility == Survey.Visibility.UNLISTED:
-                                # Share the same unlisted key as parent
-                                translation.unlisted_key = survey.unlisted_key
+                                # Generate unique unlisted key for translation
+                                # Always generate new key to avoid duplicates
+                                import secrets
+
+                                translation.unlisted_key = secrets.token_urlsafe(24)
                             translation.save()
                             published_count += 1
                     except Survey.DoesNotExist:
@@ -2239,7 +2243,7 @@ def survey_publish_settings(request: HttpRequest, slug: str) -> HttpResponse:
                 if published_count > 0:
                     messages.success(
                         request,
-                        f"Survey published with {published_count} translation(s)!"
+                        f"Survey published with {published_count} translation(s)!",
                     )
 
             # Process invite emails if provided - start async sending
@@ -2295,7 +2299,8 @@ def survey_publish_settings(request: HttpRequest, slug: str) -> HttpResponse:
 
                 if published_count > 0:
                     messages.success(
-                        request, f"Survey published with {published_count} translation(s)! Sending invitations..."
+                        request,
+                        f"Survey published with {published_count} translation(s)! Sending invitations...",
                     )
                 else:
                     messages.success(
@@ -2304,7 +2309,8 @@ def survey_publish_settings(request: HttpRequest, slug: str) -> HttpResponse:
             else:
                 if published_count > 0:
                     messages.success(
-                        request, f"Survey published with {published_count} translation(s)!"
+                        request,
+                        f"Survey published with {published_count} translation(s)!",
                     )
                 else:
                     messages.success(request, "Survey has been published successfully!")
@@ -2347,8 +2353,7 @@ def survey_publish_settings(request: HttpRequest, slug: str) -> HttpResponse:
                 for translation_slug in publish_translations:
                     try:
                         translation = Survey.objects.get(
-                            slug=translation_slug,
-                            translated_from=survey
+                            slug=translation_slug, translated_from=survey
                         )
                         if translation.status != Survey.Status.PUBLISHED:
                             translation.status = Survey.Status.PUBLISHED
@@ -2360,10 +2365,15 @@ def survey_publish_settings(request: HttpRequest, slug: str) -> HttpResponse:
                             translation.max_responses = survey.max_responses
                             translation.captcha_required = survey.captcha_required
                             translation.no_patient_data_ack = survey.no_patient_data_ack
-                            translation.allow_any_authenticated = survey.allow_any_authenticated
+                            translation.allow_any_authenticated = (
+                                survey.allow_any_authenticated
+                            )
                             if survey.visibility == Survey.Visibility.UNLISTED:
-                                # Share the same unlisted key as parent
-                                translation.unlisted_key = survey.unlisted_key
+                                # Generate unique unlisted key for translation
+                                # Always generate new key to avoid duplicates
+                                import secrets
+
+                                translation.unlisted_key = secrets.token_urlsafe(24)
                             translation.save()
                             published_count += 1
                     except Survey.DoesNotExist:
@@ -2384,7 +2394,8 @@ def survey_publish_settings(request: HttpRequest, slug: str) -> HttpResponse:
             else:
                 if published_count > 0:
                     messages.success(
-                        request, f"Settings updated! Published {published_count} translation(s)."
+                        request,
+                        f"Settings updated! Published {published_count} translation(s).",
                     )
                 else:
                     messages.success(request, "Publication settings updated.")
@@ -2397,8 +2408,7 @@ def survey_publish_settings(request: HttpRequest, slug: str) -> HttpResponse:
 
     # Check if there are any draft translations
     has_draft_translations = any(
-        t.status == Survey.Status.DRAFT
-        for t in available_translations
+        t.status == Survey.Status.DRAFT for t in available_translations
     )
 
     # Get supported languages for dropdown

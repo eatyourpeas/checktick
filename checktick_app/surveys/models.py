@@ -1071,17 +1071,27 @@ class Survey(models.Model):
                             first_option = source_q.options[0]
                             if isinstance(first_option, dict):
                                 # Number scale format with min/max/left/right labels
-                                if first_option.get("type") in ["number-scale", "number"]:
+                                if first_option.get("type") in [
+                                    "number-scale",
+                                    "number",
+                                ]:
                                     scale_data = {}
                                     if "left" in first_option and first_option["left"]:
                                         scale_data["left_label"] = first_option["left"]
-                                    if "right" in first_option and first_option["right"]:
-                                        scale_data["right_label"] = first_option["right"]
+                                    if (
+                                        "right" in first_option
+                                        and first_option["right"]
+                                    ):
+                                        scale_data["right_label"] = first_option[
+                                            "right"
+                                        ]
                                     if scale_data:
                                         question_data["likert_scale"] = scale_data
                                 # Categories format with labels list
                                 elif "labels" in first_option:
-                                    question_data["likert_categories"] = first_option["labels"]
+                                    question_data["likert_categories"] = first_option[
+                                        "labels"
+                                    ]
                             elif isinstance(first_option, str):
                                 # Simple list of category strings
                                 question_data["likert_categories"] = source_q.options
