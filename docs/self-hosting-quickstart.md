@@ -57,10 +57,11 @@ ALLOWED_HOSTS=yourdomain.com,localhost
 
 # Database (REQUIRED - for included PostgreSQL)
 POSTGRES_PASSWORD=secure-database-password
+# REQUIRED - forms base url for emails
+SITE_URL="https://yourdomain.com"
 
 # Branding (OPTIONAL - has defaults)
 BRAND_TITLE=Your Survey Platform
-
 # Theme Configuration (OPTIONAL - has sensible defaults)
 # Set deployment-level default themes - org admins can override in Profile
 # Light theme: choose from 20 options (nord, cupcake, emerald, corporate, etc.)
