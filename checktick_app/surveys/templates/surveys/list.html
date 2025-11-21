@@ -105,7 +105,11 @@
                   {% trans "Create Copy" %}
                 </a>
                 {% if s.questions.count > 0 %}
-                  <button class="btn btn-outline btn-sm create-translation-btn" data-survey-slug="{{ s.slug }}" data-survey-id="{{ s.id }}" title="{% trans 'Create a translation of this survey' %}">
+                  <button class="btn btn-outline btn-sm create-translation-btn"
+                          data-survey-slug="{{ s.slug }}"
+                          data-survey-id="{{ s.id }}"
+                          data-existing-languages="{{ s.language }}{% for trans in item.translations %},{{ trans.survey.language }}{% endfor %}"
+                          title="{% trans 'Create a translation of this survey' %}">
                     {% include "components/icons/language.html" with classes="w-4 h-4 mr-1" %}
                     {% trans "Create Translation" %}
                   </button>
@@ -210,14 +214,33 @@
 document.addEventListener('DOMContentLoaded', function() {
   let currentSurveySlug = null;
   let currentSurveyId = null;
+  let existingLanguages = [];
 
   // Create Translation button functionality
   const createTranslationButtons = document.querySelectorAll('.create-translation-btn');
+  const languageSelect = document.getElementById('translation_language');
+  const allLanguageOptions = Array.from(languageSelect.querySelectorAll('option[value]')).map(opt => ({
+    value: opt.value,
+    text: opt.textContent
+  }));
 
   createTranslationButtons.forEach(button => {
     button.addEventListener('click', function() {
       currentSurveySlug = this.dataset.surveySlug;
       currentSurveyId = this.dataset.surveyId;
+      existingLanguages = (this.dataset.existingLanguages || '').split(',').filter(l => l);
+
+      // Filter language options
+      languageSelect.innerHTML = '<option value="">{% trans "Select a language..." %}</option>';
+      allLanguageOptions.forEach(opt => {
+        if (!existingLanguages.includes(opt.value)) {
+          const option = document.createElement('option');
+          option.value = opt.value;
+          option.textContent = opt.text;
+          languageSelect.appendChild(option);
+        }
+      });
+
       translation_modal.showModal();
     });
   });

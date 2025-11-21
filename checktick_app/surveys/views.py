@@ -1831,7 +1831,13 @@ def survey_dashboard(request: HttpRequest, slug: str) -> HttpResponse:
         ).exists(),
         # Translation management
         "available_translations": survey.get_available_translations(),
+        "supported_languages": SUPPORTED_SURVEY_LANGUAGES,
     }
+
+    # Import language constants for flags
+    from .models import LANGUAGE_FLAGS
+    ctx["language_flags"] = LANGUAGE_FLAGS
+
     if any(
         v for k, v in brand_overrides.items() if k != "primary_hex"
     ) or brand_overrides.get("primary_hex"):
