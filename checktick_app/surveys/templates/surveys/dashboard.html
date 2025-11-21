@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load i18n %}
+{% load survey_extras %}
 {% block head_theme_overrides %}
   {% if survey.style.theme_css_light or survey.style.theme_css_dark %}
   <style>
@@ -32,10 +33,42 @@
   {% trans "Survey Dashboard" as bc_survey_dashboard %}
   {% include 'components/breadcrumbs.html' with crumb1_label=bc_surveys crumb1_href="/surveys/" crumb2_label=bc_survey_dashboard crumb2_href="/surveys/"|add:survey.slug|add:"/dashboard/" %}
 </div>
-<h2 class="text-2xl font-bold mt-2"><a class="link link-accent" href="/surveys/{{ survey.slug }}/groups/">{{ survey.name }}</a></h2>
+
+{# Language switcher - button group above title #}
+<div class="mb-4">
+  <div class="join">
+    {# Current language - active/selected with accent color #}
+    <button class="btn join-item btn-accent btn-sm btn-active">
+      <span class="text-base mr-1">{{ survey.language|default:'en'|language_flag }}</span>
+      <span>{{ survey.language|language_name }}</span>
+      <span class="ml-1 text-xs opacity-70">({% if survey.status == 'published' %}{% trans "Published" %}{% else %}{% trans "Draft" %}{% endif %})</span>
+    </button>
+
+    {# Other translations - clickable with primary color #}
+    {% for trans in available_translations %}
+      <a href="/surveys/{{ trans.slug }}/dashboard/"
+         class="btn join-item btn-sm"
+         title="{{ trans.language|language_name }} - {% if trans.status == 'published' %}{% trans 'Published' %}{% else %}{% trans 'Draft' %}{% endif %}">
+        <span class="text-base mr-1">{{ trans.language|language_flag }}</span>
+        <span>{{ trans.language|language_name }}</span>
+        {% if trans.status == 'draft' %}
+          <span class="ml-1 text-xs opacity-70">({% trans "Draft" %})</span>
+        {% endif %}
+      </a>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="flex items-center gap-3 mt-2">
+  <h2 class="text-2xl font-bold">
+    <a class="link link-accent" href="/surveys/{{ survey.slug }}/groups/" id="survey-title-display">{{ survey.name }}</a>
+  </h2>
+  <button class="btn btn-ghost btn-sm btn-circle" id="edit-title-btn" title="{% trans 'Edit survey title' %}">
+    {% include "components/icons/pencil.html" with classes="w-4 h-4" %}
+  </button>
+</div>
 
 <div class="flex flex-wrap gap-2 items-center mb-2">
-  <span class="badge badge-primary badge-outline">{% trans "Status" %}: {{ survey.status }}</span>
   <span class="badge badge-primary badge-outline">{% trans "Visibility" %}: {{ visible }}</span>
   <span class="badge badge-primary badge-outline">{% trans "Window" %}: {{ survey.start_at|default:'—' }} → {{ survey.end_at|default:'—' }}</span>
   <span class="badge badge-primary badge-outline">{% trans "Total responses" %}: {{ total }}{% if survey.max_responses %} / {{ survey.max_responses }}{% endif %}</span>
@@ -46,17 +79,55 @@
 
 <div class="flex flex-wrap gap-2 mb-4">
   {% if survey.status == 'draft' %}
-    <a class="btn btn-success btn-sm flex-shrink-0" href="{% url 'surveys:publish_settings' slug=survey.slug %}">
+    <a class="btn btn-success btn-sm flex-shrink-0{% if survey.questions.count == 0 %} btn-disabled{% endif %}" href="{% if survey.questions.count > 0 %}{% url 'surveys:publish_settings' slug=survey.slug %}{% else %}#{% endif %}"{% if survey.questions.count == 0 %} aria-disabled="true" title="{% trans 'Add questions before publishing' %}"{% endif %}>
       {% include "components/icons/cloud-upload.html" with classes="w-5 h-5 mr-1" %}
       {% trans "Publish Survey" %}
     </a>
   {% elif survey.status == 'published' %}
-    <a class="btn btn-primary btn-sm flex-shrink-0" href="{% url 'surveys:publish_settings' slug=survey.slug %}">
+    <a class="btn btn-primary btn-sm flex-shrink-0{% if survey.questions.count == 0 %} btn-disabled{% endif %}" href="{% if survey.questions.count > 0 %}{% url 'surveys:publish_settings' slug=survey.slug %}{% else %}#{% endif %}"{% if survey.questions.count == 0 %} aria-disabled="true" title="{% trans 'Add questions before publishing' %}"{% endif %}>
       {% include "components/icons/pencil.html" with classes="w-4 h-4 mr-1" %}
       {% trans "Edit Publication" %}
     </a>
   {% endif %}
-  <a class="btn btn-primary btn-sm flex-shrink-0" href="/surveys/{{ survey.slug }}/preview/">{% trans "Survey Preview (read-only)" %}</a>
+  <a class="btn btn-primary btn-sm flex-shrink-0{% if survey.questions.count == 0 %} btn-disabled{% endif %}" href="{% if survey.questions.count > 0 %}/surveys/{{ survey.slug }}/preview/{% else %}#{% endif %}"{% if survey.questions.count == 0 %} aria-disabled="true" title="{% trans 'Add questions before previewing' %}"{% endif %}>{% trans "Survey Preview (read-only)" %}</a>
+
+  {# Create Copy button - only show for original surveys #}
+  {% if survey.is_original %}
+  <a class="btn btn-outline btn-sm flex-shrink-0" href="{% url 'surveys:clone' slug=survey.slug %}" title="{% trans 'Create a copy of this survey' %}">
+    {% include "components/icons/documents.html" with classes="w-4 h-4 mr-1" %}
+    {% trans "Create Copy" %}
+  </a>
+  {% endif %}
+
+  {# Create translation button - only show for original surveys #}
+  {% if survey.is_original %}
+    <button class="btn btn-outline btn-sm flex-shrink-0 create-translation-btn"
+            data-survey-slug="{{ survey.slug }}"
+            data-survey-id="{{ survey.id }}"
+            data-existing-languages="{{ survey.language }}{% for trans in available_translations %},{{ trans.language }}{% endfor %}"
+            title="{% trans 'Create a translation of this survey' %}">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+      </svg>
+      {% trans "Create Translation" %}
+    </button>
+  {% endif %}
+
+  {# Translate Again button - only show for translated surveys (not base language) #}
+  {# Re-translates base survey content into current language without modal #}
+  {% if survey.translated_from %}
+    <button class="btn btn-outline btn-sm flex-shrink-0 retranslate-btn"
+            data-survey-slug="{{ survey.translated_from.slug }}"
+            data-survey-id="{{ survey.translated_from.id }}"
+            data-target-language="{{ survey.language }}"
+            title="{% trans 'Re-translate from base language if content has changed' %}">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+      </svg>
+      {% trans "Translate Again" %}
+    </button>
+  {% endif %}
+
   {% if can_manage_users %}
   <a class="btn btn-primary btn-sm flex-shrink-0" href="/surveys/{{ survey.slug }}/users/">{% trans "Manage collaborators" %}</a>
   {% endif %}
@@ -330,6 +401,284 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.body.removeChild(textarea);
   }
+
+  // Edit title functionality
+  const editTitleBtn = document.getElementById('edit-title-btn');
+  const titleModal = document.getElementById('edit_title_modal');
+  const cancelEditTitleBtn = document.getElementById('cancel_edit_title_btn');
+
+  editTitleBtn.addEventListener('click', function() {
+    const currentTitle = '{{ survey.name|escapejs }}';
+    document.getElementById('survey_title_input').value = currentTitle;
+    titleModal.showModal();
+  });
+
+  cancelEditTitleBtn.addEventListener('click', function() {
+    titleModal.close();
+  });
+
+  document.getElementById('save_title_btn').addEventListener('click', function() {
+    const newTitle = document.getElementById('survey_title_input').value.trim();
+
+    if (!newTitle) {
+      alert('{% trans "Please enter a title" %}');
+      return;
+    }
+
+    // Save the title
+    fetch('/surveys/{{ survey.slug }}/update-title/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({ title: newTitle })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Update the title in the page
+        document.getElementById('survey-title-display').textContent = newTitle;
+        document.title = '{% trans "Dashboard" %} - ' + newTitle;
+        titleModal.close();
+      } else {
+        alert(data.error || '{% trans "Failed to update title" %}');
+      }
+    })
+    .catch(error => {
+      alert('{% trans "Error updating title" %}');
+      console.error('Error:', error);
+    });
+  });
+
+  // Translation functionality
+  let currentSurveySlug = null;
+  let currentSurveyId = null;
+  let existingLanguages = [];
+
+  const translation_modal = document.getElementById('translation_modal');
+  const translation_progress_modal = document.getElementById('translation_progress_modal');
+  const cancelTranslationBtn = document.getElementById('cancel_translation_btn');
+
+  cancelTranslationBtn.addEventListener('click', function() {
+    translation_modal.close();
+  });
+
+  // Create Translation button functionality
+  const createTranslationButtons = document.querySelectorAll('.create-translation-btn');
+  const languageSelect = document.getElementById('translation_language');
+  const allLanguageOptions = Array.from(languageSelect.querySelectorAll('option[value]')).map(opt => ({
+    value: opt.value,
+    text: opt.textContent
+  }));
+
+  createTranslationButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      currentSurveySlug = this.dataset.surveySlug;
+      currentSurveyId = this.dataset.surveyId;
+      existingLanguages = (this.dataset.existingLanguages || '').split(',').filter(l => l);
+
+      // Filter language options
+      languageSelect.innerHTML = '<option value="">{% trans "Select a language..." %}</option>';
+      allLanguageOptions.forEach(opt => {
+        if (!existingLanguages.includes(opt.value)) {
+          const option = document.createElement('option');
+          option.value = opt.value;
+          option.textContent = opt.text;
+          languageSelect.appendChild(option);
+        }
+      });
+
+      translation_modal.showModal();
+    });
+  });
+
+  // Handle translation creation
+  document.getElementById('create_translation_btn').addEventListener('click', function() {
+    const targetLanguage = document.getElementById('translation_language').value;
+
+    if (!targetLanguage) {
+      alert('{% trans "Please select a target language" %}');
+      return;
+    }
+
+    // Close the selection modal and show progress modal
+    translation_modal.close();
+    translation_progress_modal.showModal();
+
+    // Send translation request
+    fetch(`/surveys/${currentSurveySlug}/translations/create/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({
+        survey_id: currentSurveyId,
+        target_language: targetLanguage
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.task_id) {
+        pollTranslationStatus(data.task_id, currentSurveySlug);
+      } else if (data.error) {
+        translation_progress_modal.close();
+        alert(data.error);
+      }
+    })
+    .catch(error => {
+      translation_progress_modal.close();
+      alert('{% trans "Failed to create translation. Please try again." %}');
+      console.error('Translation error:', error);
+    });
+  });
+
+  // Handle re-translation (Translate Again button)
+  const retranslateButtons = document.querySelectorAll('.retranslate-btn');
+  retranslateButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      const surveySlug = this.dataset.surveySlug;
+      const surveyId = this.dataset.surveyId;
+      const targetLanguage = this.dataset.targetLanguage;
+
+      if (!confirm('{% trans "This will re-translate the survey content from the base language. Any manual edits will be overwritten. Continue?" %}')) {
+        return;
+      }
+
+      // Show progress modal
+      translation_progress_modal.showModal();
+
+      // Send translation request
+      fetch(`/surveys/${surveySlug}/translations/create/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+          survey_id: surveyId,
+          target_language: targetLanguage,
+          force_retranslate: true
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.task_id) {
+          pollTranslationStatus(data.task_id, surveySlug);
+        } else if (data.error) {
+          translation_progress_modal.close();
+          alert(data.error);
+        }
+      })
+      .catch(error => {
+        translation_progress_modal.close();
+        alert('{% trans "Failed to re-translate. Please try again." %}');
+        console.error('Re-translation error:', error);
+      });
+    });
+  });
+
+  function pollTranslationStatus(taskId, slug) {
+    const interval = setInterval(() => {
+      fetch(`/surveys/${slug}/translations/status/${taskId}/`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'completed') {
+            clearInterval(interval);
+            translation_progress_modal.close();
+            location.reload(); // Reload to show updated data
+          } else if (data.status === 'error') {
+            clearInterval(interval);
+            translation_progress_modal.close();
+            alert('{% trans "Translation failed. Please try again or contact support." %}');
+          }
+          // Update status text if available
+          if (data.message) {
+            document.getElementById('translation_status_text').textContent = data.message;
+          }
+        })
+        .catch(error => {
+          clearInterval(interval);
+          translation_progress_modal.close();
+          console.error('Status polling error:', error);
+        });
+    }, 1000);
+  }
 });
 </script>
+
+<!-- Edit Title Modal -->
+<dialog id="edit_title_modal" class="modal">
+  <div class="modal-box">
+    <h3 class="text-lg font-bold">{% trans "Edit Survey Title" %}</h3>
+
+    <div class="form-control w-full mt-4">
+      <label class="label">
+        <span class="label-text">{% trans "Survey Title" %}</span>
+      </label>
+      <input type="text" id="survey_title_input" class="input input-bordered w-full" maxlength="200" />
+    </div>
+
+    <div class="modal-action">
+      <button id="cancel_edit_title_btn" class="btn">{% trans "Cancel" %}</button>
+      <button id="save_title_btn" class="btn btn-primary">
+        {% include "components/icons/pencil.html" with classes="w-4 h-4 mr-1" %}
+        {% trans "Save" %}
+      </button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Translation Creation Modal -->
+<dialog id="translation_modal" class="modal">
+  <div class="modal-box">
+    <h3 class="text-lg font-bold">{% trans "Create Translation" %}</h3>
+    <p class="py-4">{% trans "This will create a copy of the survey in the selected language. The content will be automatically translated using AI, but you should review all translations before publishing." %}</p>
+
+    <div class="form-control w-full">
+      <label class="label">
+        <span class="label-text">{% trans "Target Language" %}</span>
+      </label>
+      <select id="translation_language" class="select select-bordered w-full">
+        <option value="">{% trans "Select a language..." %}</option>
+        {% for code, name in supported_languages %}
+          <option value="{{ code }}">{{ name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="alert alert-warning mt-4">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+      <span>{% trans "AI translation may not be perfect. Always review content before publishing." %}</span>
+    </div>
+
+    <div class="modal-action">
+      <button id="cancel_translation_btn" class="btn">{% trans "Cancel" %}</button>
+      <button id="create_translation_btn" class="btn btn-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+        </svg>
+        {% trans "Create Translation" %}
+      </button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>{% trans "close" %}</button>
+  </form>
+</dialog>
+
+<!-- Translation Progress Modal -->
+<dialog id="translation_progress_modal" class="modal">
+  <div class="modal-box">
+    <h3 class="text-lg font-bold">{% trans "Creating Translation..." %}</h3>
+    <div class="py-4">
+      <progress class="progress progress-primary w-full"></progress>
+      <p class="text-sm text-center mt-2" id="translation_status_text">{% trans "Translating survey content..." %}</p>
+    </div>
+  </div>
+</dialog>
+
 {% endblock %}

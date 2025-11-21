@@ -46,6 +46,7 @@ urlpatterns = [
     ),
     path("<slug:slug>/bulk-upload/", views.bulk_upload, name="bulk_upload"),
     path("create/", views.survey_create, name="create"),
+    path("<slug:slug>/clone/", views.survey_clone, name="clone"),
     # Repeats (collections) integrated with groups
     path(
         "<slug:slug>/groups/repeat/create",
@@ -84,11 +85,32 @@ urlpatterns = [
     path("<slug:slug>/closed/", views.survey_closed, name="closed"),
     path("<slug:slug>/", views.survey_detail, name="detail"),
     path("<slug:slug>/dashboard/", views.survey_dashboard, name="dashboard"),
+    path("<slug:slug>/update-title/", views.update_survey_title, name="update_title"),
     path("<slug:slug>/delete/", views.survey_delete, name="delete"),
     path(
         "<slug:slug>/publish/",
         views.survey_publish_settings,
         name="publish_settings",
+    ),
+    path(
+        "<slug:slug>/translations/create/",
+        views.create_translation_async,
+        name="create_translation",
+    ),
+    path(
+        "<slug:slug>/translations/status/<str:task_id>/",
+        views.translation_status,
+        name="translation_status",
+    ),
+    path(
+        "<slug:slug>/invites/send/",
+        views.send_invites_async,
+        name="send_invites_async",
+    ),
+    path(
+        "<slug:slug>/invites/status/<str:task_id>/",
+        views.email_status,
+        name="email_status",
     ),
     path(
         "<slug:slug>/dashboard/publish",

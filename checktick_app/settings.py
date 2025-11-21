@@ -52,6 +52,7 @@ env = environ.Env(
     OIDC_RP_SIGN_ALGO=(str, "RS256"),
     OIDC_OP_JWKS_ENDPOINT_GOOGLE=(str, "https://www.googleapis.com/oauth2/v3/certs"),
     OIDC_OP_JWKS_ENDPOINT_AZURE=(str, ""),
+    SITE_URL=(str, "http://localhost:8000"),
 )
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -83,6 +84,7 @@ BRAND_FONT_BODY = env("BRAND_FONT_BODY")
 BRAND_FONT_CSS_URL = env("BRAND_FONT_CSS_URL")
 BRAND_THEME_CSS_LIGHT = env("BRAND_THEME_CSS_LIGHT") or None
 BRAND_THEME_CSS_DARK = env("BRAND_THEME_CSS_DARK") or None
+SITE_URL = "http://localhost:8000" if DEBUG else env("SITE_URL")
 
 INSTALLED_APPS = [
     # Use custom AdminConfig to enforce superuser-only access

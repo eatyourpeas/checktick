@@ -100,6 +100,63 @@ CheckTick provides four ways to share your survey, from most secure to most open
 
 **Note:** Must confirm that your survey doesn't collect patient-identifiable data.
 
+## Publishing Multiple Languages
+
+If you've created translations of your survey, you can publish them independently or together.
+
+### How language versions work
+
+- Each translation has its own publication status (draft or published)
+- Translations share the same visibility settings as the original survey
+- When published, each language is accessible at the same URL - the system detects the user's browser language or allows manual language selection
+
+### Publishing translations
+
+From the Publish Settings page:
+
+1. **Published translations** section shows live versions:
+   - View published translations
+   - Each has a view link to the live survey
+   - Cannot unpublish once live
+
+2. **Draft translations** section shows unpublished versions:
+   - Review draft translations using preview links
+   - Check "Publish together" to publish multiple languages at once
+   - Click "Publish selected translations" to make them live
+
+### Important before publishing translations
+
+**Always have a native speaker review AI-generated translations**, preferably:
+
+- A healthcare professional who speaks the target language
+- Someone familiar with medical terminology in that language
+- Someone from the target cultural community
+
+**Check for:**
+
+- Medical terminology accuracy
+- Cultural appropriateness of questions
+- Proper formality level for healthcare context
+- Correct translation of technical terms
+- Appropriate phrasing for sensitive topics
+
+**Testing:**
+
+- Use the preview link to test the complete survey flow
+- Have team members review the translation
+- Consider pilot testing with a small group of native speakers
+
+### Language selection for respondents
+
+When multiple languages are published:
+
+- The survey detects the user's browser language preference
+- A language selector appears if multiple languages are available
+- Respondents can switch languages during survey completion
+- Progress is maintained when switching languages
+
+For details on creating translations, see [Multi-language surveys](/docs/surveys/#multi-language-surveys).
+
 ## Protecting Patient Data
 
 When your survey collects patient-identifiable information:

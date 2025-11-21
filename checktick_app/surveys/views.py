@@ -37,6 +37,7 @@ from .external_datasets import get_available_datasets
 from .llm_client import ConversationalSurveyLLM
 from .markdown_import import BulkParseError, parse_bulk_markdown_with_collections
 from .models import (
+    SUPPORTED_SURVEY_LANGUAGES,
     AuditLog,
     CollectionDefinition,
     CollectionItem,
@@ -464,7 +465,49 @@ def survey_list(request: HttpRequest) -> HttpResponse:
             surveys = owned | Survey.objects.filter(id__in=[s.id for s in org_surveys])  # type: ignore[attr-defined]
         else:
             surveys = owned
-    return render(request, "surveys/list.html", {"surveys": surveys})
+
+    # Filter to only show original surveys (not translations)
+    # Translations will be shown as sub-items under their originals
+    original_surveys = surveys.filter(is_original=True)
+
+    # Enrich surveys with translation data
+    from .models import LANGUAGE_FLAGS, LANGUAGE_NAMES
+
+    surveys_with_translations = []
+    for survey in original_surveys:
+        # Get all translations for this survey
+        translations = survey.get_available_translations()
+        translation_data = []
+        for trans in translations:
+            translation_data.append(
+                {
+                    "survey": trans,
+                    "flag": LANGUAGE_FLAGS.get(trans.language, "🏳️"),
+                    "language_name": LANGUAGE_NAMES.get(trans.language, trans.language),
+                    "status": trans.status,
+                }
+            )
+
+        surveys_with_translations.append(
+            {
+                "survey": survey,
+                "translations": translation_data,
+                "translation_count": len(translation_data),
+                "flag": LANGUAGE_FLAGS.get(survey.language, "🏳️"),
+                "language_name": LANGUAGE_NAMES.get(survey.language, survey.language),
+            }
+        )
+
+    return render(
+        request,
+        "surveys/list.html",
+        {
+            "surveys": original_surveys,
+            "surveys_with_translations": surveys_with_translations,
+            "supported_languages": SUPPORTED_SURVEY_LANGUAGES,
+            "language_flags": LANGUAGE_FLAGS,
+        },
+    )
 
 
 class SurveyCreateForm(forms.ModelForm):
@@ -658,6 +701,35 @@ def survey_create(request: HttpRequest) -> HttpResponse:
     else:
         form = SurveyCreateForm()
     return render(request, "surveys/create.html", {"form": form})
+
+
+@login_required
+def survey_clone(request: HttpRequest, slug: str) -> HttpResponse:
+    """
+    Clone an existing survey, creating a complete copy with all questions and settings.
+    """
+    # Get the source survey
+    survey = get_object_or_404(Survey, slug=slug)
+
+    # Check permissions - require edit access to clone
+    require_can_edit(request.user, survey)
+
+    try:
+        # Create the clone using the model method
+        cloned_survey = survey.create_clone()
+
+        messages.success(
+            request,
+            f'Survey cloned successfully! The new survey "{cloned_survey.name}" has been created as a draft.',
+        )
+        return redirect("surveys:dashboard", slug=cloned_survey.slug)
+
+    except Exception as e:
+        logger.error(f"Failed to clone survey {slug}: {e}")
+        messages.error(
+            request, "Failed to clone survey. Please try again or contact support."
+        )
+        return redirect("surveys:list")
 
 
 @login_required
@@ -1757,7 +1829,16 @@ def survey_dashboard(request: HttpRequest, slug: str) -> HttpResponse:
         "has_questions": survey.question_groups.filter(
             surveyquestion__survey=survey
         ).exists(),
+        # Translation management
+        "available_translations": survey.get_available_translations(),
+        "supported_languages": SUPPORTED_SURVEY_LANGUAGES,
     }
+
+    # Import language constants for flags
+    from .models import LANGUAGE_FLAGS
+
+    ctx["language_flags"] = LANGUAGE_FLAGS
+
     if any(
         v for k, v in brand_overrides.items() if k != "primary_hex"
     ) or brand_overrides.get("primary_hex"):
@@ -1789,6 +1870,30 @@ def survey_dashboard(request: HttpRequest, slug: str) -> HttpResponse:
             "primary": hex_to_oklch(brand_overrides.get("primary_hex") or ""),
         }
     return render(request, "surveys/dashboard.html", ctx)
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_survey_title(request: HttpRequest, slug: str) -> JsonResponse:
+    """Update the title/name of a survey via AJAX."""
+    try:
+        survey = get_object_or_404(Survey, slug=slug)
+        require_can_edit(request.user, survey)
+
+        data = json.loads(request.body)
+        new_title = data.get("title", "").strip()
+
+        if not new_title:
+            return JsonResponse({"success": False, "error": "Title cannot be empty"})
+
+        survey.name = new_title
+        survey.save(update_fields=["name"])
+
+        return JsonResponse({"success": True})
+    except PermissionDenied as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=403)
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)})
 
 
 @login_required
@@ -1994,7 +2099,10 @@ def survey_publish_settings(request: HttpRequest, slug: str) -> HttpResponse:
         end_at_str = request.POST.get("end_at") or None
         max_responses = request.POST.get("max_responses") or None
         captcha_required = bool(request.POST.get("captcha_required"))
-        no_patient_data_ack = bool(request.POST.get("no_patient_data_ack"))
+        # If survey is already published with no_patient_data_ack=True, preserve it (disabled checkboxes don't submit)
+        no_patient_data_ack = bool(request.POST.get("no_patient_data_ack")) or (
+            survey.status == Survey.Status.PUBLISHED and survey.no_patient_data_ack
+        )
         invite_emails = request.POST.get("invite_emails", "").strip()
 
         # Parse dates
@@ -2106,111 +2214,113 @@ def survey_publish_settings(request: HttpRequest, slug: str) -> HttpResponse:
 
             survey.save()
 
-            # Process invite emails if provided
+            # Publish selected translations if any are checked
+            published_count = 0
+            publish_translations = request.POST.getlist("publish_translations")
+            if publish_translations:
+                for translation_slug in publish_translations:
+                    try:
+                        translation = Survey.objects.get(
+                            slug=translation_slug, translated_from=survey
+                        )
+                        if translation.status != Survey.Status.PUBLISHED:
+                            translation.status = Survey.Status.PUBLISHED
+                            translation.published_at = timezone.now()
+                            # Copy relevant publish settings from parent
+                            translation.visibility = survey.visibility
+                            translation.start_at = survey.start_at
+                            translation.end_at = survey.end_at
+                            translation.max_responses = survey.max_responses
+                            translation.captcha_required = survey.captcha_required
+                            translation.no_patient_data_ack = survey.no_patient_data_ack
+                            translation.allow_any_authenticated = (
+                                survey.allow_any_authenticated
+                            )
+                            if survey.visibility == Survey.Visibility.UNLISTED:
+                                # Generate unique unlisted key for translation
+                                # Always generate new key to avoid duplicates
+                                import secrets
+
+                                translation.unlisted_key = secrets.token_urlsafe(24)
+                            translation.save()
+                            published_count += 1
+                    except Survey.DoesNotExist:
+                        continue
+
+                if published_count > 0:
+                    messages.success(
+                        request,
+                        f"Survey published with {published_count} translation(s)!",
+                    )
+
+            # Process invite emails if provided - start async sending
             if invite_emails and visibility in [
                 Survey.Visibility.TOKEN,
                 Survey.Visibility.AUTHENTICATED,
             ]:
-                import secrets
+                import threading
+                import uuid
 
-                from django.contrib.auth import get_user_model
+                from django.core.cache import cache
 
-                from checktick_app.core.email_utils import (
-                    send_authenticated_survey_invite_existing_user,
-                    send_authenticated_survey_invite_new_user,
-                    send_survey_invite_email,
-                )
-
-                User = get_user_model()
-
-                # Parse email addresses (supports Outlook format and various separators)
+                # Parse email addresses
                 email_list = _parse_email_addresses(invite_emails)
 
-                # Get contact email (use survey owner's email)
-                contact_email = request.user.email if request.user.email else None
+                # Generate task ID
+                task_id = str(uuid.uuid4())
 
-                sent_count = 0
-                failed_emails = []
+                # Set initial status in cache
+                cache.set(
+                    f"email_task_{task_id}",
+                    {
+                        "status": "processing",
+                        "progress": 0,
+                        "message": f"Starting to send {len(email_list)} invitation(s)...",
+                        "sent_count": 0,
+                        "failed_count": 0,
+                    },
+                    timeout=3600,
+                )
 
-                for email_address in email_list:
-                    # Validate email format (basic check)
-                    if (
-                        "@" not in email_address
-                        or "." not in email_address.split("@")[1]
-                    ):
-                        failed_emails.append(f"{email_address} (invalid format)")
-                        continue
+                # Start background thread
+                thread = threading.Thread(
+                    target=_send_invites_background,
+                    args=(
+                        survey.id,
+                        email_list,
+                        visibility,
+                        survey.end_at,
+                        request.user.email if request.user.email else None,
+                        request.user.id,
+                        task_id,
+                    ),
+                )
+                thread.start()
 
-                    if visibility == Survey.Visibility.TOKEN:
-                        # Create anonymous token
-                        token = SurveyAccessToken(
-                            survey=survey,
-                            token=secrets.token_urlsafe(24),
-                            created_by=request.user,
-                            expires_at=end_at if end_at else None,
-                            note=f"Invited: {email_address}",
-                            for_authenticated=False,
-                        )
-                        token.save()
+                # Store task ID in session for status tracking
+                request.session["pending_invites"] = {
+                    "slug": slug,
+                    "task_id": task_id,
+                    "email_count": len(email_list),
+                }
 
-                        # Send invitation email
-                        if send_survey_invite_email(
-                            to_email=email_address,
-                            survey=survey,
-                            token=token.token,
-                            contact_email=contact_email,
-                        ):
-                            sent_count += 1
-                        else:
-                            failed_emails.append(email_address)
-
-                    elif visibility == Survey.Visibility.AUTHENTICATED:
-                        # Create authenticated invitation token
-                        token = SurveyAccessToken(
-                            survey=survey,
-                            token=secrets.token_urlsafe(24),
-                            created_by=request.user,
-                            expires_at=end_at if end_at else None,
-                            note=f"Invited: {email_address}",
-                            for_authenticated=True,
-                        )
-                        token.save()
-
-                        # Check if user exists
-                        user_exists = User.objects.filter(email=email_address).exists()
-
-                        # Send appropriate email
-                        if user_exists:
-                            email_sent = send_authenticated_survey_invite_existing_user(
-                                to_email=email_address,
-                                survey=survey,
-                                contact_email=contact_email,
-                            )
-                        else:
-                            email_sent = send_authenticated_survey_invite_new_user(
-                                to_email=email_address,
-                                survey=survey,
-                                contact_email=contact_email,
-                            )
-
-                        if email_sent:
-                            sent_count += 1
-                        else:
-                            failed_emails.append(email_address)
-
-                # Show summary message
-                if sent_count > 0:
+                if published_count > 0:
                     messages.success(
                         request,
-                        f"Survey published! {sent_count} invitation(s) sent successfully.",
+                        f"Survey published with {published_count} translation(s)! Sending invitations...",
                     )
-                if failed_emails:
-                    messages.warning(
-                        request,
-                        f"Failed to send invites to: {', '.join(failed_emails)}",
+                else:
+                    messages.success(
+                        request, "Survey has been published! Sending invitations..."
                     )
             else:
-                messages.success(request, "Survey has been published successfully!")
+                if published_count > 0:
+                    messages.success(
+                        request,
+                        f"Survey published with {published_count} translation(s)!",
+                    )
+                else:
+                    messages.success(request, "Survey has been published successfully!")
 
             return redirect("surveys:dashboard", slug=slug)
 
@@ -2243,69 +2353,512 @@ def survey_publish_settings(request: HttpRequest, slug: str) -> HttpResponse:
 
             survey.save()
 
-            # Process invite emails if provided and visibility is TOKEN
-            if invite_emails and visibility == Survey.Visibility.TOKEN:
-                import secrets
+            # Publish selected translations if any are checked
+            publish_translations = request.POST.getlist("publish_translations")
+            published_count = 0
+            if publish_translations:
+                for translation_slug in publish_translations:
+                    try:
+                        translation = Survey.objects.get(
+                            slug=translation_slug, translated_from=survey
+                        )
+                        if translation.status != Survey.Status.PUBLISHED:
+                            translation.status = Survey.Status.PUBLISHED
+                            translation.published_at = timezone.now()
+                            # Copy relevant publish settings from parent
+                            translation.visibility = survey.visibility
+                            translation.start_at = survey.start_at
+                            translation.end_at = survey.end_at
+                            translation.max_responses = survey.max_responses
+                            translation.captcha_required = survey.captcha_required
+                            translation.no_patient_data_ack = survey.no_patient_data_ack
+                            translation.allow_any_authenticated = (
+                                survey.allow_any_authenticated
+                            )
+                            if survey.visibility == Survey.Visibility.UNLISTED:
+                                # Generate unique unlisted key for translation
+                                # Always generate new key to avoid duplicates
+                                import secrets
 
-                from checktick_app.core.email_utils import send_survey_invite_email
-
-                # Parse email addresses (supports Outlook format and various separators)
-                email_list = _parse_email_addresses(invite_emails)
-
-                # Get contact email (use survey owner's email)
-                contact_email = request.user.email if request.user.email else None
-
-                sent_count = 0
-                failed_emails = []
-
-                for email_address in email_list:
-                    # Validate email format (basic check)
-                    if (
-                        "@" not in email_address
-                        or "." not in email_address.split("@")[1]
-                    ):
-                        failed_emails.append(f"{email_address} (invalid format)")
+                                translation.unlisted_key = secrets.token_urlsafe(24)
+                            translation.save()
+                            published_count += 1
+                    except Survey.DoesNotExist:
                         continue
 
-                    # Create token for this email
-                    token = SurveyAccessToken(
-                        survey=survey,
-                        token=secrets.token_urlsafe(24),
-                        created_by=request.user,
-                        expires_at=end_at if end_at else None,
-                        note=f"Invited: {email_address}",
-                    )
-                    token.save()
+            # Process invite emails if provided - use async sending
+            if invite_emails and visibility in [
+                Survey.Visibility.TOKEN,
+                Survey.Visibility.AUTHENTICATED,
+            ]:
+                # Store invitation request in session for status tracking
+                request.session["pending_invites"] = {
+                    "slug": slug,
+                    "email_count": len(_parse_email_addresses(invite_emails)),
+                }
 
-                    # Send invitation email
-                    if send_survey_invite_email(
-                        to_email=email_address,
-                        survey=survey,
-                        token=token.token,
-                        contact_email=contact_email,
-                    ):
-                        sent_count += 1
-                    else:
-                        failed_emails.append(email_address)
-
-                # Show summary message
-                if sent_count > 0:
+                messages.success(request, "Settings updated! Sending invitations...")
+            else:
+                if published_count > 0:
                     messages.success(
                         request,
-                        f"Settings updated! {sent_count} invitation(s) sent successfully.",
+                        f"Settings updated! Published {published_count} translation(s).",
                     )
-                if failed_emails:
-                    messages.warning(
-                        request,
-                        f"Failed to send invites to: {', '.join(failed_emails)}",
-                    )
-            else:
-                messages.success(request, "Publication settings updated.")
+                else:
+                    messages.success(request, "Publication settings updated.")
 
             return redirect("surveys:dashboard", slug=slug)
 
     # GET request - show the form
-    return render(request, "surveys/publish_settings.html", {"survey": survey})
+    # Get available translations
+    available_translations = survey.get_available_translations()
+
+    # Check if there are any draft translations
+    has_draft_translations = any(
+        t.status == Survey.Status.DRAFT for t in available_translations
+    )
+
+    # Get supported languages for dropdown
+    supported_languages = [
+        {"code": code, "name": name}
+        for code, name in SUPPORTED_SURVEY_LANGUAGES
+        if code != survey.language
+    ]
+
+    context = {
+        "survey": survey,
+        "available_translations": available_translations,
+        "has_draft_translations": has_draft_translations,
+        "supported_languages": supported_languages,
+    }
+
+    return render(request, "surveys/publish_settings.html", context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def create_translation_async(request: HttpRequest, slug: str) -> JsonResponse:
+    """
+    Create a translation of a survey asynchronously.
+    Returns a task_id for polling status.
+    """
+    import json
+    import threading
+    import uuid
+
+    from django.core.cache import cache
+
+    survey = get_object_or_404(Survey, slug=slug)
+    require_can_edit(request.user, survey)
+
+    # Handle both JSON and form data
+    if request.content_type == "application/json":
+        try:
+            data = json.loads(request.body)
+            target_language = data.get("target_language") or data.get("language")
+            force_retranslate = data.get("force_retranslate", False)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+    else:
+        target_language = request.POST.get("language") or request.POST.get(
+            "target_language"
+        )
+        force_retranslate = request.POST.get("force_retranslate") == "true"
+
+    if not target_language:
+        return JsonResponse({"error": "Language parameter required"}, status=400)
+
+    # Validate language code
+    if target_language not in dict(SUPPORTED_SURVEY_LANGUAGES):
+        return JsonResponse({"error": "Invalid language code"}, status=400)
+
+    # Check if translation already exists
+    existing = survey.get_translation(target_language)
+    if existing and not force_retranslate:
+        return JsonResponse(
+            {
+                "error": f"Translation to {target_language} already exists",
+                "translation_slug": existing.slug,
+            },
+            status=400,
+        )
+
+    # Generate task ID
+    task_id = str(uuid.uuid4())
+
+    # Set initial status
+    cache.set(
+        f"translation_task_{task_id}",
+        {
+            "status": "processing",
+            "progress": 0,
+            "message": "Creating translation...",
+        },
+        timeout=3600,  # 1 hour
+    )
+
+    def translate_in_background():
+        import logging
+        import traceback
+
+        logger = logging.getLogger(__name__)
+        translation = None
+        is_retranslate = False  # Track if we're re-translating an existing survey
+
+        try:
+            # Create or get existing translation survey
+            cache.set(
+                f"translation_task_{task_id}",
+                {
+                    "status": "processing",
+                    "progress": 25,
+                    "message": (
+                        "Creating survey structure..."
+                        if not existing
+                        else "Preparing to re-translate..."
+                    ),
+                },
+                timeout=3600,
+            )
+
+            if existing and force_retranslate:
+                # Re-use existing translation survey
+                translation = existing
+                is_retranslate = True  # Mark as re-translate to preserve on failure
+                logger.info(
+                    f"Re-translating existing survey {translation.slug} for {survey.slug} in {target_language}"
+                )
+            else:
+                # Create new translation survey
+                translation = survey.create_translation(target_language=target_language)
+                logger.info(
+                    f"Created translation survey {translation.slug} for {survey.slug} in {target_language}"
+                )
+
+            # Run LLM translation
+            cache.set(
+                f"translation_task_{task_id}",
+                {
+                    "status": "processing",
+                    "progress": 50,
+                    "message": "Translating content with AI...",
+                },
+                timeout=3600,
+            )
+
+            results = survey.translate_survey_content(translation, use_llm=True)
+            logger.info(
+                f"Translation results for {translation.slug}: {results['translated_fields']} fields, errors: {results['errors']}"
+            )
+
+            # Update final status
+            if results["success"]:
+                cache.set(
+                    f"translation_task_{task_id}",
+                    {
+                        "status": "completed",
+                        "progress": 100,
+                        "message": "Translation completed successfully",
+                        "translation_slug": translation.slug,
+                        "translated_fields": results["translated_fields"],
+                        "warnings": results.get("warnings", []),
+                    },
+                    timeout=3600,
+                )
+            else:
+                error_msg = (
+                    "; ".join(results["errors"])
+                    if results["errors"]
+                    else "Unknown error"
+                )
+                logger.error(f"Translation failed for {translation.slug}: {error_msg}")
+
+                # Only delete if this was a new translation, not a re-translate
+                if translation and not is_retranslate:
+                    logger.info(
+                        f"Deleting failed translation survey {translation.slug}"
+                    )
+                    translation.delete()
+                elif is_retranslate:
+                    logger.info(
+                        f"Preserving existing translation survey {translation.slug} after failed re-translate"
+                    )
+
+                cache.set(
+                    f"translation_task_{task_id}",
+                    {
+                        "status": "error",
+                        "progress": 100,
+                        "message": f"Translation failed: {error_msg}",
+                        "errors": results["errors"],
+                    },
+                    timeout=3600,
+                )
+
+        except Exception as e:
+            error_details = traceback.format_exc()
+            logger.error(f"Translation exception for {survey.slug}: {error_details}")
+
+            # Only delete the failed translation if it was just created, not if re-translating
+            if translation and not is_retranslate:
+                try:
+                    logger.info(
+                        f"Deleting failed translation survey {translation.slug} after exception"
+                    )
+                    translation.delete()
+                except Exception as delete_error:
+                    logger.error(f"Failed to delete translation survey: {delete_error}")
+            elif translation and is_retranslate:
+                logger.info(
+                    f"Preserving existing translation survey {translation.slug} after exception"
+                )
+
+            cache.set(
+                f"translation_task_{task_id}",
+                {
+                    "status": "error",
+                    "progress": 100,
+                    "message": f"Translation error: {str(e)}",
+                },
+                timeout=3600,
+            )
+
+    # Start background thread
+    thread = threading.Thread(target=translate_in_background)
+    thread.daemon = True
+    thread.start()
+
+    return JsonResponse({"task_id": task_id})
+
+
+@login_required
+@require_http_methods(["GET"])
+def translation_status(request: HttpRequest, slug: str, task_id: str) -> JsonResponse:
+    """Poll status of an async translation task."""
+    from django.core.cache import cache
+
+    survey = get_object_or_404(Survey, slug=slug)
+    require_can_view(request.user, survey)
+
+    status_data = cache.get(f"translation_task_{task_id}")
+
+    if not status_data:
+        return JsonResponse(
+            {"status": "error", "message": "Task not found or expired"}, status=404
+        )
+
+    return JsonResponse(status_data)
+
+
+def _send_invites_background(
+    survey_id: int,
+    email_list: list[str],
+    visibility: str,
+    end_at,
+    contact_email: str,
+    user_id: int,
+    task_id: str,
+) -> None:
+    """Background task to send survey invitation emails."""
+    from django.contrib.auth import get_user_model
+    from django.core.cache import cache
+
+    from checktick_app.core.email_utils import (
+        send_authenticated_survey_invite_existing_user,
+        send_authenticated_survey_invite_new_user,
+        send_survey_invite_email,
+    )
+
+    User = get_user_model()
+
+    try:
+        survey = Survey.objects.get(id=survey_id)
+        user = User.objects.get(id=user_id)
+
+        sent_count = 0
+        failed_emails = []
+        total_emails = len(email_list)
+
+        for idx, email_address in enumerate(email_list):
+            # Update progress
+            progress = int(((idx + 1) / total_emails) * 100)
+            cache.set(
+                f"email_task_{task_id}",
+                {
+                    "status": "processing",
+                    "progress": progress,
+                    "message": f"Sending invitation {idx + 1} of {total_emails}...",
+                    "sent_count": sent_count,
+                    "failed_count": len(failed_emails),
+                },
+                timeout=3600,
+            )
+
+            # Validate email format (basic check)
+            if "@" not in email_address or "." not in email_address.split("@")[1]:
+                failed_emails.append(f"{email_address} (invalid format)")
+                continue
+
+            if visibility == Survey.Visibility.TOKEN:
+                # Create anonymous token
+                token = SurveyAccessToken(
+                    survey=survey,
+                    token=secrets.token_urlsafe(24),
+                    created_by=user,
+                    expires_at=end_at if end_at else None,
+                    note=f"Invited: {email_address}",
+                    for_authenticated=False,
+                )
+                token.save()
+
+                # Send invitation email
+                if send_survey_invite_email(
+                    to_email=email_address,
+                    survey=survey,
+                    token=token.token,
+                    contact_email=contact_email,
+                ):
+                    sent_count += 1
+                else:
+                    failed_emails.append(email_address)
+
+            elif visibility == Survey.Visibility.AUTHENTICATED:
+                # Create authenticated invitation token
+                token = SurveyAccessToken(
+                    survey=survey,
+                    token=secrets.token_urlsafe(24),
+                    created_by=user,
+                    expires_at=end_at if end_at else None,
+                    note=f"Invited: {email_address}",
+                    for_authenticated=True,
+                )
+                token.save()
+
+                # Check if user exists
+                user_exists = User.objects.filter(email=email_address).exists()
+
+                # Send appropriate email
+                if user_exists:
+                    email_sent = send_authenticated_survey_invite_existing_user(
+                        to_email=email_address,
+                        survey=survey,
+                        contact_email=contact_email,
+                    )
+                else:
+                    email_sent = send_authenticated_survey_invite_new_user(
+                        to_email=email_address,
+                        survey=survey,
+                        contact_email=contact_email,
+                    )
+
+                if email_sent:
+                    sent_count += 1
+                else:
+                    failed_emails.append(email_address)
+
+        # Update final status
+        cache.set(
+            f"email_task_{task_id}",
+            {
+                "status": "completed",
+                "progress": 100,
+                "message": "All invitations processed",
+                "sent_count": sent_count,
+                "failed_emails": failed_emails,
+            },
+            timeout=3600,
+        )
+
+    except Exception as e:
+        cache.set(
+            f"email_task_{task_id}",
+            {
+                "status": "error",
+                "message": f"Failed to send invitations: {str(e)}",
+            },
+            timeout=3600,
+        )
+
+
+@login_required
+@require_http_methods(["POST"])
+def send_invites_async(request: HttpRequest, slug: str) -> JsonResponse:
+    """Start async email sending for survey invitations."""
+    import threading
+    import uuid
+
+    from django.core.cache import cache
+
+    survey = get_object_or_404(Survey, slug=slug)
+    require_can_edit(request.user, survey)
+
+    invite_emails = request.POST.get("invite_emails", "").strip()
+
+    if not invite_emails:
+        return JsonResponse({"error": "No email addresses provided"}, status=400)
+
+    # Parse email addresses
+    email_list = _parse_email_addresses(invite_emails)
+
+    if not email_list:
+        return JsonResponse({"error": "No valid email addresses found"}, status=400)
+
+    # Get parameters
+    visibility = survey.visibility
+    end_at = survey.end_at
+    contact_email = request.user.email if request.user.email else None
+
+    # Generate task ID
+    task_id = str(uuid.uuid4())
+
+    # Set initial status in cache
+    cache.set(
+        f"email_task_{task_id}",
+        {
+            "status": "processing",
+            "progress": 0,
+            "message": f"Starting to send {len(email_list)} invitation(s)...",
+            "sent_count": 0,
+            "failed_count": 0,
+        },
+        timeout=3600,
+    )
+
+    # Start background thread
+    thread = threading.Thread(
+        target=_send_invites_background,
+        args=(
+            survey.id,
+            email_list,
+            visibility,
+            end_at,
+            contact_email,
+            request.user.id,
+            task_id,
+        ),
+    )
+    thread.start()
+
+    return JsonResponse({"task_id": task_id, "total_emails": len(email_list)})
+
+
+@login_required
+@require_http_methods(["GET"])
+def email_status(request: HttpRequest, slug: str, task_id: str) -> JsonResponse:
+    """Poll status of an async email sending task."""
+    from django.core.cache import cache
+
+    survey = get_object_or_404(Survey, slug=slug)
+    require_can_view(request.user, survey)
+
+    status_data = cache.get(f"email_task_{task_id}")
+
+    if not status_data:
+        return JsonResponse(
+            {"status": "error", "message": "Task not found or expired"}, status=404
+        )
+
+    return JsonResponse(status_data)
 
 
 @login_required

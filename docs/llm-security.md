@@ -2,13 +2,21 @@
 title: AI Security & Safety
 category: security
 priority: 7
+translation_prompt_variables:
+  - target_language_name
+  - target_language_code
 ---
 
-This document outlines the security measures and safety controls implemented in CheckTick's AI-assisted survey generation feature.
+This document outlines the security measures and safety controls implemented in CheckTick's AI features: survey generation and survey translation.
 
 ## Overview
 
-The AI Survey Generator uses Large Language Models (LLMs) to help users create healthcare surveys through natural conversation. Security and user safety are fundamental to the design.
+CheckTick uses Large Language Models (LLMs) for two purposes:
+
+1. **AI Survey Generator**: Helps users create healthcare surveys through natural conversation
+2. **Survey Translation**: Automatically translates surveys into multiple languages
+
+Security and user safety are fundamental to both features.
 
 ## Core Security Principles
 
@@ -26,10 +34,11 @@ The AI Survey Generator uses Large Language Models (LLMs) to help users create h
 **What the LLM can do:**
 
 - Generate text responses
-- Output markdown in the specified survey format
+- Output markdown in specified formats (survey generation)
+- Output JSON translations (translation service)
 - Provide suggestions and guidance
 
-All survey creation happens through the existing survey import system, which has its own security controls and validation.
+All survey creation and translation happens through existing secure import and validation systems.
 
 ### 2. Sandboxed Output Format
 
@@ -73,6 +82,166 @@ You can view the exact instructions given to the LLM:
 - Changes to the prompt are version-controlled in git
 
 Last updated: 2025-11-17
+
+## Survey Generation System Prompt
+
+For complete transparency, the full system prompt for the AI Survey Generator is published in the [AI Survey Generator documentation](/docs/ai-survey-generator/#transparency--system-prompt).
+
+The prompt specifies:
+- Core responsibilities (clarifying questions, generating markdown, refining based on feedback)
+- Exact markdown format and syntax rules
+- Allowed question types (text, multiple choice, dropdown, likert scales, etc.)
+- Healthcare best practices (8th grade reading level, avoid jargon, validated scales)
+- Conversation approach and limitations
+
+**The prompt is loaded directly from that documentation file**, so any updates are automatically reflected in the system.
+
+## Survey Translation System
+
+CheckTick also uses LLMs to translate surveys into multiple languages. **The same security principles apply:**
+
+- No tool access
+- Sandboxed output
+- Manual review required
+- Full prompt transparency
+
+### Translation workflow
+
+**Initial translation:**
+
+1. User selects a target language from the dashboard
+2. System sends entire survey structure to LLM
+3. LLM returns JSON translation
+4. User reviews and edits translation
+5. User publishes when ready
+
+**Re-translating existing surveys:**
+
+Users can update existing translations using "Translate Again":
+
+1. Open the translated survey's dashboard
+2. Click "Translate Again" button
+3. Confirm overwrite of existing translations
+4. System re-translates while preserving:
+   - Survey structure and IDs
+   - Collected responses
+   - Settings and permissions
+5. If re-translation fails, existing translation is preserved unchanged
+
+**Critical safeguard:** AI-generated translations should **always be reviewed by a native speaker**, preferably a healthcare professional who speaks the target language.
+
+### Translation system prompt
+
+For full transparency, here is the complete system prompt used for survey translation. **This prompt is loaded directly from this documentation file** to ensure consistency between what users see and what the LLM receives.
+
+The prompt includes:
+- Medical translation best practices
+- Instructions to output plain text (no markdown or language codes)
+- Strict JSON output requirements with validation rules
+- Confidence level guidelines
+- Context about the clinical healthcare platform
+
+**Template variables** (substituted at runtime):
+- `{target_language_name}`: Full language name (e.g., "Arabic")
+- `{target_language_code}`: ISO language code (e.g., "ar")
+
+These variables are defined in this document's frontmatter and automatically replaced when the prompt is loaded.
+
+<!-- TRANSLATION_PROMPT_START -->
+```text
+You are a professional medical translator specializing in healthcare surveys and clinical questionnaires.
+
+CRITICAL INSTRUCTIONS:
+1. Translate the ENTIRE survey to {target_language_name} ({target_language_code}) maintaining medical accuracy
+2. Preserve technical/medical terminology precision - do NOT guess or approximate medical terms
+3. Maintain consistency across all questions and answers
+4. Keep formal, professional clinical tone throughout
+5. Preserve any placeholders like {{variable_name}}
+6. Use context from the full survey to ensure accurate, consistent translations
+7. If you encounter medical terms where accurate translation is uncertain, note this in the confidence field
+
+⚠️ TRANSLATION OUTPUT RULES - CRITICAL:
+- Return ONLY the translated text - NO markdown formatting (no #, *, **, etc.)
+- NO explanations, reasoning, or notes in the translated fields
+- NO language codes like (ar), (fr) in the translations
+- Just pure, plain translated text in each field
+- Remove ALL source language markdown before translating
+- Example: "# About You" becomes "عنك" (NOT "# عنك" or "# عنك (ar)")
+
+CONFIDENCE LEVELS:
+- "high": All translations are medically accurate and appropriate
+- "medium": Most translations accurate but some terms may need review
+- "low": Significant uncertainty - professional medical translator should review
+
+⚠️ JSON OUTPUT REQUIREMENTS - CRITICAL:
+- Return ONLY valid, parseable JSON - no trailing commas
+- No comments or explanations outside the JSON structure
+- Use proper JSON escaping for quotes within strings (use \" for quotes in text)
+- Ensure all brackets and braces are properly closed
+- No extra commas after the last item in arrays or objects
+- Test your JSON is valid before returning
+
+Return ONLY valid JSON in this EXACT structure (INCLUDE ALL SECTIONS):
+{
+  "confidence": "high|medium|low",
+  "confidence_notes": "explanation of any uncertainties or terms needing review",
+  "metadata": {
+    "name": "translated survey name",
+    "description": "translated survey description"
+  },
+  "question_groups": [
+    {
+      "name": "translated group name",
+      "description": "translated group description",
+      "questions": [
+        {
+          "text": "translated question text",
+          "choices": ["choice 1", "choice 2"],
+          "likert_categories": ["category 1", "category 2"],
+          "likert_scale": {"left_label": "...", "right_label": "..."}
+        }
+      ]
+    }
+  ]
+}
+
+NOTE:
+- ALWAYS include the 'metadata' section with translated name and description
+- Only include 'choices' if the source question has multiple choice options
+- Only include 'likert_categories' if the source has likert scale categories (list of labels)
+- Only include 'likert_scale' if the source has number scale with left/right labels
+- NO trailing commas after last items in arrays or objects
+
+Context: This is for a clinical healthcare platform. Accuracy is CRITICAL for patient safety.
+```
+<!-- TRANSLATION_PROMPT_END -->
+
+**Translation parameters:**
+
+- **Temperature**: 0.2 (lower for consistent medical translations)
+- **Max tokens**: 8000 (allows complete survey translations)
+- **Model**: Same self-hosted Ollama instance as survey generation
+
+### Why manual review is essential
+
+**Medical accuracy:** LLMs can make mistakes with:
+- Specialized medical terminology
+- Cultural nuances in healthcare contexts
+- Regional variations in medical language
+- Formal vs informal register in clinical settings
+
+**Best practice workflow:**
+
+1. Use LLM to create initial translation draft
+2. Have native-speaking healthcare professional review
+3. Edit any errors or cultural mismatches
+4. Test translation with native speakers
+5. Publish only after human verification
+
+The confidence levels help prioritize reviews:
+- **High confidence**: Quick review may suffice
+- **Medium confidence**: Thorough professional review needed
+- **Low confidence**: Consider professional medical translator
 
 ### 4. Prompt Injection Protection
 

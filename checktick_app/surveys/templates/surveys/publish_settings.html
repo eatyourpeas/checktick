@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load i18n %}
 {% load static %}
+{% load survey_extras %}
 
 {% block content %}
 <div class="container mx-auto max-w-5xl px-4 py-6">
@@ -84,6 +85,112 @@
           </div>
         </div>
 
+        <div class="divider"></div>
+
+        <!-- Translation Management Section -->
+        <div class="mb-6">
+          <h3 class="font-semibold text-lg mb-3">{% trans "Survey Translations" %}</h3>
+
+          {% if available_translations %}
+            <!-- Published Translations -->
+            {% with published_count=0 %}
+              {% for translation in available_translations %}
+                {% if translation.status == 'published' %}
+                  {% if forloop.first or published_count == 0 %}
+                    <div class="mb-4">
+                      <div class="flex items-center gap-2 mb-2">
+                        <span class="badge badge-success badge-sm">{% trans "Published" %}</span>
+                      </div>
+                      <div class="space-y-2">
+                  {% endif %}
+                      <div class="flex items-center justify-between p-3 bg-base-200 rounded-lg">
+                        <div class="flex items-center gap-3">
+                          <span class="text-2xl">{{ translation.language|language_flag }}</span>
+                          <div>
+                            <span class="font-medium">{{ translation.language|language_name }}</span>
+                            <span class="badge badge-sm badge-success ml-2">
+                              {{ translation.get_status_display }}
+                            </span>
+                          </div>
+                        </div>
+                        <div class="flex gap-2">
+                          <a href="{% url 'surveys:dashboard' slug=translation.slug %}" class="btn btn-sm btn-outline">
+                            {% trans "View" %}
+                          </a>
+                        </div>
+                      </div>
+                {% endif %}
+              {% endfor %}
+              {% for translation in available_translations %}
+                {% if translation.status == 'published' %}
+                  {% if forloop.last %}
+                      </div>
+                    </div>
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+            {% endwith %}
+
+            <!-- Draft Translations -->
+            {% for translation in available_translations %}
+              {% if translation.status == 'draft' %}
+                {% if forloop.first %}
+                  <div class="mb-4">
+                    <div class="flex items-center gap-2 mb-2">
+                      <span class="badge badge-warning badge-sm">{% trans "Draft" %}</span>
+                    </div>
+                    <div class="space-y-2">
+                {% endif %}
+                    <div class="flex items-center justify-between p-3 bg-base-200 rounded-lg">
+                      <div class="flex items-center gap-3">
+                        <span class="text-2xl">{{ translation.language|language_flag }}</span>
+                        <div>
+                          <span class="font-medium">{{ translation.language|language_name }}</span>
+                          <span class="badge badge-sm badge-warning ml-2">
+                            {{ translation.get_status_display }}
+                          </span>
+                        </div>
+                      </div>
+                      <div class="flex gap-2">
+                        <a href="{% url 'surveys:dashboard' slug=translation.slug %}" class="btn btn-sm btn-outline">
+                          {% trans "Edit" %}
+                        </a>
+                        <label class="flex items-center gap-2">
+                          <input type="checkbox" class="checkbox checkbox-sm" name="publish_translations" value="{{ translation.slug }}" />
+                          <span class="text-sm">{% trans "Publish together" %}</span>
+                        </label>
+                      </div>
+                    </div>
+                {% if forloop.last %}
+                    </div>
+                  </div>
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+
+            <div class="alert alert-info mt-3 mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <span class="text-sm font-semibold">{% trans "Translations were AI-generated." %}</span>
+                <p class="text-sm mt-1">{% trans "Please review them carefully before publishing. Check the boxes above to publish translations together with this survey." %}</p>
+              </div>
+            </div>
+          {% else %}
+            <p class="text-sm opacity-70 mb-3">{% trans "No translations yet. Create translations to make your survey available in multiple languages." %}</p>
+          {% endif %}
+
+          <button type="button" class="btn btn-outline btn-sm" id="create-translation-btn-open">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+            </svg>
+            {% trans "Create Translation" %}
+          </button>
+        </div>
+
+        <div class="divider"></div>
+
         <div class="form-control mb-6" id="invite-emails-section" style="display: none;">
           <label class="label">
             <span class="label-text font-semibold">{% trans "Send invite emails" %}</span>
@@ -127,9 +234,9 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
               <div class="flex-1">
-                <label class="cursor-pointer flex items-start gap-3">
-                  <input type="checkbox" class="checkbox checkbox-warning border-white mt-0.5" name="no_patient_data_ack" id="no_patient_data" {% if survey.no_patient_data_ack %}checked{% endif %} required />
-                  <span class="text-sm">{% blocktrans %}I confirm no <strong>patient-identifiable data</strong> is collected in this survey. This is required when using Public, Unlisted, or Token visibility to prevent unauthorised access.{% endblocktrans %}</span>
+                <label class="{% if not survey.status == 'published' or not survey.no_patient_data_ack %}cursor-pointer{% endif %} flex items-start gap-3">
+                  <input type="checkbox" class="checkbox checkbox-warning border-white mt-0.5" name="no_patient_data_ack" id="no_patient_data" {% if survey.no_patient_data_ack %}checked{% endif %} {% if survey.status == 'published' and survey.no_patient_data_ack %}disabled{% endif %} required />
+                  <span class="text-sm">{% blocktrans %}I confirm no <strong>patient-identifiable data</strong> is collected in this survey. This is required when using Public, Unlisted, or Token visibility to prevent unauthorised access.{% endblocktrans %}{% if survey.status == 'published' and survey.no_patient_data_ack %} <span class="text-xs opacity-70">({% trans "Cannot be changed after publication" %})</span>{% endif %}</span>
                 </label>
               </div>
             </div>
@@ -244,6 +351,422 @@
         publishForm.submit();
       }
     }
+  });
+
+  // Handle async email sending
+  publishForm.addEventListener('submit', function(e) {
+    const inviteEmailsTextarea = document.querySelector('textarea[name="invite_emails"]');
+    const inviteEmails = inviteEmailsTextarea ? inviteEmailsTextarea.value.trim() : '';
+    const actionButton = document.activeElement;
+    const action = actionButton && actionButton.name === 'action' ? actionButton.value : 'publish';
+
+    // Only intercept if there are emails and action is publish or save
+    if (inviteEmails && (action === 'publish' || action === 'save')) {
+      e.preventDefault();
+
+      // First submit the form to save survey settings (without emails to avoid sync processing)
+      const formData = new FormData(publishForm);
+      formData.set('invite_emails', ''); // Clear emails to avoid sync processing
+      formData.set('action', action);
+
+      // Submit settings first
+      fetch(publishForm.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+      }).then(response => {
+        if (response.ok) {
+          // Now send emails asynchronously
+          showEmailModal(inviteEmails);
+        } else {
+          alert('{% trans "Failed to update settings. Please try again." %}');
+        }
+      }).catch(error => {
+        console.error('Error:', error);
+        alert('{% trans "An error occurred. Please try again." %}');
+      });
+    }
+  });
+
+  function showEmailModal(inviteEmails) {
+    const modal = document.getElementById('emailModal');
+    const formView = document.getElementById('email-form-view');
+    const progressView = document.getElementById('email-progress-view');
+    const successView = document.getElementById('email-success-view');
+    const errorView = document.getElementById('email-error-view');
+
+    // Reset views
+    formView.style.display = 'none';
+    progressView.style.display = 'block';
+    successView.style.display = 'none';
+    errorView.style.display = 'none';
+
+    modal.showModal();
+
+    // Start sending emails
+    const formData = new FormData();
+    formData.append('invite_emails', inviteEmails);
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+    fetch('{% url "surveys:send_invites_async" slug=survey.slug %}', {
+      method: 'POST',
+      body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        showEmailError(data.error);
+      } else {
+        pollEmailStatus(data.task_id, data.total_emails);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      showEmailError('{% trans "Failed to start sending invitations" %}');
+    });
+  }
+
+  function pollEmailStatus(taskId, totalEmails) {
+    const progressMessage = document.getElementById('email-progress-message');
+    const progressBar = document.getElementById('email-progress-bar');
+    const sentCount = document.getElementById('email-sent-count');
+    const totalCount = document.getElementById('email-total-count');
+
+    totalCount.textContent = totalEmails;
+
+    const pollInterval = setInterval(() => {
+      fetch(`{% url "surveys:email_status" slug=survey.slug task_id="TASK_ID" %}`.replace('TASK_ID', taskId))
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'processing') {
+            progressMessage.textContent = data.message;
+            progressBar.style.width = data.progress + '%';
+            progressBar.setAttribute('aria-valuenow', data.progress);
+            sentCount.textContent = data.sent_count || 0;
+          } else if (data.status === 'completed') {
+            clearInterval(pollInterval);
+            showEmailSuccess(data.sent_count, data.failed_emails);
+          } else if (data.status === 'error') {
+            clearInterval(pollInterval);
+            showEmailError(data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Polling error:', error);
+        });
+    }, 1000);
+  }
+
+  function showEmailSuccess(sentCount, failedEmails) {
+    const progressView = document.getElementById('email-progress-view');
+    const successView = document.getElementById('email-success-view');
+    const successMessage = document.getElementById('email-success-message');
+    const failedList = document.getElementById('email-failed-list');
+
+    progressView.style.display = 'none';
+    successView.style.display = 'block';
+
+    successMessage.textContent = `{% trans "Successfully sent" %} ${sentCount} {% trans "invitation(s)" %}`;
+
+    if (failedEmails && failedEmails.length > 0) {
+      failedList.style.display = 'block';
+      const failedListUl = document.getElementById('email-failed-emails');
+      failedListUl.innerHTML = '';
+      failedEmails.forEach(email => {
+        const li = document.createElement('li');
+        li.textContent = email;
+        failedListUl.appendChild(li);
+      });
+    } else {
+      failedList.style.display = 'none';
+    }
+  }
+
+  function showEmailError(message) {
+    const progressView = document.getElementById('email-progress-view');
+    const errorView = document.getElementById('email-error-view');
+    const errorMessage = document.getElementById('email-error-message');
+
+    progressView.style.display = 'none';
+    errorView.style.display = 'block';
+    errorMessage.textContent = message;
+  }
+})();
+</script>
+
+<!-- Email Sending Modal -->
+<dialog id="emailModal" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">{% trans "Sending Invitations" %}</h3>
+
+    <div id="email-progress-view">
+      <div class="flex flex-col items-center gap-4">
+        <span class="loading loading-spinner loading-lg"></span>
+        <p id="email-progress-message" class="text-center">{% trans "Starting to send invitations..." %}</p>
+        <div class="w-full">
+          <div class="text-sm text-center mb-2">
+            <span id="email-sent-count">0</span> / <span id="email-total-count">0</span> {% trans "sent" %}
+          </div>
+          <progress id="email-progress-bar" class="progress progress-primary w-full" value="0" max="100"></progress>
+        </div>
+      </div>
+    </div>
+
+    <div id="email-success-view" style="display: none;">
+      <div class="alert alert-success">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span id="email-success-message"></span>
+      </div>
+
+      <div id="email-failed-list" style="display: none;" class="mt-4">
+        <p class="font-semibold text-sm">{% trans "Failed to send to:" %}</p>
+        <ul id="email-failed-emails" class="list-disc list-inside text-sm mt-2 max-h-32 overflow-y-auto"></ul>
+      </div>
+
+      <div class="modal-action">
+        <button id="email-done-btn" class="btn btn-primary">{% trans "Done" %}</button>
+      </div>
+    </div>
+
+    <div id="email-error-view" style="display: none;">
+      <div class="alert alert-error">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span id="email-error-message"></span>
+      </div>
+      <div class="modal-action">
+        <button id="email-error-close" class="btn">{% trans "Close" %}</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script nonce="{{ request.csp_nonce }}">
+(function() {
+  // Email modal button handlers
+  const emailDoneBtn = document.getElementById('email-done-btn');
+  const emailErrorClose = document.getElementById('email-error-close');
+  const emailModal = document.getElementById('emailModal');
+
+  if (emailDoneBtn) {
+    emailDoneBtn.addEventListener('click', () => {
+      emailModal.close();
+      window.location.href = '{% url "surveys:dashboard" slug=survey.slug %}';
+    });
+  }
+
+  if (emailErrorClose) {
+    emailErrorClose.addEventListener('click', () => {
+      emailModal.close();
+    });
+  }
+})();
+</script>
+
+<!-- Translation Creation Modal -->
+<dialog id="translationModal" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">{% trans "Create Translation" %}</h3>
+
+    <div id="translation-form">
+      <label class="label">
+        <span class="label-text font-semibold">{% trans "Select Language" %}</span>
+      </label>
+      <select id="target-language" class="select select-bordered w-full mb-4">
+        <option value="">{% trans "Choose a language..." %}</option>
+        {% for lang in supported_languages %}
+          <option value="{{ lang.code }}">{{ lang.code|language_flag }} {{ lang.name }}</option>
+        {% endfor %}
+      </select>
+
+      <div class="alert alert-warning mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <span class="text-sm">{% trans "Translation will be AI-generated. You'll be able to review and edit it before publishing." %}</span>
+      </div>
+
+
+      <div class="modal-action">
+        <button type="button" class="btn btn-ghost" id="translation-modal-cancel">{% trans "Cancel" %}</button>
+        <button type="button" id="create-translation-btn" class="btn btn-primary">
+          {% trans "Create Translation" %}
+        </button>
+      </div>
+    </div>    <div id="translation-progress" class="hidden">
+      <div class="flex flex-col items-center gap-4 py-8">
+        <span class="loading loading-spinner loading-lg text-primary"></span>
+        <p class="text-center" id="progress-message">{% trans "Creating translation..." %}</p>
+        <progress class="progress progress-primary w-full" id="progress-bar" value="0" max="100"></progress>
+      </div>
+    </div>
+
+    <div id="translation-complete" class="hidden">
+      <div class="alert alert-success mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>{% trans "Translation created successfully!" %}</span>
+      </div>
+      <p class="text-sm opacity-70 mb-4">{% trans "You can now review and edit the translation before publishing." %}</p>
+      <div class="modal-action">
+        <button type="button" class="btn btn-ghost" id="translation-reload-btn">{% trans "Stay Here" %}</button>
+        <button type="button" id="edit-translation-btn" class="btn btn-primary">
+          {% trans "Review Translation" %}
+        </button>
+      </div>
+    </div>
+
+    <div id="translation-error" class="hidden">
+      <div class="alert alert-error mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span id="error-message">{% trans "Failed to create translation" %}</span>
+      </div>
+      <div class="modal-action">
+        <button type="button" class="btn btn-primary" id="translation-error-close">{% trans "Close" %}</button>
+      </div>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
+
+<script nonce="{{ request.csp_nonce }}">
+(function() {
+  const createBtn = document.getElementById('create-translation-btn');
+  const targetLanguageSelect = document.getElementById('target-language');
+  const translationForm = document.getElementById('translation-form');
+  const translationProgress = document.getElementById('translation-progress');
+  const translationComplete = document.getElementById('translation-complete');
+  const translationError = document.getElementById('translation-error');
+  const progressMessage = document.getElementById('progress-message');
+  const progressBar = document.getElementById('progress-bar');
+  const editTranslationBtn = document.getElementById('edit-translation-btn');
+  const errorMessage = document.getElementById('error-message');
+
+  // Modal control buttons
+  const createTranslationBtnOpen = document.getElementById('create-translation-btn-open');
+  const translationModalCancel = document.getElementById('translation-modal-cancel');
+  const translationReloadBtn = document.getElementById('translation-reload-btn');
+  const translationErrorClose = document.getElementById('translation-error-close');
+
+  let pollingInterval;
+  let translationSlug;
+
+  // Open modal
+  if (createTranslationBtnOpen) {
+    createTranslationBtnOpen.addEventListener('click', function() {
+      translationModal.showModal();
+    });
+  }
+
+  // Cancel button
+  if (translationModalCancel) {
+    translationModalCancel.addEventListener('click', function() {
+      translationModal.close();
+    });
+  }
+
+  // Reload button
+  if (translationReloadBtn) {
+    translationReloadBtn.addEventListener('click', function() {
+      window.location.reload();
+    });
+  }
+
+  // Error close button
+  if (translationErrorClose) {
+    translationErrorClose.addEventListener('click', function() {
+      translationModal.close();
+    });
+  }
+
+  createBtn.addEventListener('click', async function() {
+    const language = targetLanguageSelect.value;
+    if (!language) {
+      alert('{% trans "Please select a language" %}');
+      return;
+    }
+
+    // Show progress
+    translationForm.classList.add('hidden');
+    translationProgress.classList.remove('hidden');
+
+    try {
+      // Start translation
+      const response = await fetch('{% url "surveys:create_translation" slug=survey.slug %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: new URLSearchParams({
+          language: language
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || '{% trans "Failed to create translation" %}');
+      }
+
+      // Poll for status
+      const taskId = data.task_id;
+      pollingInterval = setInterval(async () => {
+        const statusResponse = await fetch(`{% url "surveys:translation_status" slug=survey.slug task_id="TASK_ID" %}`.replace('TASK_ID', taskId));
+        const statusData = await statusResponse.json();
+
+        // Update progress
+        progressBar.value = statusData.progress || 0;
+        progressMessage.textContent = statusData.message || '{% trans "Processing..." %}';
+
+        if (statusData.status === 'completed') {
+          clearInterval(pollingInterval);
+          translationSlug = statusData.translation_slug;
+
+          // Show success
+          translationProgress.classList.add('hidden');
+          translationComplete.classList.remove('hidden');
+        } else if (statusData.status === 'error') {
+          clearInterval(pollingInterval);
+          throw new Error(statusData.message || '{% trans "Translation failed" %}');
+        }
+      }, 1000);
+
+    } catch (error) {
+      if (pollingInterval) clearInterval(pollingInterval);
+
+      // Show error
+      translationProgress.classList.add('hidden');
+      translationError.classList.remove('hidden');
+      errorMessage.textContent = error.message;
+    }
+  });
+
+  editTranslationBtn.addEventListener('click', function() {
+    if (translationSlug) {
+      window.location.href = `/surveys/${translationSlug}/dashboard/`;
+    }
+  });
+
+  // Reset modal when closed
+  window.translationModal.addEventListener('close', function() {
+    if (pollingInterval) clearInterval(pollingInterval);
+    translationForm.classList.remove('hidden');
+    translationProgress.classList.add('hidden');
+    translationComplete.classList.add('hidden');
+    translationError.classList.add('hidden');
+    targetLanguageSelect.value = '';
+    progressBar.value = 0;
   });
 })();
 </script>

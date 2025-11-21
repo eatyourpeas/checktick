@@ -77,6 +77,7 @@ def authenticated_survey(owner, org):
 class TestAuthenticatedInvitationPublishing:
     """Tests for publishing authenticated surveys with email invitations."""
 
+    @patch("threading.Thread")
     @patch(
         "checktick_app.core.email_utils.send_authenticated_survey_invite_existing_user"
     )
@@ -85,12 +86,23 @@ class TestAuthenticatedInvitationPublishing:
         self,
         mock_send_new_user,
         mock_send_existing_user,
+        mock_thread,
         client,
         owner,
         existing_user,
         authenticated_survey,
     ):
         """Publishing with invite to existing user should send correct email."""
+
+        # Make threading synchronous by calling target directly
+        def run_sync(target=None, args=()):
+            if target:
+                target(*args)
+
+        mock_thread.return_value.start.side_effect = lambda: run_sync(
+            mock_thread.call_args.kwargs.get("target"),
+            mock_thread.call_args.kwargs.get("args", ()),
+        )
         mock_send_existing_user.return_value = True
         client.force_login(owner)
 
@@ -124,6 +136,7 @@ class TestAuthenticatedInvitationPublishing:
         authenticated_survey.refresh_from_db()
         assert authenticated_survey.status == Survey.Status.PUBLISHED
 
+    @patch("threading.Thread")
     @patch(
         "checktick_app.core.email_utils.send_authenticated_survey_invite_existing_user"
     )
@@ -132,11 +145,22 @@ class TestAuthenticatedInvitationPublishing:
         self,
         mock_send_new_user,
         mock_send_existing_user,
+        mock_thread,
         client,
         owner,
         authenticated_survey,
     ):
         """Publishing with invite to new user should send signup email."""
+
+        # Make threading synchronous by calling target directly
+        def run_sync(target=None, args=()):
+            if target:
+                target(*args)
+
+        mock_thread.return_value.start.side_effect = lambda: run_sync(
+            mock_thread.call_args.kwargs.get("target"),
+            mock_thread.call_args.kwargs.get("args", ()),
+        )
         mock_send_new_user.return_value = True
         client.force_login(owner)
 
@@ -168,6 +192,7 @@ class TestAuthenticatedInvitationPublishing:
         mock_send_new_user.assert_called_once()
         mock_send_existing_user.assert_not_called()
 
+    @patch("threading.Thread")
     @patch(
         "checktick_app.core.email_utils.send_authenticated_survey_invite_existing_user"
     )
@@ -176,12 +201,23 @@ class TestAuthenticatedInvitationPublishing:
         self,
         mock_send_new_user,
         mock_send_existing_user,
+        mock_thread,
         client,
         owner,
         existing_user,
         authenticated_survey,
     ):
         """Publishing with multiple invites should handle mixed existing/new users."""
+
+        # Make threading synchronous by calling target directly
+        def run_sync(target=None, args=()):
+            if target:
+                target(*args)
+
+        mock_thread.return_value.start.side_effect = lambda: run_sync(
+            mock_thread.call_args.kwargs.get("target"),
+            mock_thread.call_args.kwargs.get("args", ()),
+        )
         mock_send_existing_user.return_value = True
         mock_send_new_user.return_value = True
         client.force_login(owner)
@@ -216,13 +252,25 @@ class TestAuthenticatedInvitationPublishing:
         assert mock_send_existing_user.call_count == 1
         assert mock_send_new_user.call_count == 2
 
+    @patch("threading.Thread")
     def test_publish_authenticated_survey_with_outlook_format(
         self,
+        mock_thread,
         client,
         owner,
         authenticated_survey,
     ):
         """Should parse Outlook contact format: Name <email@domain.com>."""
+
+        # Make threading synchronous by calling target directly
+        def run_sync(target=None, args=()):
+            if target:
+                target(*args)
+
+        mock_thread.return_value.start.side_effect = lambda: run_sync(
+            mock_thread.call_args.kwargs.get("target"),
+            mock_thread.call_args.kwargs.get("args", ()),
+        )
         client.force_login(owner)
 
         with patch(

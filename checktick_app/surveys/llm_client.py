@@ -28,40 +28,103 @@ def load_system_prompt_from_docs() -> str:
         System prompt string, or fallback prompt if docs file cannot be read
     """
     docs_path = Path(settings.BASE_DIR) / "docs" / "ai-survey-generator.md"
+    return _load_prompt_from_docs(
+        docs_path, "SYSTEM_PROMPT_START", "SYSTEM_PROMPT_END", _FALLBACK_SYSTEM_PROMPT
+    )
+
+
+def load_translation_prompt_from_docs(
+    target_language_name: str = None, target_language_code: str = None
+) -> str:
+    """
+    Load the translation system prompt from the LLM security documentation.
+
+    This ensures transparency - the prompt shown to users is exactly what the LLM receives.
+    The prompt is extracted from the section between TRANSLATION_PROMPT_START and TRANSLATION_PROMPT_END markers.
+
+    Template variables are defined in the document's frontmatter and will be replaced if provided.
+
+    Args:
+        target_language_name: Name of target language (e.g., "Arabic") for template substitution
+        target_language_code: ISO code of target language (e.g., "ar") for template substitution
+
+    Returns:
+        Translation prompt string with variables substituted, or fallback prompt if docs file cannot be read
+    """
+    docs_path = Path(settings.BASE_DIR) / "docs" / "llm-security.md"
+    prompt = _load_prompt_from_docs(
+        docs_path,
+        "TRANSLATION_PROMPT_START",
+        "TRANSLATION_PROMPT_END",
+        _FALLBACK_TRANSLATION_PROMPT,
+    )
+
+    # Substitute template variables if provided
+    if target_language_name and target_language_code:
+        prompt = prompt.replace("{target_language_name}", target_language_name)
+        prompt = prompt.replace("{target_language_code}", target_language_code)
+
+    return prompt
+
+
+def _load_prompt_from_docs(
+    docs_path: Path, start_marker: str, end_marker: str, fallback: str
+) -> str:
+    """
+    Generic helper to load a prompt from documentation.
+
+    Args:
+        docs_path: Path to the documentation file
+        start_marker: Start marker comment (e.g., 'SYSTEM_PROMPT_START')
+        end_marker: End marker comment (e.g., 'SYSTEM_PROMPT_END')
+        fallback: Fallback prompt if loading fails
+
+    Returns:
+        Prompt string from docs or fallback
+    """
+    start_comment = f"<!-- {start_marker} -->"
+    end_comment = f"<!-- {end_marker} -->"
 
     try:
         if docs_path.exists():
             content = docs_path.read_text(encoding="utf-8")
 
-            # Extract content between markers
-            start_marker = "<!-- SYSTEM_PROMPT_START -->"
-            end_marker = "<!-- SYSTEM_PROMPT_END -->"
-
-            start_idx = content.find(start_marker)
-            end_idx = content.find(end_marker)
+            start_idx = content.find(start_comment)
+            end_idx = content.find(end_comment)
 
             if start_idx != -1 and end_idx != -1:
                 # Extract text between markers and clean up
-                prompt = content[start_idx + len(start_marker) : end_idx].strip()
+                prompt = content[start_idx + len(start_comment) : end_idx].strip()
+
+                # Remove markdown code fence if present
+                if prompt.startswith("```"):
+                    lines = prompt.split("\n")
+                    # Remove first line (```text or similar) and last line (```)
+                    if lines[-1].strip() == "```":
+                        prompt = "\n".join(lines[1:-1])
 
                 # Remove leading/trailing whitespace from each line while preserving structure
                 lines = prompt.split("\n")
                 cleaned_lines = [line.rstrip() for line in lines]
                 prompt = "\n".join(cleaned_lines).strip()
 
-                logger.info("Successfully loaded system prompt from documentation")
+                logger.info(
+                    f"Successfully loaded prompt from documentation: {docs_path.name}"
+                )
                 return prompt
             else:
-                logger.warning("System prompt markers not found in documentation file")
+                logger.warning(
+                    f"Prompt markers {start_marker}/{end_marker} not found in {docs_path.name}"
+                )
         else:
             logger.warning(f"Documentation file not found: {docs_path}")
 
     except Exception as e:
-        logger.error(f"Failed to load system prompt from docs: {e}")
+        logger.error(f"Failed to load prompt from docs: {e}")
 
     # Fallback to inline prompt if docs unavailable
-    logger.info("Using fallback inline system prompt")
-    return _FALLBACK_SYSTEM_PROMPT
+    logger.info("Using fallback inline prompt")
+    return fallback
 
 
 # Fallback prompt if documentation file cannot be loaded
@@ -135,6 +198,73 @@ When generating markdown, always wrap it in:
 ```"""
 
 
+# Fallback translation prompt if documentation file cannot be loaded
+_FALLBACK_TRANSLATION_PROMPT = """You are a professional medical translator specializing in healthcare surveys and clinical questionnaires.
+
+CRITICAL INSTRUCTIONS:
+1. Translate the ENTIRE survey to {target_language_name} ({target_language_code}) maintaining medical accuracy
+2. Preserve technical/medical terminology precision - do NOT guess or approximate medical terms
+3. Maintain consistency across all questions and answers
+4. Keep formal, professional clinical tone throughout
+5. Preserve any placeholders like {{variable_name}}
+6. Use context from the full survey to ensure accurate, consistent translations
+7. If you encounter medical terms where accurate translation is uncertain, note this in the confidence field
+
+⚠️ TRANSLATION OUTPUT RULES - CRITICAL:
+- Return ONLY the translated text - NO markdown formatting (no #, *, **, etc.)
+- NO explanations, reasoning, or notes in the translated fields
+- NO language codes like (ar), (fr) in the translations
+- Just pure, plain translated text in each field
+- Remove ALL source language markdown before translating
+- Example: "# About You" becomes "عنك" (NOT "# عنك" or "# عنك (ar)")
+
+CONFIDENCE LEVELS:
+- "high": All translations are medically accurate and appropriate
+- "medium": Most translations accurate but some terms may need review
+- "low": Significant uncertainty - professional medical translator should review
+
+⚠️ JSON OUTPUT REQUIREMENTS - CRITICAL:
+- Return ONLY valid, parseable JSON - no trailing commas
+- No comments or explanations outside the JSON structure
+- Use proper JSON escaping for quotes within strings (use \\" for quotes in text)
+- Ensure all brackets and braces are properly closed
+- No extra commas after the last item in arrays or objects
+- Test your JSON is valid before returning
+
+Return ONLY valid JSON in this EXACT structure (INCLUDE ALL SECTIONS):
+{
+  "confidence": "high|medium|low",
+  "confidence_notes": "explanation of any uncertainties or terms needing review",
+  "metadata": {
+    "name": "translated survey name",
+    "description": "translated survey description"
+  },
+  "question_groups": [
+    {
+      "name": "translated group name",
+      "description": "translated group description",
+      "questions": [
+        {
+          "text": "translated question text",
+          "choices": ["choice 1", "choice 2"],
+          "likert_categories": ["category 1", "category 2"],
+          "likert_scale": {"left_label": "...", "right_label": "..."}
+        }
+      ]
+    }
+  ]
+}
+
+NOTE:
+- ALWAYS include the 'metadata' section with translated name and description
+- Only include 'choices' if the source question has multiple choice options
+- Only include 'likert_categories' if the source has likert scale categories (list of labels)
+- Only include 'likert_scale' if the source has number scale with left/right labels
+- NO trailing commas after last items in arrays or objects
+
+Context: This is for a clinical healthcare platform. Accuracy is CRITICAL for patient safety."""
+
+
 class ConversationalSurveyLLM:
     """
     Conversational LLM client for iterative survey refinement.
@@ -155,7 +285,10 @@ class ConversationalSurveyLLM:
             raise ValueError("LLM endpoint and API key must be configured")
 
     def chat(
-        self, conversation_history: List[Dict[str, str]], temperature: float = None
+        self,
+        conversation_history: List[Dict[str, str]],
+        temperature: float = None,
+        max_tokens: int = None,
     ) -> Optional[str]:
         """
         Continue conversation with LLM.
@@ -163,12 +296,15 @@ class ConversationalSurveyLLM:
         Args:
             conversation_history: List of message dicts with 'role' and 'content'
             temperature: Override default temperature
+            max_tokens: Maximum tokens in response (default: 2000)
 
         Returns:
             LLM response or None on failure
         """
         if temperature is None:
             temperature = settings.LLM_TEMPERATURE
+        if max_tokens is None:
+            max_tokens = 2000
 
         messages = [{"role": "system", "content": self.system_prompt}]
         messages.extend(conversation_history)
@@ -189,7 +325,88 @@ class ConversationalSurveyLLM:
                         "model": settings.LLM_MODEL,
                         "messages": messages,
                         "temperature": temperature,
-                        "max_tokens": 2000,
+                        "max_tokens": max_tokens,
+                    },
+                    timeout=self.timeout,
+                )
+
+                response.raise_for_status()
+                data = response.json()
+
+                # Handle OpenAI-compatible response format
+                content = None
+                if "choices" in data:
+                    content = data["choices"][0]["message"]["content"]
+                elif "content" in data:
+                    content = data["content"]
+                else:
+                    logger.error(f"Unexpected response format: {data.keys()}")
+                    return None
+
+                # Strip markdown code fences if present
+                if content:
+                    content = content.strip()
+                    # Remove ```markdown and ``` wrappers
+                    if content.startswith("```markdown"):
+                        content = content[len("```markdown") :].strip()
+                    elif content.startswith("```"):
+                        content = content[3:].strip()
+                    if content.endswith("```"):
+                        content = content[:-3].strip()
+
+                return content
+
+            except requests.RequestException as e:
+                logger.error(f"LLM request failed (attempt {attempt + 1}): {e}")
+                if attempt == settings.LLM_MAX_RETRIES - 1:
+                    return None
+
+        return None
+
+    def chat_with_custom_system_prompt(
+        self,
+        system_prompt: str,
+        conversation_history: List[Dict[str, str]],
+        temperature: float = None,
+        max_tokens: int = None,
+    ) -> Optional[str]:
+        """
+        Chat with LLM using a custom system prompt (for specialized tasks like translation).
+
+        Args:
+            system_prompt: Custom system prompt to use instead of default
+            conversation_history: List of message dicts with 'role' and 'content'
+            temperature: Override default temperature
+            max_tokens: Maximum tokens in response (default: 2000)
+
+        Returns:
+            LLM response or None on failure
+        """
+        if temperature is None:
+            temperature = settings.LLM_TEMPERATURE
+        if max_tokens is None:
+            max_tokens = 2000
+
+        messages = [{"role": "system", "content": system_prompt}]
+        messages.extend(conversation_history)
+
+        for attempt in range(settings.LLM_MAX_RETRIES):
+            try:
+                # Support both Azure APIM and standard OpenAI authentication
+                headers = {"Content-Type": "application/json"}
+                if self.auth_type.lower() == "apim":
+                    headers["Ocp-Apim-Subscription-Key"] = self.api_key
+                else:
+                    headers["Authorization"] = f"Bearer {self.api_key}"
+
+                response = requests.post(
+                    self.endpoint,
+                    headers=headers,
+                    json={
+                        "model": settings.LLM_MODEL,
+                        "messages": messages,
+                        "temperature": temperature,
+                        "max_tokens": max_tokens,
                     },
                     timeout=self.timeout,
                 )

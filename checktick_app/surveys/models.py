@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import uuid
 
 from django.conf import settings
@@ -17,6 +18,43 @@ User = get_user_model()
 def get_default_retention_months():
     """Get default retention months from settings."""
     return getattr(settings, "CHECKTICK_DEFAULT_RETENTION_MONTHS", 6)
+
+
+# Supported languages for survey translation
+# Based on available locale directories
+SUPPORTED_SURVEY_LANGUAGES = [
+    ("en", "English"),
+    ("ar", "العربية (Arabic)"),
+    ("cy", "Cymraeg (Welsh)"),
+    ("de", "Deutsch (German)"),
+    ("es", "Español (Spanish)"),
+    ("fr", "Français (French)"),
+    ("hi", "हिन्दी (Hindi)"),
+    ("it", "Italiano (Italian)"),
+    ("pl", "Polski (Polish)"),
+    ("pt", "Português (Portuguese)"),
+    ("ur", "اردو (Urdu)"),
+    ("zh_Hans", "简体中文 (Simplified Chinese)"),
+]
+
+# Map language codes to their native names
+LANGUAGE_NAMES = {code: name for code, name in SUPPORTED_SURVEY_LANGUAGES}
+
+# Map language codes to emoji flags
+LANGUAGE_FLAGS = {
+    "en": "🇬🇧",
+    "ar": "🇸🇦",
+    "cy": "🏴󠁧󠁢󠁷󠁬󠁳󠁿",
+    "de": "🇩🇪",
+    "es": "🇪🇸",
+    "fr": "🇫🇷",
+    "hi": "🇮🇳",
+    "it": "🇮🇹",
+    "pl": "🇵🇱",
+    "pt": "🇵🇹",
+    "ur": "🇵🇰",
+    "zh_Hans": "🇨🇳",
+}
 
 
 class Organization(models.Model):
@@ -211,7 +249,7 @@ class PublishedQuestionGroup(models.Model):
         ]
         constraints = [
             models.CheckConstraint(
-                check=(
+                condition=(
                     Q(publication_level="organization", organization__isnull=False)
                     | Q(publication_level="global")
                 ),
@@ -324,6 +362,32 @@ class Survey(models.Model):
         help_text="Total number of recovery shares distributed (optional, for Shamir's Secret Sharing)",
     )
     created_at = models.DateTimeField(auto_now_add=True)
+
+    # Language and Translation fields
+    language = models.CharField(
+        max_length=10,
+        default="en",
+        help_text="Primary language code (ISO 639-1, e.g., 'en', 'fr', 'es')",
+    )
+    translation_group = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="UUID linking translated versions of the same survey",
+    )
+    is_original = models.BooleanField(
+        default=True,
+        help_text="True if this is the original survey, False if it's a translation",
+    )
+    translated_from = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="translations",
+        help_text="Reference to the survey this was translated from",
+    )
 
     # Data Governance fields
     # Survey closure
@@ -697,6 +761,556 @@ class Survey(models.Model):
             return kek
         except (InvalidTag, Exception):
             return None
+
+    # Translation and Cloning Methods
+
+    def get_available_translations(self):
+        """
+        Get all translations of this survey.
+
+        Returns:
+            QuerySet of Survey objects that are translations of this survey,
+            excluding this survey itself.
+        """
+        if not self.translation_group:
+            return Survey.objects.none()
+        return Survey.objects.filter(translation_group=self.translation_group).exclude(
+            id=self.id
+        )
+
+    def get_translation(self, language_code: str):
+        """
+        Get a specific translation by language code.
+
+        Args:
+            language_code: Language code (e.g., 'fr', 'es', 'de')
+
+        Returns:
+            Survey object if translation exists, None otherwise
+        """
+        if not self.translation_group:
+            return None
+        return (
+            Survey.objects.filter(
+                translation_group=self.translation_group, language=language_code
+            )
+            .exclude(id=self.id)
+            .first()
+        )
+
+    def create_clone(
+        self, new_name: str | None = None, new_slug: str | None = None
+    ) -> "Survey":
+        """
+        Create a complete clone of this survey.
+
+        This creates a new survey with:
+        - All question groups (as copies, not references)
+        - All questions with their conditions
+        - Same settings and configuration
+        - New name and slug
+
+        Args:
+            new_name: Name for the cloned survey (defaults to "Copy of [original]")
+            new_slug: Slug for the cloned survey (auto-generated if not provided)
+
+        Returns:
+            New Survey object (unsaved, in DRAFT status)
+        """
+        from django.utils.text import slugify as django_slugify
+
+        # Generate name and slug
+        if new_name is None:
+            new_name = f"Copy of {self.name}"
+        if new_slug is None:
+            base_slug = django_slugify(new_name)
+            new_slug = base_slug
+            counter = 1
+            while Survey.objects.filter(slug=new_slug).exists():
+                new_slug = f"{base_slug}-{counter}"
+                counter += 1
+
+        # Create new survey with same settings
+        cloned_survey = Survey(
+            owner=self.owner,
+            organization=self.organization,
+            name=new_name,
+            slug=new_slug,
+            description=self.description,
+            style=self.style.copy() if self.style else {},
+            # Reset dates and publishing status
+            status=Survey.Status.DRAFT,
+            visibility=self.visibility,
+            start_at=None,
+            end_at=None,
+            published_at=None,
+            unlisted_key=None,
+            max_responses=self.max_responses,
+            captcha_required=self.captcha_required,
+            no_patient_data_ack=self.no_patient_data_ack,
+            allow_any_authenticated=self.allow_any_authenticated,
+            # Copy encryption settings (but not the actual keys - those are survey-specific)
+            recovery_threshold=self.recovery_threshold,
+            recovery_shares_count=self.recovery_shares_count,
+            # Copy retention settings
+            retention_months=self.retention_months,
+            # Language settings - same language as original
+            language=self.language,
+            is_original=True,
+            # No translation linking for plain clones
+            translation_group=None,
+            translated_from=None,
+        )
+        cloned_survey.save()
+
+        # Clone question groups and questions
+        for qg in self.question_groups.all():
+            # Create a copy of the question group
+            cloned_qg = QuestionGroup.objects.create(
+                owner=qg.owner,
+                name=qg.name,
+                description=qg.description,
+            )
+
+            # Copy all questions from this group
+            questions_map = {}  # Maps old question ID to new question
+            for question in self.questions.filter(group=qg):
+                cloned_question = SurveyQuestion.objects.create(
+                    survey=cloned_survey,
+                    group=cloned_qg,
+                    text=question.text,
+                    type=question.type,
+                    required=question.required,
+                    order=question.order,
+                    options=question.options.copy() if question.options else {},
+                    dataset=question.dataset,
+                )
+                questions_map[question.id] = cloned_question
+
+            # Copy question conditions (after all questions are created)
+            for question in self.questions.filter(group=qg):
+                for condition in question.conditions.all():
+                    # Map old question IDs to new ones for target_question
+                    target = None
+                    if (
+                        condition.target_question_id
+                        and condition.target_question_id in questions_map
+                    ):
+                        target = questions_map[condition.target_question_id]
+
+                    SurveyQuestionCondition.objects.create(
+                        question=questions_map[question.id],
+                        operator=condition.operator,
+                        value=condition.value,
+                        target_question=target,
+                        target_group=condition.target_group,
+                        action=condition.action,
+                        order=condition.order,
+                        description=condition.description,
+                    )
+
+            # Add question group to survey
+            cloned_survey.question_groups.add(cloned_qg)
+
+        return cloned_survey
+
+    def create_translation(
+        self, target_language: str, translator_name: str | None = None
+    ) -> "Survey":
+        """
+        Create a translation clone of this survey.
+
+        This creates a clone and sets up translation linking:
+        - Creates or reuses a translation_group UUID
+        - Sets the target language
+        - Marks as translated (is_original=False)
+        - Links back to source survey
+
+        Note: This only creates the structure. The actual translation
+        of question text is done separately (typically via LLM).
+
+        Args:
+            target_language: Target language code (e.g., 'fr', 'es', 'de')
+            translator_name: Optional name/identifier for translator
+
+        Returns:
+            New Survey object (saved, in DRAFT status, ready for translation)
+
+        Raises:
+            ValueError: If translation already exists for this language
+        """
+        import uuid
+
+        # Check if translation already exists
+        if self.translation_group:
+            existing = self.get_translation(target_language)
+            if existing:
+                raise ValueError(
+                    f"Translation to {target_language} already exists (ID: {existing.id})"
+                )
+
+        # Ensure original has a translation group
+        if not self.translation_group:
+            self.translation_group = str(uuid.uuid4())
+            self.save(update_fields=["translation_group"])
+
+        # Create the clone
+        translated_name = f"{self.name} ({target_language.upper()})"
+        cloned_survey = self.create_clone(
+            new_name=translated_name, new_slug=f"{self.slug}-{target_language}"
+        )
+
+        # Update translation-specific fields
+        cloned_survey.language = target_language
+        cloned_survey.translation_group = self.translation_group
+        cloned_survey.is_original = False
+        cloned_survey.translated_from = self
+        cloned_survey.save(
+            update_fields=[
+                "language",
+                "translation_group",
+                "is_original",
+                "translated_from",
+            ]
+        )
+
+        return cloned_survey
+
+    def translate_survey_content(
+        self, target_survey: "Survey", use_llm: bool = True
+    ) -> dict[str, any]:
+        """
+        Translate the text content of this survey into the target survey.
+
+        This method translates:
+        - Survey name and description
+        - Question text and options
+        - Question group names and descriptions
+
+        Args:
+            target_survey: The survey to populate with translated content
+            use_llm: Whether to use LLM for translation (default: True)
+
+        Returns:
+            Dictionary with translation results:
+            {
+                'success': bool,
+                'translated_fields': int,
+                'errors': list,
+                'warnings': list
+            }
+
+        Note: Target survey must already exist (created via create_translation).
+        This method updates the target survey in place.
+        """
+        from .llm_client import (
+            ConversationalSurveyLLM,
+            load_translation_prompt_from_docs,
+        )
+
+        results = {
+            "success": False,
+            "translated_fields": 0,
+            "errors": [],
+            "warnings": [],
+        }
+
+        # Verify target is a translation
+        if target_survey.translated_from_id != self.id:
+            results["errors"].append(
+                "Target survey is not a translation of this survey"
+            )
+            return results
+
+        target_lang = target_survey.language
+        target_lang_name = LANGUAGE_NAMES.get(target_lang, target_lang)
+
+        if not use_llm:
+            results["warnings"].append(
+                "LLM translation disabled - content must be translated manually"
+            )
+            return results
+
+        try:
+            llm = ConversationalSurveyLLM()
+        except Exception as e:
+            results["errors"].append(f"Failed to initialize LLM: {str(e)}")
+            return results
+
+        # Build complete survey structure for context-aware translation
+        try:
+            # Collect all content to translate
+            survey_structure = {
+                "metadata": {
+                    "name": self.name or "",
+                    "description": self.description or "",
+                },
+                "question_groups": [],
+            }
+
+            # Gather all question groups and questions
+            for source_qg in self.question_groups.all():
+                group_data = {
+                    "name": source_qg.name or "",
+                    "description": source_qg.description or "",
+                    "questions": [],
+                }
+
+                source_questions = self.questions.filter(group=source_qg).order_by(
+                    "order"
+                )
+                for source_q in source_questions:
+                    question_data = {"text": source_q.text or ""}
+
+                    # Include choices if present
+                    if source_q.options and isinstance(source_q.options, dict):
+                        if "choices" in source_q.options:
+                            question_data["choices"] = source_q.options["choices"]
+
+                    # Include likert scale labels
+                    if source_q.type == "likert" and source_q.options:
+                        if isinstance(source_q.options, list) and source_q.options:
+                            # Check if it's categories (list of labels) or number scale (dict)
+                            first_option = source_q.options[0]
+                            if isinstance(first_option, dict):
+                                # Number scale format with min/max/left/right labels
+                                if first_option.get("type") in [
+                                    "number-scale",
+                                    "number",
+                                ]:
+                                    scale_data = {}
+                                    if "left" in first_option and first_option["left"]:
+                                        scale_data["left_label"] = first_option["left"]
+                                    if (
+                                        "right" in first_option
+                                        and first_option["right"]
+                                    ):
+                                        scale_data["right_label"] = first_option[
+                                            "right"
+                                        ]
+                                    if scale_data:
+                                        question_data["likert_scale"] = scale_data
+                                # Categories format with labels list
+                                elif "labels" in first_option:
+                                    question_data["likert_categories"] = first_option[
+                                        "labels"
+                                    ]
+                            elif isinstance(first_option, str):
+                                # Simple list of category strings
+                                question_data["likert_categories"] = source_q.options
+                        elif isinstance(source_q.options, list):
+                            # List of strings (categories)
+                            question_data["likert_categories"] = source_q.options
+
+                    group_data["questions"].append(question_data)
+
+                survey_structure["question_groups"].append(group_data)
+
+            # Load system prompt from documentation for transparency
+            # Template variables are substituted automatically
+            system_msg = load_translation_prompt_from_docs(
+                target_language_name=target_lang_name, target_language_code=target_lang
+            )
+
+            # Send entire survey for translation
+            conversation = [
+                {
+                    "role": "user",
+                    "content": f"""Translate this complete medical survey to {target_lang_name}.
+
+SURVEY TO TRANSLATE:
+{json.dumps(survey_structure, ensure_ascii=False, indent=2)}
+
+Return the translation as JSON following the exact structure specified in the system message.""",
+                }
+            ]
+
+            response = llm.chat_with_custom_system_prompt(
+                system_prompt=system_msg,
+                conversation_history=conversation,
+                temperature=0.2,  # Lower temperature for more consistent medical translations
+                max_tokens=8000,  # Higher limit for complete survey translations
+            )
+
+            if not response:
+                results["errors"].append("No response from translation service")
+                return results
+
+            # Log the raw response for debugging
+            import logging
+            import re
+
+            logger = logging.getLogger(__name__)
+            logger.info(
+                f"LLM response length: {len(response) if response else 0} chars"
+            )
+            logger.debug(
+                f"LLM response (first 500 chars): {response[:500] if response else 'None'}"
+            )
+
+            # Extract JSON from response (LLM may wrap it in markdown or add explanatory text)
+            json_text = response
+
+            # Try to extract JSON from markdown code blocks
+            json_match = re.search(r"```json\s*\n(.*?)\n```", response, re.DOTALL)
+            if json_match:
+                json_text = json_match.group(1)
+                logger.info("Extracted JSON from markdown code block")
+            else:
+                # Try to find JSON object boundaries
+                json_match = re.search(r"\{.*\}", response, re.DOTALL)
+                if json_match:
+                    json_text = json_match.group(0)
+                    logger.info("Extracted JSON by finding object boundaries")
+
+            # Parse the complete translation
+            try:
+                translation = json.loads(json_text)
+            except json.JSONDecodeError as e:
+                # Log the problematic JSON for debugging
+                logger.error(f"JSON decode error at position {e.pos}: {str(e)}")
+                logger.error(
+                    f"Context around error (chars {max(0, e.pos-100)}:{e.pos+100}): {json_text[max(0, e.pos-100):e.pos+100]}"
+                )
+
+                # Try to salvage the JSON by fixing common issues
+                try:
+                    import re
+
+                    fixed_json = json_text
+
+                    # Remove trailing commas before closing braces/brackets (multiple passes)
+                    prev_json = None
+                    while prev_json != fixed_json:
+                        prev_json = fixed_json
+                        fixed_json = re.sub(r",(\s*[}\]])", r"\1", fixed_json)
+
+                    # Remove any comments (// or /* */)
+                    fixed_json = re.sub(r"//.*?$", "", fixed_json, flags=re.MULTILINE)
+                    fixed_json = re.sub(r"/\*.*?\*/", "", fixed_json, flags=re.DOTALL)
+
+                    translation = json.loads(fixed_json)
+                    logger.info("Successfully parsed JSON after automatic fixes")
+                except Exception as fix_error:
+                    logger.error(f"Failed to fix JSON: {str(fix_error)}")
+                    logger.error(f"Full response for debugging:\n{response}")
+                    results["errors"].append(
+                        f"Failed to parse translation response: {str(e)}"
+                    )
+                    return results
+
+            # Check confidence level
+            confidence = translation.get("confidence", "low")
+            if confidence == "low":
+                results["warnings"].append(
+                    f"⚠️ LOW CONFIDENCE: {translation.get('confidence_notes', 'Professional medical translator review recommended')}"
+                )
+            elif confidence == "medium":
+                results["warnings"].append(
+                    f"MEDIUM CONFIDENCE: {translation.get('confidence_notes', 'Some terms may need review')}"
+                )
+
+            # Apply translations to target survey
+            # Translate metadata
+            metadata = translation.get("metadata", {})
+            if metadata.get("name"):
+                target_survey.name = metadata["name"]
+                results["translated_fields"] += 1
+            if metadata.get("description"):
+                target_survey.description = metadata["description"]
+                results["translated_fields"] += 1
+
+            target_survey.save(update_fields=["name", "description"])
+
+            # Translate question groups and questions
+            translated_groups = translation.get("question_groups", [])
+            source_groups = list(self.question_groups.all())
+
+            for source_qg, trans_group in zip(source_groups, translated_groups):
+                # Find corresponding group in target survey
+                target_qg = target_survey.question_groups.filter(
+                    name=source_qg.name
+                ).first()
+                if not target_qg:
+                    continue
+
+                # Apply group translations
+                if trans_group.get("name"):
+                    target_qg.name = trans_group["name"]
+                    results["translated_fields"] += 1
+                if trans_group.get("description"):
+                    target_qg.description = trans_group["description"]
+                    results["translated_fields"] += 1
+
+                target_qg.save(update_fields=["name", "description"])
+
+                # Translate questions
+                source_questions = list(
+                    self.questions.filter(group=source_qg).order_by("order")
+                )
+                target_questions = list(
+                    target_survey.questions.filter(group=target_qg).order_by("order")
+                )
+                trans_questions = trans_group.get("questions", [])
+
+                for source_q, target_q, trans_q in zip(
+                    source_questions, target_questions, trans_questions
+                ):
+                    if trans_q.get("text"):
+                        target_q.text = trans_q["text"]
+                        results["translated_fields"] += 1
+
+                    # Apply translated choices if present
+                    if trans_q.get("choices"):
+                        if target_q.options and isinstance(target_q.options, dict):
+                            target_q.options = {
+                                **target_q.options,
+                                "choices": trans_q["choices"],
+                            }
+                            results["translated_fields"] += 1
+
+                    # Apply translated likert categories if present
+                    if trans_q.get("likert_categories"):
+                        if isinstance(target_q.options, list):
+                            # Simple list format
+                            target_q.options = trans_q["likert_categories"]
+                            results["translated_fields"] += 1
+                        elif isinstance(target_q.options, list) and target_q.options:
+                            first_opt = target_q.options[0]
+                            if isinstance(first_opt, dict) and "labels" in first_opt:
+                                # Categories format with labels dict
+                                first_opt["labels"] = trans_q["likert_categories"]
+                                results["translated_fields"] += 1
+
+                    # Apply translated likert number scale labels if present
+                    if trans_q.get("likert_scale"):
+                        scale_data = trans_q["likert_scale"]
+                        if isinstance(target_q.options, list) and target_q.options:
+                            first_opt = target_q.options[0]
+                            if isinstance(first_opt, dict):
+                                if "left_label" in scale_data:
+                                    first_opt["left"] = scale_data["left_label"]
+                                    results["translated_fields"] += 1
+                                if "right_label" in scale_data:
+                                    first_opt["right"] = scale_data["right_label"]
+                                    results["translated_fields"] += 1
+
+                    target_q.save(update_fields=["text", "options"])
+
+        except Exception as e:
+            results["errors"].append(f"Error during translation: {str(e)}")
+
+        # Set success flag
+        results["success"] = (
+            len(results["errors"]) == 0 and results["translated_fields"] > 0
+        )
+
+        if results["success"]:
+            results["warnings"].append(
+                "Please review translations for accuracy before publishing"
+            )
+
+        return results
 
     # Data Governance Methods
 
@@ -1956,13 +2570,13 @@ class DataSet(models.Model):
         constraints = [
             # NHS DD lists must be global and not have an organization
             models.CheckConstraint(
-                check=~models.Q(category="nhs_dd", organization__isnull=False),
+                condition=~models.Q(category="nhs_dd", organization__isnull=False),
                 name="nhs_dd_must_be_global",
             ),
             # Platform global datasets (not published) cannot have an organization
             # Published datasets CAN have organization for attribution
             models.CheckConstraint(
-                check=~models.Q(
+                condition=~models.Q(
                     is_global=True,
                     organization__isnull=False,
                     published_at__isnull=True,
