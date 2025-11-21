@@ -1003,7 +1003,10 @@ class Survey(models.Model):
         Note: Target survey must already exist (created via create_translation).
         This method updates the target survey in place.
         """
-        from .llm_client import ConversationalSurveyLLM, load_translation_prompt_from_docs
+        from .llm_client import (
+            ConversationalSurveyLLM,
+            load_translation_prompt_from_docs,
+        )
 
         results = {
             "success": False,
@@ -1106,8 +1109,7 @@ class Survey(models.Model):
             # Load system prompt from documentation for transparency
             # Template variables are substituted automatically
             system_msg = load_translation_prompt_from_docs(
-                target_language_name=target_lang_name,
-                target_language_code=target_lang
+                target_language_name=target_lang_name, target_language_code=target_lang
             )
 
             # Send entire survey for translation
@@ -1166,9 +1168,7 @@ Return the translation as JSON following the exact structure specified in the sy
                 translation = json.loads(json_text)
             except json.JSONDecodeError as e:
                 # Log the problematic JSON for debugging
-                logger.error(
-                    f"JSON decode error at position {e.pos}: {str(e)}"
-                )
+                logger.error(f"JSON decode error at position {e.pos}: {str(e)}")
                 logger.error(
                     f"Context around error (chars {max(0, e.pos-100)}:{e.pos+100}): {json_text[max(0, e.pos-100):e.pos+100]}"
                 )
@@ -1176,17 +1176,18 @@ Return the translation as JSON following the exact structure specified in the sy
                 # Try to salvage the JSON by fixing common issues
                 try:
                     import re
+
                     fixed_json = json_text
 
                     # Remove trailing commas before closing braces/brackets (multiple passes)
                     prev_json = None
                     while prev_json != fixed_json:
                         prev_json = fixed_json
-                        fixed_json = re.sub(r',(\s*[}\]])', r'\1', fixed_json)
+                        fixed_json = re.sub(r",(\s*[}\]])", r"\1", fixed_json)
 
                     # Remove any comments (// or /* */)
-                    fixed_json = re.sub(r'//.*?$', '', fixed_json, flags=re.MULTILINE)
-                    fixed_json = re.sub(r'/\*.*?\*/', '', fixed_json, flags=re.DOTALL)
+                    fixed_json = re.sub(r"//.*?$", "", fixed_json, flags=re.MULTILINE)
+                    fixed_json = re.sub(r"/\*.*?\*/", "", fixed_json, flags=re.DOTALL)
 
                     translation = json.loads(fixed_json)
                     logger.info("Successfully parsed JSON after automatic fixes")

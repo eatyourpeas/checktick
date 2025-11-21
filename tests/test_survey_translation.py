@@ -542,14 +542,19 @@ class TestLLMTranslation:
 
         # Mock LLM to return JSON translations
         def mock_chat_with_custom_system_prompt(
-            self, system_prompt=None, conversation_history=None, temperature=None, max_tokens=None
+            self,
+            system_prompt=None,
+            conversation_history=None,
+            temperature=None,
+            max_tokens=None,
         ):
             # Return a properly formatted JSON response
             import json
+
             translation_data = {
                 "metadata": {
                     "name": "Encuesta del Paciente",
-                    "description": "una encuesta sobre atención al paciente"
+                    "description": "una encuesta sobre atención al paciente",
                 },
                 "question_groups": [
                     {
@@ -557,21 +562,22 @@ class TestLLMTranslation:
                         "description": "Preguntas demográficas básicas",
                         "questions": [
                             {"text": "¿Cuál es tu edad?"},
-                            {
-                                "text": "¿Tienes diabetes?",
-                                "choices": ["Sí", "No"]
-                            },
+                            {"text": "¿Tienes diabetes?", "choices": ["Sí", "No"]},
                             {
                                 "text": "¿Qué tipo de diabetes?",
-                                "choices": ["Tipo 1", "Tipo 2", "Gestacional", "Otro"]
-                            }
-                        ]
+                                "choices": ["Tipo 1", "Tipo 2", "Gestacional", "Otro"],
+                            },
+                        ],
                     }
-                ]
+                ],
             }
             return json.dumps(translation_data, ensure_ascii=False)
 
-        monkeypatch.setattr(ConversationalSurveyLLM, "chat_with_custom_system_prompt", mock_chat_with_custom_system_prompt)
+        monkeypatch.setattr(
+            ConversationalSurveyLLM,
+            "chat_with_custom_system_prompt",
+            mock_chat_with_custom_system_prompt,
+        )
 
         # Create translation survey
         target_survey = source_survey.create_translation(target_language="es")
@@ -666,14 +672,19 @@ class TestAsyncTranslation:
         """Translation should handle LLM failures gracefully."""
 
         def mock_chat_with_custom_system_prompt(
-            self, system_prompt=None, conversation_history=None, temperature=None, max_tokens=None
+            self,
+            system_prompt=None,
+            conversation_history=None,
+            temperature=None,
+            max_tokens=None,
         ):
             # Return a minimal valid JSON response
             import json
+
             translation_data = {
                 "metadata": {
                     "name": "Encuesta Traducida",
-                    "description": "descripción traducida"
+                    "description": "descripción traducida",
                 },
                 "question_groups": [
                     {
@@ -681,15 +692,25 @@ class TestAsyncTranslation:
                         "description": "descripción del grupo",
                         "questions": [
                             {"text": "pregunta traducida 1"},
-                            {"text": "pregunta traducida 2", "choices": ["opción 1", "opción 2"]},
-                            {"text": "pregunta traducida 3", "choices": ["a", "b", "c", "d"]}
-                        ]
+                            {
+                                "text": "pregunta traducida 2",
+                                "choices": ["opción 1", "opción 2"],
+                            },
+                            {
+                                "text": "pregunta traducida 3",
+                                "choices": ["a", "b", "c", "d"],
+                            },
+                        ],
                     }
-                ]
+                ],
             }
             return json.dumps(translation_data, ensure_ascii=False)
 
-        monkeypatch.setattr(ConversationalSurveyLLM, "chat_with_custom_system_prompt", mock_chat_with_custom_system_prompt)
+        monkeypatch.setattr(
+            ConversationalSurveyLLM,
+            "chat_with_custom_system_prompt",
+            mock_chat_with_custom_system_prompt,
+        )
 
         translation = basic_survey.create_translation("es")
 

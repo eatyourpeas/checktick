@@ -1836,6 +1836,7 @@ def survey_dashboard(request: HttpRequest, slug: str) -> HttpResponse:
 
     # Import language constants for flags
     from .models import LANGUAGE_FLAGS
+
     ctx["language_flags"] = LANGUAGE_FLAGS
 
     if any(
@@ -2511,7 +2512,11 @@ def create_translation_async(request: HttpRequest, slug: str) -> JsonResponse:
                 {
                     "status": "processing",
                     "progress": 25,
-                    "message": "Creating survey structure..." if not existing else "Preparing to re-translate...",
+                    "message": (
+                        "Creating survey structure..."
+                        if not existing
+                        else "Preparing to re-translate..."
+                    ),
                 },
                 timeout=3600,
             )

@@ -33,7 +33,9 @@ def load_system_prompt_from_docs() -> str:
     )
 
 
-def load_translation_prompt_from_docs(target_language_name: str = None, target_language_code: str = None) -> str:
+def load_translation_prompt_from_docs(
+    target_language_name: str = None, target_language_code: str = None
+) -> str:
     """
     Load the translation system prompt from the LLM security documentation.
 
