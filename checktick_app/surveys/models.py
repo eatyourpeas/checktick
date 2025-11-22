@@ -1542,9 +1542,9 @@ class SurveyQuestionCondition(models.Model):
         NOT_EXISTS = "not_exists", "Answer missing"
 
     class Action(models.TextChoices):
-        JUMP_TO = "jump_to", "Jump to target"
-        SHOW = "show", "Show target"
-        SKIP = "skip", "Skip target"
+        SHOW = "show", "Show when condition met (hidden by default)"
+        JUMP_TO = "jump_to", "Skip ahead to question"
+        SKIP = "skip", "Hide when condition met"
         END_SURVEY = "end_survey", "End survey"
 
     question = models.ForeignKey(
