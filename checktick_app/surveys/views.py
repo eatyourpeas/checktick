@@ -8074,3 +8074,51 @@ def _export_question_group_to_markdown(group: QuestionGroup, survey: Survey) -> 
         lines.append("")
 
     return "\n".join(lines)
+
+
+@login_required
+def branching_data_api(request: HttpRequest, slug: str) -> JsonResponse:
+    """
+    API endpoint to provide branching visualization data.
+    Returns all questions and their conditions for the survey.
+    """
+    survey = get_object_or_404(Survey, slug=slug)
+    require_can_view(request.user, survey)
+
+    # Get all questions ordered properly
+    questions_qs = survey.questions.select_related("group").prefetch_related(
+        "conditions", "conditions__target_question"
+    )
+    ordered_questions = _order_questions_by_group(survey, list(questions_qs))
+
+    questions_data = []
+    conditions_data = {}
+
+    for index, q in enumerate(ordered_questions):
+        question_data = {
+            "id": str(q.id),
+            "text": q.text,
+            "order": index,
+            "group_name": q.group.name if q.group else None,
+        }
+        questions_data.append(question_data)
+
+        # Get conditions for this question
+        conditions = list(q.conditions.all())
+        if conditions:
+            conditions_data[str(q.id)] = []
+            for cond in conditions:
+                cond_data = {
+                    "operator": cond.operator,
+                    "value": cond.value or "",
+                    "action": cond.action,
+                    "target_question": str(cond.target_question.id)
+                    if cond.target_question
+                    else None,
+                    "description": cond.description or "",
+                }
+                conditions_data[str(q.id)].append(cond_data)
+
+    return JsonResponse(
+        {"questions": questions_data, "conditions": conditions_data}
+    )
