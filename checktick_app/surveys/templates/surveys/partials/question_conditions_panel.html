@@ -45,23 +45,9 @@
                   {% endfor %}
                 </select>
 
-                <fieldset class="mt-3" data-target-fieldset>
-                  <legend class="label text-xs">Target</legend>
-                  <div class="flex flex-wrap gap-3">
-                    <label class="flex items-center gap-2 text-xs">
-                      <input type="radio" name="target_selector" value="question" class="radio radio-primary" {% if not opts.has_question_targets %}disabled{% endif %} {% if opts.default_target_type == 'question' %}checked{% endif %} />
-                      <span>Question</span>
-                    </label>
-                    <label class="flex items-center gap-2 text-xs">
-                      <input type="radio" name="target_selector" value="group" class="radio radio-primary" {% if not opts.has_group_targets %}disabled{% endif %} {% if opts.default_target_type == 'group' %}checked{% endif %} />
-                      <span>Group</span>
-                    </label>
-                  </div>
-                </fieldset>
-
-                <div class="mt-2{% if opts.default_target_type != 'question' %} hidden{% endif %}" data-target-wrapper="question">
+                <div class="mt-3" data-target-fieldset>
                   <label class="label text-xs">Target question</label>
-                  <select name="target_question" class="select select-bordered w-full" data-target-select="question" {% if opts.default_target_type != 'question' %}disabled{% endif %}>
+                  <select name="target_question" class="select select-bordered w-full" data-target-select="question">
                     {% if not opts.has_question_targets %}
                       <option value="">No available questions</option>
                     {% else %}
@@ -70,20 +56,9 @@
                       {% endfor %}
                     {% endif %}
                   </select>
-                </div>
-
-                <div class="mt-2{% if opts.default_target_type != 'group' %} hidden{% endif %}" data-target-wrapper="group">
-                  <label class="label text-xs">Target group</label>
-                  <select name="target_group" class="select select-bordered w-full" data-target-select="group" {% if opts.default_target_type != 'group' %}disabled{% endif %}>
-                    {% if not opts.has_group_targets %}
-                      <option value="">No available groups</option>
-                    {% else %}
-                      <option value="">Choose a group…</option>
-                      {% for tg in opts.target_groups %}
-                        <option value="{{ tg.id }}"{% if tg.id == opts.default_group_id %} selected{% endif %}>{{ tg.label }}</option>
-                      {% endfor %}
-                    {% endif %}
-                  </select>
+                  <div class="text-xs text-gray-500 mt-1">
+                    Note: END_SURVEY action does not require a target question
+                  </div>
                 </div>
 
                 <div class="mt-3 flex justify-end">
@@ -136,45 +111,20 @@
                             {% endfor %}
                           </select>
 
-                          <fieldset class="mt-3" data-target-fieldset>
-                            <legend class="label text-xs">Target</legend>
-                            <div class="flex flex-wrap gap-3">
-                              <label class="flex items-center gap-2 text-xs">
-                                <input type="radio" name="target_selector" value="question" class="radio radio-primary" {% if cond.target.type == 'question' %}checked{% endif %} {% if not opts.has_question_targets %}disabled{% endif %} />
-                                <span>Question</span>
-                              </label>
-                              <label class="flex items-center gap-2 text-xs">
-                                <input type="radio" name="target_selector" value="group" class="radio radio-primary" {% if cond.target.type == 'group' %}checked{% endif %} {% if not opts.has_group_targets %}disabled{% endif %} />
-                                <span>Group</span>
-                              </label>
-                            </div>
-                          </fieldset>
-
-                          <div class="mt-2{% if cond.target.type != 'question' %} hidden{% endif %}" data-target-wrapper="question">
+                          <div class="mt-3" data-target-fieldset>
                             <label class="label text-xs">Target question</label>
-                            <select name="target_question" class="select select-bordered w-full" data-target-select="question" {% if cond.target.type != 'question' %}disabled{% endif %}>
+                            <select name="target_question" class="select select-bordered w-full" data-target-select="question">
                               {% if not opts.has_question_targets %}
                                 <option value="">No available questions</option>
                               {% else %}
                                 {% for tq in opts.target_questions %}
-                                  <option value="{{ tq.id }}"{% if cond.target.type == 'question' and tq.id == cond.target.id %} selected{% endif %}>{{ tq.label }}</option>
+                                  <option value="{{ tq.id }}"{% if cond.target_question_id == tq.id %} selected{% endif %}>{{ tq.label }}</option>
                                 {% endfor %}
                               {% endif %}
                             </select>
-                          </div>
-
-                          <div class="mt-2{% if cond.target.type != 'group' %} hidden{% endif %}" data-target-wrapper="group">
-                            <label class="label text-xs">Target group</label>
-                            <select name="target_group" class="select select-bordered w-full" data-target-select="group" {% if cond.target.type != 'group' %}disabled{% endif %}>
-                              {% if not opts.has_group_targets %}
-                                <option value="">No available groups</option>
-                              {% else %}
-                                <option value="">Choose a group…</option>
-                                {% for tg in opts.target_groups %}
-                                  <option value="{{ tg.id }}"{% if cond.target.type == 'group' and tg.id == cond.target.id %} selected{% endif %}>{{ tg.label }}</option>
-                                {% endfor %}
-                              {% endif %}
-                            </select>
+                            <div class="text-xs text-gray-500 mt-1">
+                              Note: END_SURVEY action does not require a target question
+                            </div>
                           </div>
 
                           <div class="mt-2">

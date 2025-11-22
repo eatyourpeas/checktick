@@ -98,18 +98,10 @@
       const valueWrapper = form.querySelector("[data-condition-value]");
       const valueInput = form.querySelector('input[name="value"]');
       const actionSelect = form.querySelector('select[name="action"]');
-      const targetFieldset = form.querySelector('[data-target-fieldset]');
-      const targetRadios = form.querySelectorAll(
-        'input[name="target_selector"]'
-      );
-      const questionWrapper = form.querySelector(
-        '[data-target-wrapper="question"]'
-      );
-      const groupWrapper = form.querySelector('[data-target-wrapper="group"]');
+      const targetFieldset = form.querySelector("[data-target-fieldset]");
       const questionSelect = form.querySelector(
         '[data-target-select="question"]'
       );
-      const groupSelect = form.querySelector('[data-target-select="group"]');
 
       const toggleValueField = () => {
         if (!operatorSelect) return;
@@ -126,40 +118,15 @@
       };
 
       const toggleTargetFields = () => {
-        // Check if END_SURVEY is selected - hide all target fields
+        // Check if END_SURVEY is selected - hide target field
         const isEndSurvey = actionSelect && actionSelect.value === "end_survey";
 
         if (targetFieldset) {
           targetFieldset.classList.toggle("hidden", isEndSurvey);
         }
 
-        if (isEndSurvey) {
-          // Disable all target fields
-          if (questionSelect) questionSelect.disabled = true;
-          if (groupSelect) groupSelect.disabled = true;
-          return;
-        }
-
-        // Normal target selection logic
-        let selected = "question";
-        targetRadios.forEach((radio) => {
-          if (radio.checked) selected = radio.value;
-        });
-
-        const enableQuestion = selected === "question";
-        const enableGroup = selected === "group";
-
-        if (questionWrapper) {
-          questionWrapper.classList.toggle("hidden", !enableQuestion);
-        }
-        if (groupWrapper) {
-          groupWrapper.classList.toggle("hidden", !enableGroup);
-        }
         if (questionSelect) {
-          questionSelect.disabled = !enableQuestion;
-        }
-        if (groupSelect) {
-          groupSelect.disabled = !enableGroup;
+          questionSelect.disabled = isEndSurvey;
         }
       };
 
@@ -169,9 +136,6 @@
       if (actionSelect) {
         actionSelect.addEventListener("change", toggleTargetFields);
       }
-      targetRadios.forEach((radio) => {
-        radio.addEventListener("change", toggleTargetFields);
-      });
 
       toggleValueField();
       toggleTargetFields();

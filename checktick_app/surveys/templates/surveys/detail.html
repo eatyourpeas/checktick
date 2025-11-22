@@ -83,7 +83,7 @@
 
 {# Template dropdown moved below with HR and label per UX #}
 
-<form method="post" class="space-y-4 mt-6" data-survey-form data-survey-slug="{{ survey.slug }}" data-branching-config="{{ branching_config|escapejs }}">
+<form method="post" class="space-y-4 mt-6" data-survey-form data-survey-slug="{{ survey.slug }}" data-branching-config='{{ branching_config|safe }}'>
   {% csrf_token %}
 
   {% for q in questions %}
@@ -103,7 +103,7 @@
     {% endif %}
 
     {# Render question inside the group card - wrapped for branching #}
-    <div class="mb-4" data-question-id="{{ q.id }}">
+    <div class="mb-4" data-question-id="{{ q.id }}"{% if q.has_show_condition %} style="display: none;"{% endif %}>
       <h2 class="font-semibold inline-flex items-center gap-2">
         {% include "components/icons/document.html" with classes="w-4 h-4 opacity-70" %}
         <span><span class="text-sm opacity-70 mr-2 select-none">{{ q.idx }}.</span> {{ q.text }} {% if q.required %}<span class="text-error">*</span>{% endif %}</span>
