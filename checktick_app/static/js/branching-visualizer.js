@@ -264,7 +264,8 @@
           // Draw repeat badge if group has repeats
           if (group.groupId && groupRepeats[group.groupId]) {
             const repeatInfo = groupRepeats[group.groupId];
-            const countText = repeatInfo.count !== null ? String(repeatInfo.count) : "∞";
+            const countText =
+              repeatInfo.count !== null ? String(repeatInfo.count) : "∞";
 
             // Measure count text
             ctx.font = "bold 11px sans-serif";
@@ -283,11 +284,26 @@
             ctx.beginPath();
             ctx.moveTo(badgeX + radius, badgeY);
             ctx.lineTo(badgeX + badgeWidth - radius, badgeY);
-            ctx.quadraticCurveTo(badgeX + badgeWidth, badgeY, badgeX + badgeWidth, badgeY + radius);
+            ctx.quadraticCurveTo(
+              badgeX + badgeWidth,
+              badgeY,
+              badgeX + badgeWidth,
+              badgeY + radius
+            );
             ctx.lineTo(badgeX + badgeWidth, badgeY + badgeHeight - radius);
-            ctx.quadraticCurveTo(badgeX + badgeWidth, badgeY + badgeHeight, badgeX + badgeWidth - radius, badgeY + badgeHeight);
+            ctx.quadraticCurveTo(
+              badgeX + badgeWidth,
+              badgeY + badgeHeight,
+              badgeX + badgeWidth - radius,
+              badgeY + badgeHeight
+            );
             ctx.lineTo(badgeX + radius, badgeY + badgeHeight);
-            ctx.quadraticCurveTo(badgeX, badgeY + badgeHeight, badgeX, badgeY + badgeHeight - radius);
+            ctx.quadraticCurveTo(
+              badgeX,
+              badgeY + badgeHeight,
+              badgeX,
+              badgeY + badgeHeight - radius
+            );
             ctx.lineTo(badgeX, badgeY + radius);
             ctx.quadraticCurveTo(badgeX, badgeY, badgeX + radius, badgeY);
             ctx.closePath();
@@ -304,7 +320,11 @@
             ctx.font = "bold 11px sans-serif";
             ctx.textAlign = "left";
             ctx.textBaseline = "middle";
-            ctx.fillText(countText, iconX + iconSize + 3, badgeY + badgeHeight / 2);
+            ctx.fillText(
+              countText,
+              iconX + iconSize + 3,
+              badgeY + badgeHeight / 2
+            );
 
             // Adjust rightX for group label
             rightX = badgeX - 8;
