@@ -159,7 +159,9 @@ def check_survey_creation_limit(user) -> tuple[bool, str]:
     return True, ""
 
 
-def check_collaboration_limit(user, collaboration_type: str = "editor") -> tuple[bool, str]:
+def check_collaboration_limit(
+    user, collaboration_type: str = "editor"
+) -> tuple[bool, str]:
     """Check if user can add a collaborator of the specified type.
 
     Args:
@@ -191,7 +193,9 @@ def check_collaboration_limit(user, collaboration_type: str = "editor") -> tuple
     return True, ""
 
 
-def check_collaborators_per_survey_limit(survey, additional_count: int = 1) -> tuple[bool, str]:
+def check_collaborators_per_survey_limit(
+    survey, additional_count: int = 1
+) -> tuple[bool, str]:
     """Check if survey can have more collaborators added.
 
     Args:

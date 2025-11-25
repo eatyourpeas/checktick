@@ -1,7 +1,6 @@
 """Tests for branding configuration functionality."""
 
 from django.contrib.auth import get_user_model
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -137,7 +136,9 @@ class BrandingConfigurationTestCase(TestCase):
 
             branding = SiteBranding.objects.get(pk=1)
             self.assertEqual(branding.icon_url, "https://example.com/logo.png")
-            self.assertEqual(branding.icon_url_dark, "https://example.com/logo-dark.png")
+            self.assertEqual(
+                branding.icon_url_dark, "https://example.com/logo-dark.png"
+            )
 
     def test_update_branding_fonts(self):
         """Enterprise users can configure custom fonts."""
@@ -212,7 +213,7 @@ class BrandingConfigurationTestCase(TestCase):
     def test_form_displays_current_branding(self):
         """Branding form displays current configuration."""
         # Set up existing branding
-        branding = SiteBranding.objects.create(
+        _ = SiteBranding.objects.create(
             pk=1,
             default_theme="checktick-dark",
             theme_preset_light="nord",

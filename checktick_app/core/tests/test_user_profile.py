@@ -1,10 +1,9 @@
 """Tests for UserProfile model and account tier functionality."""
 
-import pytest
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import override_settings
 from django.utils import timezone
+import pytest
 
 from checktick_app.core.models import UserProfile
 
@@ -139,7 +138,9 @@ class TestUserProfile:
 
     def test_can_add_collaborators_organization_tier(self):
         """Test full collaboration for ORGANIZATION tier."""
-        user = User.objects.create_user(username="testuser10", email="test10@example.com")
+        user = User.objects.create_user(
+            username="testuser10", email="test10@example.com"
+        )
         user.profile.account_tier = UserProfile.AccountTier.ORGANIZATION
         user.profile.save()
 
@@ -149,7 +150,9 @@ class TestUserProfile:
 
     def test_can_customize_branding_free_tier(self):
         """Test branding restrictions for FREE tier."""
-        user = User.objects.create_user(username="testuser11", email="test11@example.com")
+        user = User.objects.create_user(
+            username="testuser11", email="test11@example.com"
+        )
         user.profile.account_tier = UserProfile.AccountTier.FREE
         user.profile.save()
 
@@ -159,7 +162,9 @@ class TestUserProfile:
 
     def test_can_customize_branding_enterprise_tier(self):
         """Test branding for ENTERPRISE tier."""
-        user = User.objects.create_user(username="testuser12", email="test12@example.com")
+        user = User.objects.create_user(
+            username="testuser12", email="test12@example.com"
+        )
         user.profile.account_tier = UserProfile.AccountTier.ENTERPRISE
         user.profile.save()
 
@@ -168,7 +173,9 @@ class TestUserProfile:
     @override_settings(SELF_HOSTED=True)
     def test_can_customize_branding_self_hosted(self):
         """Test branding is allowed for all tiers in self-hosted mode."""
-        user = User.objects.create_user(username="testuser13", email="test13@example.com")
+        user = User.objects.create_user(
+            username="testuser13", email="test13@example.com"
+        )
         user.profile.account_tier = UserProfile.AccountTier.FREE
         user.profile.save()
 
@@ -176,7 +183,9 @@ class TestUserProfile:
 
     def test_can_create_sub_organizations_free_tier(self):
         """Test sub-organization restrictions for FREE tier."""
-        user = User.objects.create_user(username="testuser14", email="test14@example.com")
+        user = User.objects.create_user(
+            username="testuser14", email="test14@example.com"
+        )
         user.profile.account_tier = UserProfile.AccountTier.FREE
         user.profile.save()
 
@@ -186,7 +195,9 @@ class TestUserProfile:
 
     def test_can_create_sub_organizations_enterprise_tier(self):
         """Test sub-organizations for ENTERPRISE tier."""
-        user = User.objects.create_user(username="testuser15", email="test15@example.com")
+        user = User.objects.create_user(
+            username="testuser15", email="test15@example.com"
+        )
         user.profile.account_tier = UserProfile.AccountTier.ENTERPRISE
         user.profile.save()
 
@@ -194,7 +205,9 @@ class TestUserProfile:
 
     def test_upgrade_tier(self):
         """Test upgrading account tier."""
-        user = User.objects.create_user(username="testuser16", email="test16@example.com")
+        user = User.objects.create_user(
+            username="testuser16", email="test16@example.com"
+        )
         assert user.profile.account_tier == UserProfile.AccountTier.FREE
 
         user.profile.upgrade_tier(UserProfile.AccountTier.PRO)
@@ -205,7 +218,9 @@ class TestUserProfile:
 
     def test_downgrade_tier(self):
         """Test downgrading account tier."""
-        user = User.objects.create_user(username="testuser17", email="test17@example.com")
+        user = User.objects.create_user(
+            username="testuser17", email="test17@example.com"
+        )
         user.profile.account_tier = UserProfile.AccountTier.ENTERPRISE
         user.profile.save()
 
@@ -217,7 +232,9 @@ class TestUserProfile:
 
     def test_update_subscription(self):
         """Test updating subscription information."""
-        user = User.objects.create_user(username="testuser18", email="test18@example.com")
+        user = User.objects.create_user(
+            username="testuser18", email="test18@example.com"
+        )
 
         period_end = timezone.now() + timezone.timedelta(days=30)
         user.profile.update_subscription(
@@ -233,7 +250,9 @@ class TestUserProfile:
 
     def test_user_profile_str(self):
         """Test UserProfile string representation."""
-        user = User.objects.create_user(username="testuser19", email="test19@example.com")
+        user = User.objects.create_user(
+            username="testuser19", email="test19@example.com"
+        )
         assert str(user.profile) == "testuser19 - Free"
 
         user.profile.account_tier = UserProfile.AccountTier.PRO

@@ -31,6 +31,7 @@ def require_tier_permission(check_function, redirect_to: str = "core:home"):
     Returns:
         Decorator function
     """
+
     def decorator(view_func):
         @wraps(view_func)
         @login_required
@@ -41,9 +42,7 @@ def require_tier_permission(check_function, redirect_to: str = "core:home"):
             if not allowed:
                 # Handle AJAX/API requests differently
                 if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                    return JsonResponse(
-                        {"success": False, "error": reason}, status=403
-                    )
+                    return JsonResponse({"success": False, "error": reason}, status=403)
 
                 # Regular request - show message and redirect
                 messages.error(request, reason)
@@ -53,6 +52,7 @@ def require_tier_permission(check_function, redirect_to: str = "core:home"):
             return view_func(request, *args, **kwargs)
 
         return wrapper
+
     return decorator
 
 
@@ -83,6 +83,7 @@ def require_can_add_collaborators(collaboration_type: str = "editor"):
             # User has permission to add editors
             ...
     """
+
     def check_func(user):
         return check_collaboration_limit(user, collaboration_type)
 
@@ -151,6 +152,7 @@ def check_survey_collaborator_limit(view_func):
                 # Handle limit exceeded
                 ...
     """
+
     @wraps(view_func)
     @login_required
     def wrapper(request: HttpRequest, *args, **kwargs) -> HttpResponse:
@@ -195,6 +197,7 @@ def add_tier_context(view_func):
             # Template will have access to {{ tier_info }}
             return render(request, 'template.html', context)
     """
+
     @wraps(view_func)
     @login_required
     def wrapper(request: HttpRequest, *args, **kwargs) -> HttpResponse:

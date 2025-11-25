@@ -11,7 +11,7 @@ def tier_info(request):
     if not request.user.is_authenticated:
         return {}
 
-    if not hasattr(request.user, 'profile'):
+    if not hasattr(request.user, "profile"):
         return {}
 
     from .tier_limits import get_feature_availability, get_tier_limits
@@ -22,13 +22,14 @@ def tier_info(request):
 
     # Get current survey count
     from checktick_app.surveys.models import Survey
+
     survey_count = Survey.objects.filter(owner=request.user, is_original=True).count()
 
     return {
-        'user_tier': effective_tier,
-        'user_tier_display': request.user.profile.get_account_tier_display(),
-        'tier_features': features,
-        'tier_limits': limits,
-        'survey_count': survey_count,
-        'is_self_hosted': getattr(settings, 'SELF_HOSTED', False),
+        "user_tier": effective_tier,
+        "user_tier_display": request.user.profile.get_account_tier_display(),
+        "tier_features": features,
+        "tier_limits": limits,
+        "survey_count": survey_count,
+        "is_self_hosted": getattr(settings, "SELF_HOSTED", False),
     }

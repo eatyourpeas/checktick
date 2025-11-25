@@ -9,7 +9,6 @@ web UI at /branding/ instead.
 
 from pathlib import Path
 
-from django.conf import settings
 from django.core.files import File
 from django.core.management.base import BaseCommand, CommandError
 
@@ -192,28 +191,28 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("Current Branding Configuration"))
         self.stdout.write("=" * 60)
 
-        self.stdout.write(f"\nTheme Settings:")
+        self.stdout.write("\nTheme Settings:")
         self.stdout.write(f"  Default Theme: {branding.default_theme}")
         self.stdout.write(
             f"  Light Preset: {branding.theme_preset_light or '(not set)'}"
         )
         self.stdout.write(f"  Dark Preset: {branding.theme_preset_dark or '(not set)'}")
 
-        self.stdout.write(f"\nLogo Settings:")
+        self.stdout.write("\nLogo Settings:")
         if branding.icon_file:
             self.stdout.write(f"  Logo File: {branding.icon_file.url}")
         else:
-            self.stdout.write(f"  Logo File: (not set)")
+            self.stdout.write("  Logo File: (not set)")
 
         if branding.icon_file_dark:
             self.stdout.write(f"  Dark Logo File: {branding.icon_file_dark.url}")
         else:
-            self.stdout.write(f"  Dark Logo File: (not set)")
+            self.stdout.write("  Dark Logo File: (not set)")
 
         self.stdout.write(f"  Logo URL: {branding.icon_url or '(not set)'}")
         self.stdout.write(f"  Dark Logo URL: {branding.icon_url_dark or '(not set)'}")
 
-        self.stdout.write(f"\nTypography:")
+        self.stdout.write("\nTypography:")
         self.stdout.write(f"  Heading Font: {branding.font_heading or '(not set)'}")
         self.stdout.write(f"  Body Font: {branding.font_body or '(not set)'}")
         self.stdout.write(f"  Font CSS URL: {branding.font_css_url or '(not set)'}")

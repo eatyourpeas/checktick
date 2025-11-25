@@ -13,8 +13,7 @@ def create_user_profiles(apps, schema_editor):
 
     # Create profiles in bulk
     profiles_to_create = [
-        UserProfile(user=user, account_tier="free")
-        for user in users_without_profiles
+        UserProfile(user=user, account_tier="free") for user in users_without_profiles
     ]
 
     UserProfile.objects.bulk_create(profiles_to_create, ignore_conflicts=True)

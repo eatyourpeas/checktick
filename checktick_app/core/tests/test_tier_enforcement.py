@@ -1,12 +1,16 @@
 """Tests for tier enforcement in views and decorators."""
 
-import pytest
 from django.contrib.auth import get_user_model
-from django.test import Client
 from django.urls import reverse
+import pytest
 
 from checktick_app.core.models import UserProfile
-from checktick_app.surveys.models import Survey, SurveyMembership, Organization, OrganizationMembership
+from checktick_app.surveys.models import (
+    Organization,
+    OrganizationMembership,
+    Survey,
+    SurveyMembership,
+)
 
 User = get_user_model()
 TEST_PASSWORD = "x"
@@ -15,7 +19,9 @@ TEST_PASSWORD = "x"
 @pytest.fixture
 def free_user(db):
     """Create a FREE tier user."""
-    user = User.objects.create_user(username="freeuser", password=TEST_PASSWORD, email="free@test.com")
+    user = User.objects.create_user(
+        username="freeuser", password=TEST_PASSWORD, email="free@test.com"
+    )
     user.profile.account_tier = UserProfile.AccountTier.FREE
     user.profile.save()
     return user
@@ -24,7 +30,9 @@ def free_user(db):
 @pytest.fixture
 def pro_user(db):
     """Create a PRO tier user."""
-    user = User.objects.create_user(username="prouser", password=TEST_PASSWORD, email="pro@test.com")
+    user = User.objects.create_user(
+        username="prouser", password=TEST_PASSWORD, email="pro@test.com"
+    )
     user.profile.account_tier = UserProfile.AccountTier.PRO
     user.profile.save()
     return user
@@ -33,7 +41,9 @@ def pro_user(db):
 @pytest.fixture
 def org_user(db):
     """Create an ORGANIZATION tier user."""
-    user = User.objects.create_user(username="orguser", password=TEST_PASSWORD, email="org@test.com")
+    user = User.objects.create_user(
+        username="orguser", password=TEST_PASSWORD, email="org@test.com"
+    )
     user.profile.account_tier = UserProfile.AccountTier.ORGANIZATION
     user.profile.save()
     return user
@@ -42,14 +52,9 @@ def org_user(db):
 @pytest.fixture
 def organization(db, org_user):
     """Create a test organization."""
-    org = Organization.objects.create(
-        name="Test Organization",
-        owner=org_user
-    )
+    org = Organization.objects.create(name="Test Organization", owner=org_user)
     OrganizationMembership.objects.create(
-        organization=org,
-        user=org_user,
-        role=OrganizationMembership.Role.ADMIN
+        organization=org, user=org_user, role=OrganizationMembership.Role.ADMIN
     )
     return org
 
@@ -64,11 +69,14 @@ class TestSurveyCreationEnforcement:
 
         # Create 3 surveys successfully
         for i in range(3):
-            response = client.post(reverse("surveys:create"), {
-                "name": f"Survey {i+1}",
-                "slug": f"survey-{i+1}",
-                "encryption_option": "none",  # No encryption
-            })
+            response = client.post(
+                reverse("surveys:create"),
+                {
+                    "name": f"Survey {i+1}",
+                    "slug": f"survey-{i+1}",
+                    "encryption_option": "none",  # No encryption
+                },
+            )
             assert response.status_code == 302  # Redirect on success
             assert Survey.objects.filter(owner=free_user, name=f"Survey {i+1}").exists()
 
@@ -85,11 +93,14 @@ class TestSurveyCreationEnforcement:
             )
 
         # Attempt to create 4th survey should be blocked
-        response = client.post(reverse("surveys:create"), {
-            "name": "Survey 4",
-            "slug": "survey-4",
-            "encryption_option": "none",
-        })
+        response = client.post(
+            reverse("surveys:create"),
+            {
+                "name": "Survey 4",
+                "slug": "survey-4",
+                "encryption_option": "none",
+            },
+        )
 
         # Should redirect back to list with error message
         assert response.status_code == 302
@@ -125,11 +136,14 @@ class TestSurveyCreationEnforcement:
 
         # Create 5 surveys (more than FREE limit)
         for i in range(5):
-            response = client.post(reverse("surveys:create"), {
-                "name": f"Survey {i+1}",
-                "slug": f"survey-{i+1}",
-                "encryption_option": "none",
-            })
+            response = client.post(
+                reverse("surveys:create"),
+                {
+                    "name": f"Survey {i+1}",
+                    "slug": f"survey-{i+1}",
+                    "encryption_option": "none",
+                },
+            )
             assert response.status_code == 302
             assert Survey.objects.filter(owner=pro_user, name=f"Survey {i+1}").exists()
 
@@ -141,11 +155,14 @@ class TestSurveyCreationEnforcement:
 
         # Create 5 surveys
         for i in range(5):
-            response = client.post(reverse("surveys:create"), {
-                "name": f"Survey {i+1}",
-                "slug": f"survey-{i+1}",
-                "encryption_option": "none",
-            })
+            response = client.post(
+                reverse("surveys:create"),
+                {
+                    "name": f"Survey {i+1}",
+                    "slug": f"survey-{i+1}",
+                    "encryption_option": "none",
+                },
+            )
             assert response.status_code == 302
             assert Survey.objects.filter(owner=org_user, name=f"Survey {i+1}").exists()
 
@@ -170,23 +187,23 @@ class TestCollaborationEnforcement:
 
         # Create another user to add as collaborator
         collaborator = User.objects.create_user(
-            username="collaborator",
-            password=TEST_PASSWORD,
-            email="collab@test.com"
+            username="collaborator", password=TEST_PASSWORD, email="collab@test.com"
         )
 
         # Try to add collaborator
-        response = client.post(reverse("surveys:survey_users", kwargs={"slug": survey.slug}), {
-            "action": "add",
-            "email": "collab@test.com",
-            "role": SurveyMembership.Role.EDITOR,
-        })
+        response = client.post(
+            reverse("surveys:survey_users", kwargs={"slug": survey.slug}),
+            {
+                "action": "add",
+                "email": "collab@test.com",
+                "role": SurveyMembership.Role.EDITOR,
+            },
+        )
 
         # Should redirect with error
         assert response.status_code == 302
         assert not SurveyMembership.objects.filter(
-            survey=survey,
-            user=collaborator
+            survey=survey, user=collaborator
         ).exists()
 
     def test_pro_tier_can_add_editors(self, client, pro_user, organization):
@@ -197,7 +214,7 @@ class TestCollaborationEnforcement:
         OrganizationMembership.objects.create(
             organization=organization,
             user=pro_user,
-            role=OrganizationMembership.Role.ADMIN
+            role=OrganizationMembership.Role.ADMIN,
         )
 
         # Create a survey in the organization
@@ -210,24 +227,23 @@ class TestCollaborationEnforcement:
 
         # Create another user to add as editor
         editor = User.objects.create_user(
-            username="editor",
-            password=TEST_PASSWORD,
-            email="editor@test.com"
+            username="editor", password=TEST_PASSWORD, email="editor@test.com"
         )
 
         # Add editor
-        response = client.post(reverse("surveys:survey_users", kwargs={"slug": survey.slug}), {
-            "action": "add",
-            "email": "editor@test.com",
-            "role": SurveyMembership.Role.EDITOR,
-        })
+        response = client.post(
+            reverse("surveys:survey_users", kwargs={"slug": survey.slug}),
+            {
+                "action": "add",
+                "email": "editor@test.com",
+                "role": SurveyMembership.Role.EDITOR,
+            },
+        )
 
         # Should succeed
         assert response.status_code == 302
         assert SurveyMembership.objects.filter(
-            survey=survey,
-            user=editor,
-            role=SurveyMembership.Role.EDITOR
+            survey=survey, user=editor, role=SurveyMembership.Role.EDITOR
         ).exists()
 
     def test_pro_tier_cannot_add_viewers(self, client, pro_user, organization):
@@ -238,7 +254,7 @@ class TestCollaborationEnforcement:
         OrganizationMembership.objects.create(
             organization=organization,
             user=pro_user,
-            role=OrganizationMembership.Role.ADMIN
+            role=OrganizationMembership.Role.ADMIN,
         )
 
         # Create a survey in the organization
@@ -251,24 +267,23 @@ class TestCollaborationEnforcement:
 
         # Create another user to add as viewer
         viewer = User.objects.create_user(
-            username="viewer",
-            password=TEST_PASSWORD,
-            email="viewer@test.com"
+            username="viewer", password=TEST_PASSWORD, email="viewer@test.com"
         )
 
         # Try to add viewer
-        response = client.post(reverse("surveys:survey_users", kwargs={"slug": survey.slug}), {
-            "action": "add",
-            "email": "viewer@test.com",
-            "role": SurveyMembership.Role.VIEWER,
-        })
+        response = client.post(
+            reverse("surveys:survey_users", kwargs={"slug": survey.slug}),
+            {
+                "action": "add",
+                "email": "viewer@test.com",
+                "role": SurveyMembership.Role.VIEWER,
+            },
+        )
 
         # Should redirect with error
         assert response.status_code == 302
         assert not SurveyMembership.objects.filter(
-            survey=survey,
-            user=viewer,
-            role=SurveyMembership.Role.VIEWER
+            survey=survey, user=viewer, role=SurveyMembership.Role.VIEWER
         ).exists()
 
     def test_org_tier_can_add_viewers(self, client, org_user, organization):
@@ -285,24 +300,23 @@ class TestCollaborationEnforcement:
 
         # Create another user to add as viewer
         viewer = User.objects.create_user(
-            username="viewer2",
-            password=TEST_PASSWORD,
-            email="viewer2@test.com"
+            username="viewer2", password=TEST_PASSWORD, email="viewer2@test.com"
         )
 
         # Add viewer
-        response = client.post(reverse("surveys:survey_users", kwargs={"slug": survey.slug}), {
-            "action": "add",
-            "email": "viewer2@test.com",
-            "role": SurveyMembership.Role.VIEWER,
-        })
+        response = client.post(
+            reverse("surveys:survey_users", kwargs={"slug": survey.slug}),
+            {
+                "action": "add",
+                "email": "viewer2@test.com",
+                "role": SurveyMembership.Role.VIEWER,
+            },
+        )
 
         # Should succeed
         assert response.status_code == 302
         assert SurveyMembership.objects.filter(
-            survey=survey,
-            user=viewer,
-            role=SurveyMembership.Role.VIEWER
+            survey=survey, user=viewer, role=SurveyMembership.Role.VIEWER
         ).exists()
 
     def test_pro_tier_respects_collaborator_limit(self, client, pro_user, organization):
@@ -313,7 +327,7 @@ class TestCollaborationEnforcement:
         OrganizationMembership.objects.create(
             organization=organization,
             user=pro_user,
-            role=OrganizationMembership.Role.ADMIN
+            role=OrganizationMembership.Role.ADMIN,
         )
 
         # Create a survey
@@ -329,32 +343,30 @@ class TestCollaborationEnforcement:
             user = User.objects.create_user(
                 username=f"collab{i}",
                 password=TEST_PASSWORD,
-                email=f"collab{i}@test.com"
+                email=f"collab{i}@test.com",
             )
             SurveyMembership.objects.create(
-                survey=survey,
-                user=user,
-                role=SurveyMembership.Role.EDITOR
+                survey=survey, user=user, role=SurveyMembership.Role.EDITOR
             )
 
         # Try to add 11th collaborator
         extra_user = User.objects.create_user(
-            username="extra",
-            password=TEST_PASSWORD,
-            email="extra@test.com"
+            username="extra", password=TEST_PASSWORD, email="extra@test.com"
         )
 
-        response = client.post(reverse("surveys:survey_users", kwargs={"slug": survey.slug}), {
-            "action": "add",
-            "email": "extra@test.com",
-            "role": SurveyMembership.Role.EDITOR,
-        })
+        response = client.post(
+            reverse("surveys:survey_users", kwargs={"slug": survey.slug}),
+            {
+                "action": "add",
+                "email": "extra@test.com",
+                "role": SurveyMembership.Role.EDITOR,
+            },
+        )
 
         # Should redirect with error
         assert response.status_code == 302
         assert not SurveyMembership.objects.filter(
-            survey=survey,
-            user=extra_user
+            survey=survey, user=extra_user
         ).exists()
 
 

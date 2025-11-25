@@ -246,9 +246,7 @@ class UserProfile(models.Model):
         UNPAID = "unpaid", "Unpaid"
         NONE = "none", "None"  # For FREE tier or self-hosted
 
-    user = models.OneToOneField(
-        User, on_delete=models.CASCADE, related_name="profile"
-    )
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
 
     # Account tier and limits
     account_tier = models.CharField(
@@ -351,7 +349,9 @@ class UserProfile(models.Model):
 
         return check_survey_creation_limit(self.user)
 
-    def can_add_collaborators(self, collaboration_type: str = "editor") -> tuple[bool, str]:
+    def can_add_collaborators(
+        self, collaboration_type: str = "editor"
+    ) -> tuple[bool, str]:
         """Check if user can add collaborators to surveys.
 
         Args:
