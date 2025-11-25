@@ -212,9 +212,9 @@ def check_collaborators_per_survey_limit(survey, additional_count: int = 1) -> t
         return True, ""
 
     # Count current collaborators
-    from checktick_app.surveys.models import SurveyCollaborator
+    from checktick_app.surveys.models import SurveyMembership
 
-    current_count = SurveyCollaborator.objects.filter(survey=survey).count()
+    current_count = SurveyMembership.objects.filter(survey=survey).count()
 
     if current_count + additional_count > limits.max_collaborators_per_survey:
         return False, (
