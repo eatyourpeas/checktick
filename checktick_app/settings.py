@@ -237,6 +237,10 @@ X_FRAME_OPTIONS = "DENY"
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 
+# Forms configuration
+# Set default URL scheme to HTTPS for Django 6.0+ compatibility
+FORMS_URLFIELD_ASSUME_HTTPS = True
+
 # When running behind a reverse proxy (e.g., Northflank), trust forwarded proto/host
 # so Django correctly detects HTTPS and constructs absolute URLs without redirect loops.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

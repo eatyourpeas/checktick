@@ -138,6 +138,9 @@ def check_survey_creation_limit(user) -> tuple[bool, str]:
     if not hasattr(user, "profile"):
         return False, "User profile not found"
 
+    # Refresh profile from database to ensure we have latest tier
+    user.profile.refresh_from_db()
+
     effective_tier = user.profile.get_effective_tier()
     limits = get_tier_limits(effective_tier)
 
@@ -174,6 +177,9 @@ def check_collaboration_limit(
     if not hasattr(user, "profile"):
         return False, "User profile not found"
 
+    # Refresh profile from database to ensure we have latest tier
+    user.profile.refresh_from_db()
+
     effective_tier = user.profile.get_effective_tier()
     limits = get_tier_limits(effective_tier)
 
@@ -207,6 +213,9 @@ def check_collaborators_per_survey_limit(
     """
     if not hasattr(survey.owner, "profile"):
         return False, "Survey owner profile not found"
+
+    # Refresh profile from database to ensure we have latest tier
+    survey.owner.profile.refresh_from_db()
 
     effective_tier = survey.owner.profile.get_effective_tier()
     limits = get_tier_limits(effective_tier)
