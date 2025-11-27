@@ -1105,6 +1105,98 @@ These will be implemented in a separate phase after the core tier system is in p
 
 ---
 
+## Managing Account Tiers
+
+### Django Admin Interface
+
+Account tiers are currently managed through the Django admin interface. This approach is suitable for:
+
+- Self-hosted deployments
+- Beta testing and early access programs
+- Manual tier assignments before payment integration
+
+#### Upgrading Users via Admin
+
+1. **Access Admin Interface**
+   - Navigate to `/admin/` and log in with superuser credentials
+   - Go to **Core > User Profiles**
+
+2. **Find User Profile**
+   - Use the search box to find users by username or email
+   - Or filter by current tier using the right sidebar
+
+3. **Change Account Tier**
+   - Click on the user's profile
+   - In the "Account Tier" section, select the desired tier from the dropdown:
+     - **Individual (Free)** - Default tier, 3 surveys max, no collaboration
+     - **Individual Pro** - Unlimited surveys, can add editors (10 max per survey)
+     - **Organization** - Full collaboration features, unlimited collaborators, viewer role
+     - **Enterprise** - All Organization features plus custom branding and SSO
+   - Click "Save"
+
+4. **Verify Changes**
+   - The `tier_changed_at` timestamp is automatically updated
+   - User immediately gains access to new tier features
+   - No logout/login required - changes are applied on next page load
+
+#### Bulk Tier Changes
+
+For updating multiple users at once:
+
+1. Select users in the User Profiles list using checkboxes
+2. Choose "Change account tier" from the "Action" dropdown (if configured)
+3. Or use Django shell for bulk updates:
+
+```python
+from checktick_app.core.models import UserProfile
+
+# Upgrade all users in a specific organization
+org_users = UserProfile.objects.filter(user__organization_memberships__organization__name="Example Org")
+org_users.update(account_tier=UserProfile.AccountTier.ORGANIZATION)
+
+# Upgrade a specific user
+profile = UserProfile.objects.get(user__username="johndoe")
+profile.account_tier = UserProfile.AccountTier.PRO
+profile.save()
+```
+
+#### Monitoring Tier Usage
+
+The admin interface provides filtering and search capabilities:
+
+- **Filter by tier**: Use the right sidebar to see all users in each tier
+- **Filter by subscription status**: Track active/inactive/cancelled subscriptions
+- **Search**: Find users by username, email, or payment IDs
+- **List view shows**:
+  - Username
+  - Current account tier
+  - Subscription status
+  - Payment provider
+  - Last tier change timestamp
+
+### Self-Hosted Mode
+
+For self-hosted deployments, set `SELF_HOSTED=true` in your environment:
+
+- All users automatically receive **Enterprise** tier features
+- No admin intervention needed
+- Custom branding available to all users
+- See [Self-Hosting Documentation](self-hosting.md) for full details
+
+### Future: Payment Integration
+
+Payment integration (Stripe, Ryft, etc.) will be added in a future update. The current schema already includes all necessary fields:
+
+- `payment_provider`
+- `payment_customer_id`
+- `payment_subscription_id`
+- `subscription_status`
+- `subscription_current_period_end`
+
+These fields are ready for webhook handlers and automated tier management when payment is integrated.
+
+---
+
 ## Summary
 
 This implementation provides:
@@ -1118,9 +1210,12 @@ This implementation provides:
 ✅ **Backward compatible** with existing deployments
 ✅ **Comprehensive feature matrix** with all current features
 ✅ **Security-first approach** (all tiers get encryption & audit logging)
+✅ **Admin-managed tier upgrades** until payment integration
 
 The system is designed to be:
+
 - **Self-hosting friendly**: No payment barriers, full features
 - **SaaS ready**: Payment integration, tier enforcement
 - **User-friendly**: UI configuration instead of environment variables
 - **Healthcare compliant**: Security features available to all tiers
+- **Admin-manageable**: Simple tier upgrades through Django admin
