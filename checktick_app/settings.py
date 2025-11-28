@@ -53,6 +53,14 @@ env = environ.Env(
     OIDC_OP_JWKS_ENDPOINT_GOOGLE=(str, "https://www.googleapis.com/oauth2/v3/certs"),
     OIDC_OP_JWKS_ENDPOINT_AZURE=(str, ""),
     SITE_URL=(str, "http://localhost:8000"),
+    # Payment Processing (Paddle)
+    PAYMENT_PROCESSING_SANDBOX_API_KEY=(str, ""),
+    PAYMENT_PROCESSING_PRODUCTION_API_KEY=(str, ""),
+    PAYMENT_PROCESSING_SANDBOX_BASE_URL=(
+        str,
+        "https://sandbox-api.paddle.com",
+    ),
+    PAYMENT_PROCESSING_PRODUCTION_BASE_URL=(str, "https://api.paddle.com"),
 )
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -88,6 +96,20 @@ BRAND_FONT_CSS_URL = env("BRAND_FONT_CSS_URL")
 BRAND_THEME_CSS_LIGHT = env("BRAND_THEME_CSS_LIGHT") or None
 BRAND_THEME_CSS_DARK = env("BRAND_THEME_CSS_DARK") or None
 SITE_URL = "http://localhost:8000" if DEBUG else env("SITE_URL")
+
+# Payment Processing Configuration (Paddle)
+# Use sandbox in DEBUG mode, production otherwise
+PADDLE_API_KEY = (
+    env("PAYMENT_PROCESSING_SANDBOX_API_KEY")
+    if DEBUG
+    else env("PAYMENT_PROCESSING_PRODUCTION_API_KEY")
+)
+PADDLE_BASE_URL = (
+    env("PAYMENT_PROCESSING_SANDBOX_BASE_URL")
+    if DEBUG
+    else env("PAYMENT_PROCESSING_PRODUCTION_BASE_URL")
+)
+PADDLE_ENVIRONMENT = "sandbox" if DEBUG else "production"
 
 INSTALLED_APPS = [
     # Use custom AdminConfig to enforce superuser-only access
