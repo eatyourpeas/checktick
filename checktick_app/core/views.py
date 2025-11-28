@@ -373,24 +373,28 @@ def signup(request):
                 logger = logging.getLogger(__name__)
                 logger.error(f"Failed to send welcome email to {user.username}: {e}")
 
-            account_type = request.POST.get("account_type")
-            if account_type == "org":
-                with transaction.atomic():
-                    org_name = (
-                        request.POST.get("org_name")
-                        or f"{user.username}'s Organisation"
+            # Get selected tier (default to free)
+            selected_tier = request.POST.get("tier", "free").lower()
+
+            # Handle tier selection and billing redirect
+            if selected_tier == "free":
+                # FREE tier - complete signup normally
+                return redirect("core:home")
+            else:
+                # Paid tier - redirect to billing
+                # Store tier in session for after payment completion
+                request.session["pending_tier"] = selected_tier
+
+                messages.info(
+                    request,
+                    _(
+                        "Please complete payment to activate your %(tier)s subscription."
                     )
-                    org = Organization.objects.create(name=org_name, owner=user)
-                    OrganizationMembership.objects.create(
-                        organization=org,
-                        user=user,
-                        role=OrganizationMembership.Role.ADMIN,
-                    )
-                messages.success(
-                    request, _("Organisation created. You are an organisation admin.")
+                    % {"tier": selected_tier.upper()},
                 )
-                return redirect("surveys:org_users", org_id=org.id)
-            return redirect("core:home")
+
+                # Redirect to pricing page for upgrade
+                return redirect("core:pricing")
     else:
         form = SignupForm()
     return render(request, "registration/signup.html", {"form": form})
