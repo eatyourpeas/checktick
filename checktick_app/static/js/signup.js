@@ -13,7 +13,10 @@ function handleSSOSignup(provider) {
   );
 
   // Store choices in sessionStorage for post-auth processing
-  sessionStorage.setItem("signup_tier", selectedTier ? selectedTier.value : "free");
+  sessionStorage.setItem(
+    "signup_tier",
+    selectedTier ? selectedTier.value : "free"
+  );
 
   // Redirect to OIDC with signup flag
   window.location.href = `/oidc/authenticate/?provider=${provider}&signup=true`;
