@@ -1,9 +1,10 @@
 """
 Basic tests for Team and TeamMembership models.
 """
-import pytest
+
 from django.contrib.auth import get_user_model
 from django.db.utils import IntegrityError
+import pytest
 
 from checktick_app.surveys.models import Organization, Team, TeamMembership
 

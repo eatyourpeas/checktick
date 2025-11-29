@@ -418,7 +418,9 @@ class UserProfile(models.Model):
 
         # Check survey count if target tier has a limit
         if target_limits.max_surveys is not None:
-            survey_count = Survey.objects.filter(owner=self.user, is_original=True).count()
+            survey_count = Survey.objects.filter(
+                owner=self.user, is_original=True
+            ).count()
             if survey_count > target_limits.max_surveys:
                 return False, (
                     f"Cannot downgrade to {new_tier.title()} tier: You currently have "

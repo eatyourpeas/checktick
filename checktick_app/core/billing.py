@@ -7,11 +7,11 @@ Automatically uses sandbox in DEBUG mode and production otherwise.
 """
 
 import logging
-from typing import Any, Optional
+from typing import Optional
 
-import requests
 from django.conf import settings
 from django.contrib.auth import get_user_model
+import requests
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -250,7 +250,9 @@ class PaddleClient:
         )
         return response.get("data", {})
 
-    def pause_subscription(self, subscription_id: str, effective_from: str = "next_billing_period") -> dict:
+    def pause_subscription(
+        self, subscription_id: str, effective_from: str = "next_billing_period"
+    ) -> dict:
         """Pause a subscription.
 
         Args:
@@ -323,13 +325,17 @@ def get_or_create_paddle_customer(user) -> str:
     }
 
     customer_data = paddle.create_customer(
-        email=user.email, name=user.get_full_name() or user.username, custom_data=custom_data
+        email=user.email,
+        name=user.get_full_name() or user.username,
+        custom_data=custom_data,
     )
 
     # Store customer ID in profile
     profile.payment_provider = "paddle"
     profile.payment_customer_id = customer_data["id"]
-    profile.save(update_fields=["payment_provider", "payment_customer_id", "updated_at"])
+    profile.save(
+        update_fields=["payment_provider", "payment_customer_id", "updated_at"]
+    )
 
     logger.info(
         f"Created Paddle customer for user {user.username}: {customer_data['id']}"

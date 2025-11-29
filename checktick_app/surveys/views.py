@@ -4492,7 +4492,9 @@ def user_management_hub(request: HttpRequest) -> HttpResponse:
     # Build data for teams user manages (not within their org)
     managed_teams = []
     for team in managed_teams_qs:
-        team_members = team.memberships.select_related("user").order_by("user__username")
+        team_members = team.memberships.select_related("user").order_by(
+            "user__username"
+        )
         managed_teams.append({"team": team, "members": team_members})
 
     return render(

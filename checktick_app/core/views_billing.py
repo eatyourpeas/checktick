@@ -1,23 +1,18 @@
 """Billing views for subscription management and Paddle webhooks."""
 
-import hashlib
-import hmac
 import json
 import logging
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse, HttpRequest, JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from checktick_app.core.billing import (
-    paddle,
-    get_or_create_paddle_customer,
-    PaddleAPIError,
-)
+from checktick_app.core.billing import PaddleAPIError, paddle
 from checktick_app.core.models import UserProfile
 
 logger = logging.getLogger(__name__)
@@ -86,11 +81,16 @@ def cancel_subscription(request: HttpRequest) -> HttpResponse:
             request,
             "Your subscription has been cancelled. You will retain access to paid features until the end of your billing period.",
         )
-        logger.info(f"User {user.username} cancelled subscription {profile.payment_subscription_id}")
+        logger.info(
+            f"User {user.username} cancelled subscription {profile.payment_subscription_id}"
+        )
 
     except PaddleAPIError as e:
         logger.error(f"Error cancelling subscription: {e}")
-        messages.error(request, "Unable to cancel subscription. Please try again or contact support.")
+        messages.error(
+            request,
+            "Unable to cancel subscription. Please try again or contact support.",
+        )
 
     return redirect("core:subscription_portal")
 
@@ -148,7 +148,7 @@ def handle_subscription_created(payload: dict) -> HttpResponse:
     subscription_id = data.get("id")
     customer_id = data.get("customer_id")
     status = data.get("status")
-    custom_data = data.get("custom_data", {})
+    # custom_data = data.get("custom_data", {})
 
     logger.info(f"Processing subscription.created: {subscription_id}")
 
@@ -164,9 +164,9 @@ def handle_subscription_created(payload: dict) -> HttpResponse:
     # Update profile
     profile.payment_subscription_id = subscription_id
     profile.subscription_status = status
-    profile.subscription_current_period_end = data.get("current_billing_period", {}).get(
-        "ends_at"
-    )
+    profile.subscription_current_period_end = data.get(
+        "current_billing_period", {}
+    ).get("ends_at")
 
     # Determine tier from price ID or custom data
     # This should be mapped based on your Paddle product configuration
@@ -206,12 +206,20 @@ def handle_subscription_updated(payload: dict) -> HttpResponse:
 
     # Update status
     profile.subscription_status = status
-    profile.subscription_current_period_end = data.get("current_billing_period", {}).get(
-        "ends_at"
+    profile.subscription_current_period_end = data.get(
+        "current_billing_period", {}
+    ).get("ends_at")
+    profile.save(
+        update_fields=[
+            "subscription_status",
+            "subscription_current_period_end",
+            "updated_at",
+        ]
     )
-    profile.save(update_fields=["subscription_status", "subscription_current_period_end", "updated_at"])
 
-    logger.info(f"Subscription updated for user {profile.user.username}: status={status}")
+    logger.info(
+        f"Subscription updated for user {profile.user.username}: status={status}"
+    )
 
     return JsonResponse({"status": "success"}, status=200)
 
@@ -292,7 +300,9 @@ def handle_transaction_completed(payload: dict) -> HttpResponse:
         if profile.subscription_status == UserProfile.SubscriptionStatus.PAST_DUE:
             profile.subscription_status = UserProfile.SubscriptionStatus.ACTIVE
             profile.save(update_fields=["subscription_status", "updated_at"])
-            logger.info(f"Transaction completed, reactivated subscription for {profile.user.username}")
+            logger.info(
+                f"Transaction completed, reactivated subscription for {profile.user.username}"
+            )
     except UserProfile.DoesNotExist:
         logger.warning(f"No user found for customer ID in transaction: {customer_id}")
 
@@ -317,7 +327,9 @@ def handle_transaction_failed(payload: dict) -> HttpResponse:
         logger.info(f"Payment failed for user {profile.user.username}")
         # TODO: Send email notification
     except UserProfile.DoesNotExist:
-        logger.warning(f"No user found for customer ID in failed transaction: {customer_id}")
+        logger.warning(
+            f"No user found for customer ID in failed transaction: {customer_id}"
+        )
 
     return JsonResponse({"status": "success"}, status=200)
 

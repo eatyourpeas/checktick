@@ -387,9 +387,7 @@ def signup(request):
 
                 messages.info(
                     request,
-                    _(
-                        "Please complete payment to activate your %(tier)s subscription."
-                    )
+                    _("Please complete payment to activate your %(tier)s subscription.")
                     % {"tier": selected_tier.upper()},
                 )
 
@@ -933,10 +931,11 @@ def docs_page(request, slug: str):
     # Rewrite internal .md links to proper /docs/slug/ URLs
     # Convert patterns like href="filename.md" or href="path/filename.md" to href="/docs/filename/"
     import re
+
     html = re.sub(
         r'href="([^"]*?)\.md(#[^"]*)?(")',
         lambda m: f'href="/docs/{m.group(1).split("/")[-1]}/{m.group(2) or ""}{m.group(3)}',
-        html
+        html,
     )
 
     return render(
