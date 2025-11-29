@@ -1,8 +1,9 @@
-"""Paddle billing integration for CheckTick.
+"""Payment processing integration for CheckTick.
 
-This module provides a unified interface for interacting with Paddle's API
+This module provides a unified interface for interacting with the payment processor API
 for subscription management, customer creation, and webhook handling.
 
+Currently implements Paddle as the payment processor.
 Automatically uses sandbox in DEBUG mode and production otherwise.
 """
 
@@ -17,29 +18,30 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
-class PaddleAPIError(Exception):
-    """Exception raised for Paddle API errors."""
+class PaymentAPIError(Exception):
+    """Exception raised for payment processor API errors."""
 
     pass
 
 
-class PaddleClient:
-    """Client for interacting with Paddle API.
+class PaymentClient:
+    """Client for interacting with payment processor API.
 
+    Currently implements Paddle as the payment processor.
     Automatically configured based on DEBUG setting:
     - DEBUG=True: Uses sandbox environment
     - DEBUG=False: Uses production environment
     """
 
     def __init__(self):
-        """Initialize Paddle client with environment-specific configuration."""
-        self.api_key = settings.PADDLE_API_KEY
-        self.base_url = settings.PADDLE_BASE_URL
-        self.environment = settings.PADDLE_ENVIRONMENT
+        """Initialize payment client with environment-specific configuration."""
+        self.api_key = settings.PAYMENT_API_KEY
+        self.base_url = settings.PAYMENT_BASE_URL
+        self.environment = settings.PAYMENT_ENVIRONMENT
 
         if not self.api_key:
             logger.warning(
-                f"Paddle API key not configured for {self.environment} environment"
+                f"Payment API key not configured for {self.environment} environment"
             )
 
     def _make_request(
@@ -61,7 +63,7 @@ class PaddleClient:
             API response as dictionary
 
         Raises:
-            PaddleAPIError: If API request fails
+            PaymentAPIError: If API request fails
         """
         url = f"{self.base_url}{endpoint}"
         headers = {
@@ -87,14 +89,14 @@ class PaddleClient:
             except Exception:
                 error_detail = e.response.text
             logger.error(
-                f"Paddle API error ({self.environment}): {e.response.status_code} - {error_detail}"
+                f"Payment API error ({self.environment}): {e.response.status_code} - {error_detail}"
             )
-            raise PaddleAPIError(
-                f"Paddle API request failed: {e.response.status_code} - {error_detail}"
+            raise PaymentAPIError(
+                f"Payment API request failed: {e.response.status_code} - {error_detail}"
             ) from e
         except requests.exceptions.RequestException as e:
-            logger.error(f"Paddle API request exception ({self.environment}): {e}")
-            raise PaddleAPIError(f"Paddle API request failed: {str(e)}") from e
+            logger.error(f"Payment API request exception ({self.environment}): {e}")
+            raise PaymentAPIError(f"Payment API request failed: {str(e)}") from e
 
     def create_customer(
         self, email: str, name: str = "", custom_data: Optional[dict] = None
@@ -294,27 +296,28 @@ class PaddleClient:
 
 
 # Global client instance
-paddle = PaddleClient()
+# Currently configured to use Paddle as the payment processor
+payment_client = PaymentClient()
 
 
-def get_or_create_paddle_customer(user) -> str:
-    """Get or create a Paddle customer for a Django user.
+def get_or_create_payment_customer(user) -> str:
+    """Get or create a payment customer for a Django user.
 
     Args:
         user: Django User instance
 
     Returns:
-        Paddle customer ID
+        Payment customer ID
 
     Raises:
-        PaddleAPIError: If customer creation fails
+        PaymentAPIError: If customer creation fails
     """
     profile = user.profile
 
-    # Check if user already has a Paddle customer ID
+    # Check if user already has a payment customer ID
     if profile.payment_customer_id and profile.payment_provider == "paddle":
         logger.info(
-            f"User {user.username} already has Paddle customer ID: {profile.payment_customer_id}"
+            f"User {user.username} already has payment customer ID: {profile.payment_customer_id}"
         )
         return profile.payment_customer_id
 
@@ -324,7 +327,7 @@ def get_or_create_paddle_customer(user) -> str:
         "username": user.username,
     }
 
-    customer_data = paddle.create_customer(
+    customer_data = payment_client.create_customer(
         email=user.email,
         name=user.get_full_name() or user.username,
         custom_data=custom_data,
@@ -338,6 +341,6 @@ def get_or_create_paddle_customer(user) -> str:
     )
 
     logger.info(
-        f"Created Paddle customer for user {user.username}: {customer_data['id']}"
+        f"Created payment customer for user {user.username}: {customer_data['id']}"
     )
     return customer_data["id"]

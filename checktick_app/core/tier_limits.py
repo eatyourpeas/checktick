@@ -46,6 +46,8 @@ class TierLimits:
 
 
 # Define limits for each tier - SINGLE SOURCE OF TRUTH
+# Note: Self-hosted instances (SELF_HOSTED=True) automatically get Enterprise features
+# but without billing requirements. Enterprise tier is for managed hosting customers.
 TIER_LIMITS_CONFIG = {
     "free": TierLimits(
         max_surveys=3,
@@ -156,8 +158,26 @@ TIER_LIMITS_CONFIG = {
         support_level="email",
     ),
     "enterprise": TierLimits(
+        # Enterprise: Managed hosting by CheckTick with dedicated infrastructure
+        # Billed separately, custom pricing (£200+/month)
+        # NOT the same as self-hosted (which is free)
         max_surveys=None,  # Unlimited
         can_add_editors=True,
+        can_add_viewers=True,
+        max_collaborators_per_survey=None,  # Unlimited
+        can_create_teams=True,
+        max_team_members=None,  # Unlimited
+        can_create_organizations=True,
+        can_create_sub_organizations=True,
+        max_organization_members=None,  # Unlimited
+        can_customize_branding=True,
+        can_use_custom_domain=True,
+        can_white_label=True,
+        can_use_api=True,
+        can_export_data=True,
+        can_use_webhooks=True,
+        support_level="priority",
+    ),
         can_add_viewers=True,
         max_collaborators_per_survey=None,  # Unlimited
         can_create_teams=True,

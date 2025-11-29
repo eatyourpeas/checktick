@@ -8,6 +8,27 @@
 <div class="prose max-w-none">
   <h1>{% trans "Subscription Management" %}</h1>
 
+  {% if self_hosted %}
+    <!-- Self-Hosted Mode: No billing needed -->
+    <div class="alert alert-success mb-6">
+      <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      <div>
+        <h3 class="font-bold">{% trans "Self-Hosted Instance" %}</h3>
+        <div class="text-sm">{% trans "This is a self-hosted instance with all Enterprise features enabled. No subscription required." %}</div>
+      </div>
+    </div>
+
+    <div class="card bg-base-200 shadow-xl">
+      <div class="card-body">
+        <h2 class="card-title text-2xl">{% trans "Current Plan" %}</h2>
+        <div class="flex items-center gap-4">
+          <div class="badge badge-lg badge-primary">{% trans "SELF-HOSTED ENTERPRISE" %}</div>
+        </div>
+        <p class="mt-4">{% trans "Your self-hosted instance has all Enterprise features enabled at no cost." %}</p>
+      </div>
+    </div>
+  {% else %}
+  <!-- Standard Billing Section -->
   <div class="not-prose mb-8">
     <!-- Current Tier Display -->
     <div class="card bg-base-200 shadow-xl mb-6">
@@ -22,7 +43,7 @@
           {% endif %}
         </div>
 
-        {% if paddle_environment == 'sandbox' %}
+        {% if payment_environment == 'sandbox' %}
           <div class="alert alert-info mt-4">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             <span>{% trans "You are using the sandbox environment for testing. No real payments will be processed." %}</span>
@@ -62,7 +83,7 @@
         </div>
       {% endif %}
 
-      {% if paddle_subscription_id and subscription_status == 'active' %}
+      {% if payment_subscription_id and subscription_status == 'active' %}
         <div class="card bg-base-100 shadow-xl">
           <div class="card-body">
             <h3 class="card-title">{% trans "Cancel Subscription" %}</h3>
@@ -169,5 +190,7 @@
       </p>
     </div>
   </div>
+  {% endif %}
+  <!-- End self_hosted check -->
 </div>
 {% endblock %}

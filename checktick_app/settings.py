@@ -61,6 +61,20 @@ env = environ.Env(
         "https://sandbox-api.paddle.com",
     ),
     PAYMENT_PROCESSING_PRODUCTION_BASE_URL=(str, "https://api.paddle.com"),
+    # Payment Product IDs (Sandbox)
+    PAYMENT_PRODUCT_ID_PRO_SANDBOX=(str, ""),
+    PAYMENT_PRODUCT_ID_TEAM_SMALL_SANDBOX=(str, ""),
+    PAYMENT_PRODUCT_ID_TEAM_MEDIUM_SANDBOX=(str, ""),
+    PAYMENT_PRODUCT_ID_TEAM_LARGE_SANDBOX=(str, ""),
+    PAYMENT_PRODUCT_ID_ORGANIZATION_SANDBOX=(str, ""),
+    PAYMENT_PRODUCT_ID_ENTERPRISE_SANDBOX=(str, ""),
+    # Payment Product IDs (Production)
+    PAYMENT_PRODUCT_ID_PRO_PRODUCTION=(str, ""),
+    PAYMENT_PRODUCT_ID_TEAM_SMALL_PRODUCTION=(str, ""),
+    PAYMENT_PRODUCT_ID_TEAM_MEDIUM_PRODUCTION=(str, ""),
+    PAYMENT_PRODUCT_ID_TEAM_LARGE_PRODUCTION=(str, ""),
+    PAYMENT_PRODUCT_ID_ORGANIZATION_PRODUCTION=(str, ""),
+    PAYMENT_PRODUCT_ID_ENTERPRISE_PRODUCTION=(str, ""),
 )
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -97,19 +111,54 @@ BRAND_THEME_CSS_LIGHT = env("BRAND_THEME_CSS_LIGHT") or None
 BRAND_THEME_CSS_DARK = env("BRAND_THEME_CSS_DARK") or None
 SITE_URL = "http://localhost:8000" if DEBUG else env("SITE_URL")
 
-# Payment Processing Configuration (Paddle)
+# Payment Processing Configuration
 # Use sandbox in DEBUG mode, production otherwise
-PADDLE_API_KEY = (
+PAYMENT_API_KEY = (
     env("PAYMENT_PROCESSING_SANDBOX_API_KEY")
     if DEBUG
     else env("PAYMENT_PROCESSING_PRODUCTION_API_KEY")
 )
-PADDLE_BASE_URL = (
+PAYMENT_BASE_URL = (
     env("PAYMENT_PROCESSING_SANDBOX_BASE_URL")
     if DEBUG
     else env("PAYMENT_PROCESSING_PRODUCTION_BASE_URL")
 )
-PADDLE_ENVIRONMENT = "sandbox" if DEBUG else "production"
+PAYMENT_ENVIRONMENT = "sandbox" if DEBUG else "production"
+
+# Payment Processor Product IDs (environment-specific)
+# These are automatically selected based on DEBUG setting
+PAYMENT_PRODUCT_IDS = {
+    "pro": (
+        env("PAYMENT_PRODUCT_ID_PRO_SANDBOX")
+        if DEBUG
+        else env("PAYMENT_PRODUCT_ID_PRO_PRODUCTION")
+    ),
+    "team_small": (
+        env("PAYMENT_PRODUCT_ID_TEAM_SMALL_SANDBOX")
+        if DEBUG
+        else env("PAYMENT_PRODUCT_ID_TEAM_SMALL_PRODUCTION")
+    ),
+    "team_medium": (
+        env("PAYMENT_PRODUCT_ID_TEAM_MEDIUM_SANDBOX")
+        if DEBUG
+        else env("PAYMENT_PRODUCT_ID_TEAM_MEDIUM_PRODUCTION")
+    ),
+    "team_large": (
+        env("PAYMENT_PRODUCT_ID_TEAM_LARGE_SANDBOX")
+        if DEBUG
+        else env("PAYMENT_PRODUCT_ID_TEAM_LARGE_PRODUCTION")
+    ),
+    "organization": (
+        env("PAYMENT_PRODUCT_ID_ORGANIZATION_SANDBOX")
+        if DEBUG
+        else env("PAYMENT_PRODUCT_ID_ORGANIZATION_PRODUCTION")
+    ),
+    "enterprise": (
+        env("PAYMENT_PRODUCT_ID_ENTERPRISE_SANDBOX")
+        if DEBUG
+        else env("PAYMENT_PRODUCT_ID_ENTERPRISE_PRODUCTION")
+    ),
+}
 
 INSTALLED_APPS = [
     # Use custom AdminConfig to enforce superuser-only access

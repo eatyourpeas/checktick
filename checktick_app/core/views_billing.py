@@ -1,4 +1,4 @@
-"""Billing views for subscription management and Paddle webhooks."""
+"""Billing views for subscription management and payment webhooks."""
 
 import json
 import logging
@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from checktick_app.core.billing import PaddleAPIError, paddle
+from checktick_app.core.billing import PaymentAPIError, payment_client
 from checktick_app.core.models import UserProfile
 
 logger = logging.getLogger(__name__)
@@ -35,17 +35,18 @@ def subscription_portal(request: HttpRequest) -> HttpResponse:
     context = {
         "current_tier": profile.account_tier,
         "subscription_status": profile.subscription_status,
-        "paddle_customer_id": profile.payment_customer_id,
-        "paddle_subscription_id": profile.payment_subscription_id,
-        "paddle_environment": settings.PADDLE_ENVIRONMENT,
+        "payment_customer_id": profile.payment_customer_id,
+        "payment_subscription_id": profile.payment_subscription_id,
+        "payment_environment": settings.PAYMENT_ENVIRONMENT,
+        "self_hosted": settings.SELF_HOSTED,  # Hide billing for self-hosters
     }
 
-    # If user has a subscription, fetch current details from Paddle
+    # If user has a subscription, fetch current details from payment processor
     if profile.payment_subscription_id and profile.payment_provider == "paddle":
         try:
-            subscription_data = paddle.get_subscription(profile.payment_subscription_id)
+            subscription_data = payment_client.get_subscription(profile.payment_subscription_id)
             context["subscription_data"] = subscription_data
-        except PaddleAPIError as e:
+        except PaymentAPIError as e:
             logger.error(f"Error fetching subscription: {e}")
             messages.error(request, "Unable to fetch subscription details.")
 
@@ -118,7 +119,7 @@ def paddle_webhook(request: HttpRequest) -> HttpResponse:
         payload = json.loads(request.body)
         event_type = payload.get("event_type")
 
-        logger.info(f"Received Paddle webhook: {event_type}")
+        logger.info(f"Received payment webhook: {event_type}")
 
         # Route to appropriate handler
         if event_type == "subscription.created":
@@ -138,7 +139,7 @@ def paddle_webhook(request: HttpRequest) -> HttpResponse:
             return JsonResponse({"status": "ignored"}, status=200)
 
     except Exception as e:
-        logger.error(f"Error processing Paddle webhook: {e}", exc_info=True)
+        logger.error(f"Error processing payment webhook: {e}", exc_info=True)
         return JsonResponse({"error": "Internal error"}, status=500)
 
 
@@ -335,19 +336,19 @@ def handle_transaction_failed(payload: dict) -> HttpResponse:
 
 
 def get_tier_from_price_id(price_id: str) -> str:
-    """Map Paddle price ID to CheckTick account tier.
+    """Map payment processor price ID to CheckTick account tier.
 
-    This mapping should be configured based on your Paddle product setup.
-    You'll need to create products and prices in Paddle and map them here.
+    This mapping should be configured based on your payment processor product setup.
+    You'll need to create products and prices in your payment processor and map them here.
 
     Args:
-        price_id: Paddle price ID
+        price_id: Payment processor price ID
 
     Returns:
-        Account tier constant or empty string if not found
+        Account tier string
     """
-    # TODO: Configure this mapping based on your Paddle products
-    # Example mapping (you'll need to replace with actual Paddle price IDs):
+    # TODO: Configure this mapping based on your payment processor products
+    # Example mapping (you'll need to replace with actual price IDs):
     PRICE_TIER_MAPPING = {
         # Sandbox price IDs (for testing)
         "pri_01example_pro_monthly": UserProfile.AccountTier.PRO,
