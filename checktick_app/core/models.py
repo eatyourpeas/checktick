@@ -435,6 +435,61 @@ class UserProfile(models.Model):
         self.save(update_fields=["account_tier", "tier_changed_at", "updated_at"])
         return True, f"Successfully downgraded to {new_tier.title()} tier"
 
+    def force_downgrade_tier(self, new_tier: str) -> tuple[bool, str]:
+        """Force downgrade to a lower tier, auto-closing excess surveys.
+
+        This is used when a subscription is canceled. If the user has more surveys
+        than the target tier allows, the oldest surveys will be automatically closed
+        (status set to 'closed'). Closed surveys remain read-only - users can view
+        and export data but cannot edit or publish them.
+
+        Args:
+            new_tier: The new tier to downgrade to
+
+        Returns:
+            (success, message) - Boolean indicating success and message explaining result
+        """
+        if new_tier not in self.AccountTier.values:
+            return False, f"Invalid tier: {new_tier}"
+
+        from checktick_app.core.tier_limits import get_tier_limits
+        from checktick_app.surveys.models import Survey
+
+        target_limits = get_tier_limits(new_tier)
+
+        # Auto-close excess surveys if target tier has a survey limit
+        surveys_closed = 0
+        if target_limits.max_surveys is not None:
+            # Get all active/draft surveys ordered by created_at (oldest first)
+            active_surveys = Survey.objects.filter(
+                owner=self.user,
+                status__in=["draft", "active", "published"],
+            ).order_by("created_at")
+
+            survey_count = active_surveys.count()
+            if survey_count > target_limits.max_surveys:
+                # Close the oldest excess surveys
+                excess_count = survey_count - target_limits.max_surveys
+                surveys_to_close = active_surveys[:excess_count]
+
+                for survey in surveys_to_close:
+                    survey.status = "closed"
+                    survey.save(update_fields=["status", "updated_at"])
+                    surveys_closed += 1
+
+        # Perform the downgrade
+        self.account_tier = new_tier
+        self.tier_changed_at = timezone.now()
+        self.save(update_fields=["account_tier", "tier_changed_at", "updated_at"])
+
+        if surveys_closed > 0:
+            return True, (
+                f"Downgraded to {new_tier.title()} tier. {surveys_closed} survey(s) "
+                f"automatically closed (oldest first). You can still view and export "
+                f"data from closed surveys."
+            )
+        return True, f"Successfully downgraded to {new_tier.title()} tier"
+
     def update_subscription(
         self,
         subscription_id: str,

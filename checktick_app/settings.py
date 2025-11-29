@@ -58,25 +58,27 @@ env = environ.Env(
     PAYMENT_PROCESSING_PRODUCTION_API_KEY=(str, ""),
     PAYMENT_PROCESSING_SANDBOX_CLIENT_TOKEN=(str, ""),
     PAYMENT_PROCESSING_PRODUCTION_CLIENT_TOKEN=(str, ""),
+    PAYMENT_PROCESSING_SANDBOX_WEBHOOK_SECRET=(str, ""),
+    PAYMENT_PROCESSING_PRODUCTION_WEBHOOK_SECRET=(str, ""),
     PAYMENT_PROCESSING_SANDBOX_BASE_URL=(
         str,
         "https://sandbox-api.paddle.com",
     ),
     PAYMENT_PROCESSING_PRODUCTION_BASE_URL=(str, "https://api.paddle.com"),
     # Payment Product IDs (Sandbox)
-    PAYMENT_PRODUCT_ID_PRO_SANDBOX=(str, ""),
-    PAYMENT_PRODUCT_ID_TEAM_SMALL_SANDBOX=(str, ""),
-    PAYMENT_PRODUCT_ID_TEAM_MEDIUM_SANDBOX=(str, ""),
-    PAYMENT_PRODUCT_ID_TEAM_LARGE_SANDBOX=(str, ""),
-    PAYMENT_PRODUCT_ID_ORGANIZATION_SANDBOX=(str, ""),
-    PAYMENT_PRODUCT_ID_ENTERPRISE_SANDBOX=(str, ""),
-    # Payment Product IDs (Production)
-    PAYMENT_PRODUCT_ID_PRO_PRODUCTION=(str, ""),
-    PAYMENT_PRODUCT_ID_TEAM_SMALL_PRODUCTION=(str, ""),
-    PAYMENT_PRODUCT_ID_TEAM_MEDIUM_PRODUCTION=(str, ""),
-    PAYMENT_PRODUCT_ID_TEAM_LARGE_PRODUCTION=(str, ""),
-    PAYMENT_PRODUCT_ID_ORGANIZATION_PRODUCTION=(str, ""),
-    PAYMENT_PRODUCT_ID_ENTERPRISE_PRODUCTION=(str, ""),
+    PAYMENT_PRICE_ID_PRO_SANDBOX=(str, ""),
+    PAYMENT_PRICE_ID_TEAM_SMALL_SANDBOX=(str, ""),
+    PAYMENT_PRICE_ID_TEAM_MEDIUM_SANDBOX=(str, ""),
+    PAYMENT_PRICE_ID_TEAM_LARGE_SANDBOX=(str, ""),
+    PAYMENT_PRICE_ID_ORGANIZATION_SANDBOX=(str, ""),
+    PAYMENT_PRICE_ID_ENTERPRISE_SANDBOX=(str, ""),
+    # Production
+    PAYMENT_PRICE_ID_PRO_PRODUCTION=(str, ""),
+    PAYMENT_PRICE_ID_TEAM_SMALL_PRODUCTION=(str, ""),
+    PAYMENT_PRICE_ID_TEAM_MEDIUM_PRODUCTION=(str, ""),
+    PAYMENT_PRICE_ID_TEAM_LARGE_PRODUCTION=(str, ""),
+    PAYMENT_PRICE_ID_ORGANIZATION_PRODUCTION=(str, ""),
+    PAYMENT_PRICE_ID_ENTERPRISE_PRODUCTION=(str, ""),
 )
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -135,38 +137,47 @@ PAYMENT_CLIENT_TOKEN = (
     else env("PAYMENT_PROCESSING_PRODUCTION_CLIENT_TOKEN")
 )
 
-# Payment Processor Product IDs (environment-specific)
-# These are automatically selected based on DEBUG setting
-PAYMENT_PRODUCT_IDS = {
+# Paddle Webhook Secret (for signature verification)
+# Get this from Paddle Dashboard -> Developer Tools -> Notifications
+PAYMENT_WEBHOOK_SECRET = (
+    env("PAYMENT_PROCESSING_SANDBOX_WEBHOOK_SECRET")
+    if DEBUG
+    else env("PAYMENT_PROCESSING_PRODUCTION_WEBHOOK_SECRET")
+)
+
+# Paddle Price IDs (environment-specific)
+# These are Price IDs (pri_*), not Product IDs (pro_*)
+# Automatically selected based on DEBUG setting
+PAYMENT_PRICE_IDS = {
     "pro": (
-        env("PAYMENT_PRODUCT_ID_PRO_SANDBOX")
+        env("PAYMENT_PRICE_ID_PRO_SANDBOX")
         if DEBUG
-        else env("PAYMENT_PRODUCT_ID_PRO_PRODUCTION")
+        else env("PAYMENT_PRICE_ID_PRO_PRODUCTION")
     ),
     "team_small": (
-        env("PAYMENT_PRODUCT_ID_TEAM_SMALL_SANDBOX")
+        env("PAYMENT_PRICE_ID_TEAM_SMALL_SANDBOX")
         if DEBUG
-        else env("PAYMENT_PRODUCT_ID_TEAM_SMALL_PRODUCTION")
+        else env("PAYMENT_PRICE_ID_TEAM_SMALL_PRODUCTION")
     ),
     "team_medium": (
-        env("PAYMENT_PRODUCT_ID_TEAM_MEDIUM_SANDBOX")
+        env("PAYMENT_PRICE_ID_TEAM_MEDIUM_SANDBOX")
         if DEBUG
-        else env("PAYMENT_PRODUCT_ID_TEAM_MEDIUM_PRODUCTION")
+        else env("PAYMENT_PRICE_ID_TEAM_MEDIUM_PRODUCTION")
     ),
     "team_large": (
-        env("PAYMENT_PRODUCT_ID_TEAM_LARGE_SANDBOX")
+        env("PAYMENT_PRICE_ID_TEAM_LARGE_SANDBOX")
         if DEBUG
-        else env("PAYMENT_PRODUCT_ID_TEAM_LARGE_PRODUCTION")
+        else env("PAYMENT_PRICE_ID_TEAM_LARGE_PRODUCTION")
     ),
     "organization": (
-        env("PAYMENT_PRODUCT_ID_ORGANIZATION_SANDBOX")
+        env("PAYMENT_PRICE_ID_ORGANIZATION_SANDBOX")
         if DEBUG
-        else env("PAYMENT_PRODUCT_ID_ORGANIZATION_PRODUCTION")
+        else env("PAYMENT_PRICE_ID_ORGANIZATION_PRODUCTION")
     ),
     "enterprise": (
-        env("PAYMENT_PRODUCT_ID_ENTERPRISE_SANDBOX")
+        env("PAYMENT_PRICE_ID_ENTERPRISE_SANDBOX")
         if DEBUG
-        else env("PAYMENT_PRODUCT_ID_ENTERPRISE_PRODUCTION")
+        else env("PAYMENT_PRICE_ID_ENTERPRISE_PRODUCTION")
     ),
 }
 

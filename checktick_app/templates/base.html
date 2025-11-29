@@ -130,7 +130,6 @@
               <li><a href="{% url 'surveys:user_management_hub' %}">{% trans "User management" %}</a></li>
             {% endif %}
             <li><a href="{% url 'core:docs_index' %}">{% trans "Documentation" %}</a></li>
-            <li><a href="{% url 'core:hosting' %}">{% trans "Hosting" %}</a></li>
           {% else %}
             <li><a href="{% url 'core:pricing' %}">{% trans "Pricing" %}</a></li>
             <li><a href="{% url 'core:docs_index' %}">{% trans "Documentation" %}</a></li>
@@ -252,7 +251,7 @@
     {# Paddle.js SDK - Only load if not self-hosted #}
     {% if not self_hosted %}
     <script src="{% static 'js/paddle.js' %}"
-            integrity="sha384-aglX2UoXZDBOAz6UEdPtOtWeOeg905NPyCh27ZRhNJv7Gi+D0cAZfJsOAPyHusOr"
+            {% if not debug %}integrity="sha384-aglX2UoXZDBOAz6UEdPtOtWeOeg905NPyCh27ZRhNJv7Gi+D0cAZfJsOAPyHusOr"{% endif %}
             crossorigin="anonymous"></script>
     <script src="{% static 'js/paddle-checkout.js' %}?v={{ build.commit|default:build.timestamp }}"></script>
     {% endif %}

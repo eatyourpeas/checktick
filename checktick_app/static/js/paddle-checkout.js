@@ -62,12 +62,15 @@ document.addEventListener("DOMContentLoaded", function () {
  */
 function openPaddleCheckout(tier, priceId) {
   if (typeof Paddle === "undefined") {
-    showToast("Payment system not loaded. Please refresh the page.", "error");
+    showPaddleToast(
+      "Payment system not loaded. Please refresh the page.",
+      "error"
+    );
     return;
   }
 
   if (!priceId) {
-    showToast(
+    showPaddleToast(
       "Invalid pricing configuration. Please contact support.",
       "error"
     );
@@ -107,7 +110,7 @@ function openPaddleCheckout(tier, priceId) {
     });
   } catch (error) {
     console.error("Error opening Paddle checkout:", error);
-    showToast("Unable to open checkout. Please try again.", "error");
+    showPaddleToast("Unable to open checkout. Please try again.", "error");
   }
 }
 
@@ -134,28 +137,26 @@ function handleCheckoutCompleted(data) {
   console.log("Checkout completed:", data);
 
   // Show success message
-  showToast("Payment successful! Your account is being upgraded...", "success");
+  showPaddleToast("Payment successful! Redirecting...", "success");
 
-  // Redirect will happen via successUrl, but we can also handle it here
-  const tier = data.data?.customData?.tier;
-  if (tier) {
-    // Give webhook time to process (1 second delay)
-    setTimeout(() => {
-      window.location.href = "/billing/success/?tier=" + tier;
-    }, 1000);
-  }
+  // Force redirect to success page
+  const tier = data.data?.customData?.tier || "pro";
+
+  // Immediate redirect - Paddle's successUrl doesn't always work reliably
+  setTimeout(() => {
+    window.location.href = "/billing/success/?tier=" + tier;
+  }, 500);
 }
 
 /**
  * Show toast notification
  * Uses the global toast.js system if available
  */
-function showToast(message, type = "info") {
+function showPaddleToast(message, type = "info") {
   if (typeof window.showToast === "function") {
     window.showToast(message, type);
   } else {
     // Fallback to console if toast system not available
     console.log(`[${type.toUpperCase()}] ${message}`);
-    alert(message);
   }
 }
