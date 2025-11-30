@@ -76,14 +76,17 @@ class TestFeatureUnlockingOnSuccessfulSubscription:
     """Test that features are properly unlocked when subscription succeeds."""
 
     @pytest.mark.django_db
+    @patch("checktick_app.core.views_billing.get_tier_from_price_id")
     @patch("checktick_app.core.views_billing.send_subscription_created_email")
     @patch("checktick_app.core.views_billing.verify_paddle_webhook_signature")
     def test_successful_subscription_upgrades_to_pro(
-        self, mock_validate, mock_email, free_user
+        self, mock_validate, mock_email, mock_get_tier, free_user
     ):
         """Test successful subscription.created webhook upgrades user to PRO tier."""
         # Mock webhook validation to return True
         mock_validate.return_value = True
+        # Mock tier mapping to return "pro" for any price ID
+        mock_get_tier.return_value = "pro"
 
         # Set up payment customer ID
         free_user.profile.payment_customer_id = "ctm_new123"
@@ -100,7 +103,7 @@ class TestFeatureUnlockingOnSuccessfulSubscription:
                 "items": [
                     {
                         "price": {
-                            "id": "pri_01kb897wkbpcj6w5t5gg9a4ds1",  # pro tier from settings
+                            "id": "pri_test_pro_price",  # Test price ID (mocked)
                             "billing_cycle": {"interval": "month", "frequency": 1},
                         }
                     }
