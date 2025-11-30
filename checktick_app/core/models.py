@@ -232,6 +232,9 @@ class UserProfile(models.Model):
     class AccountTier(models.TextChoices):
         FREE = "free", "Free"
         PRO = "pro", "Professional"
+        TEAM_SMALL = "team_small", "Team Small"
+        TEAM_MEDIUM = "team_medium", "Team Medium"
+        TEAM_LARGE = "team_large", "Team Large"
         ORGANIZATION = "organization", "Organization"
         ENTERPRISE = "enterprise", "Enterprise"
 
