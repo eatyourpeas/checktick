@@ -394,23 +394,28 @@ def signup(request):
             # Get selected tier (default to free)
             selected_tier = request.POST.get("tier", "free").lower()
 
-            # Handle tier selection and billing redirect
+            # Handle tier selection - always redirect to surveys after signup
             if selected_tier == "free":
-                # FREE tier - complete signup normally
-                return redirect("core:home")
+                # FREE tier - welcome message and go to surveys
+                messages.success(
+                    request,
+                    _("Welcome to CheckTick! Start by creating your first survey."),
+                )
             else:
-                # Paid tier - redirect to billing
-                # Store tier in session for after payment completion
+                # Paid tier selected - store preference and prompt to upgrade
+                # User starts on FREE tier, can upgrade from account settings
                 request.session["pending_tier"] = selected_tier
-
                 messages.info(
                     request,
-                    _("Please complete payment to activate your %(tier)s subscription.")
-                    % {"tier": selected_tier.upper()},
+                    _(
+                        "Welcome to CheckTick! You've selected the %(tier)s plan. "
+                        "Visit Settings → Subscription to complete your upgrade."
+                    )
+                    % {"tier": selected_tier.upper().replace("_", " ")},
                 )
 
-                # Redirect to pricing page for upgrade
-                return redirect("core:pricing")
+            # Always redirect to surveys list after signup
+            return redirect("surveys:list")
     else:
         form = SignupForm()
     return render(request, "registration/signup.html", {"form": form})
@@ -467,10 +472,15 @@ def complete_signup(request):
             request.session.pop("needs_signup_completion", None)
             return redirect("surveys:org_users", org_id=org.id)
 
-        # Individual account - just clear the flag and redirect home
-        messages.success(request, _("Account setup complete! Welcome to CheckTick."))
+        # Individual account - just clear the flag and redirect to surveys
+        messages.success(
+            request,
+            _(
+                "Account setup complete! Welcome to CheckTick. Start by creating your first survey."
+            ),
+        )
         request.session.pop("needs_signup_completion", None)
-        return redirect("core:home")
+        return redirect("surveys:list")
 
     return render(
         request,
