@@ -762,59 +762,62 @@ class RecoveryRequestAdmin(admin.ModelAdmin):
 
     @admin.action(description="Execute Recovery (after time delay)")
     def execute_recovery(self, request, queryset):
-        """Execute recovery for requests that have passed time delay."""
-        executed = 0
-        errors = []
+        """
+        Execute recovery for requests that have passed time delay.
 
-        for recovery_request in queryset:
-            if recovery_request.status != RecoveryRequest.Status.READY_FOR_EXECUTION:
-                # Check if in time delay and ready
-                if recovery_request.status == RecoveryRequest.Status.IN_TIME_DELAY:
-                    if (
-                        recovery_request.time_delay_until
-                        and timezone.now() >= recovery_request.time_delay_until
-                    ):
-                        recovery_request.status = (
-                            RecoveryRequest.Status.READY_FOR_EXECUTION
-                        )
-                        recovery_request.save(update_fields=["status"])
-                    else:
-                        errors.append(
-                            f"{recovery_request.request_code}: Time delay not complete"
-                        )
-                        continue
-                else:
-                    errors.append(
-                        f"{recovery_request.request_code}: Not ready for execution (status: {recovery_request.get_status_display()})"
-                    )
-                    continue
+        NOTE: This action requires a new password to be set for each user.
+        For actual execution with Vault integration, use the Platform Recovery Console
+        which provides a secure interface for entering the new password.
+        """
+        # Since we need a password per request, redirect to the recovery console
+        if queryset.count() > 1:
+            messages.error(
+                request,
+                "Recovery execution must be done one at a time through the "
+                "Platform Recovery Console to set each user's new password securely.",
+            )
+            return
 
-            # TODO: Integrate with Vault to actually perform recovery
-            # For now, mark as completed
-            try:
-                recovery_request.executed_by = request.user
-                recovery_request.completed_at = timezone.now()
-                recovery_request.status = RecoveryRequest.Status.COMPLETED
-                recovery_request.save()
-                recovery_request._create_audit_entry(
-                    event_type="recovery_executed",
-                    severity=RecoveryAuditEntry.Severity.CRITICAL,
-                    actor_type="admin",
-                    actor_id=request.user.id,
-                    actor_email=request.user.email,
-                    details={
-                        "action": "execute_recovery",
-                        "source": "admin_interface",
-                    },
+        recovery_request = queryset.first()
+
+        # Validate status
+        if recovery_request.status == RecoveryRequest.Status.IN_TIME_DELAY:
+            if (
+                recovery_request.time_delay_until
+                and timezone.now() >= recovery_request.time_delay_until
+            ):
+                recovery_request.status = RecoveryRequest.Status.READY_FOR_EXECUTION
+                recovery_request.save(update_fields=["status"])
+                messages.info(
+                    request,
+                    f"Request {recovery_request.request_code} is now ready for execution.",
                 )
-                executed += 1
-            except Exception as e:
-                errors.append(f"{recovery_request.request_code}: {str(e)}")
+            else:
+                messages.error(
+                    request,
+                    f"Time delay for {recovery_request.request_code} has not completed yet.",
+                )
+                return
+        elif recovery_request.status != RecoveryRequest.Status.READY_FOR_EXECUTION:
+            messages.error(
+                request,
+                f"Request {recovery_request.request_code} is not ready for execution "
+                f"(status: {recovery_request.get_status_display()}).",
+            )
+            return
 
-        if executed:
-            messages.success(request, f"Executed recovery for {executed} request(s).")
-        if errors:
-            messages.warning(request, f"Errors: {'; '.join(errors)}")
+        # Redirect to recovery console for secure password entry
+        from django.urls import reverse
+
+        recovery_url = reverse(
+            "surveys:recovery_detail", kwargs={"request_id": recovery_request.id}
+        )
+        messages.info(
+            request,
+            f"Request {recovery_request.request_code} is ready. "
+            f"Please use the Platform Recovery Console to execute with a new password: "
+            f"{request.build_absolute_uri(recovery_url)}",
+        )
 
 
 @admin.register(IdentityVerification)

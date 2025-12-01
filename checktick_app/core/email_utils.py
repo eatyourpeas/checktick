@@ -1105,6 +1105,93 @@ The {branding.get("title", "CheckTick")} Team
     )
 
 
+def send_recovery_completed_email(
+    to_email: str,
+    user_name: str,
+    request_id: str,
+    survey_name: str,
+    survey_url: str,
+) -> bool:
+    """Send email to user that their recovery has been completed successfully.
+
+    Args:
+        to_email: Recipient email address
+        user_name: User's display name
+        request_id: Unique recovery request ID
+        survey_name: Name of the survey
+        survey_url: URL to access the survey
+
+    Returns:
+        True if email sent successfully, False otherwise
+    """
+    logger.info(
+        f"Sending recovery completed email to {to_email} for request {request_id}"
+    )
+
+    branding = get_platform_branding()
+
+    context = {
+        "user_name": user_name,
+        "request_id": request_id,
+        "survey_name": survey_name,
+        "survey_url": survey_url,
+        "brand_title": branding.get("title", "CheckTick"),
+    }
+
+    try:
+        content = render_to_string("emails/recovery/completed.md", context)
+    except TemplateDoesNotExist:
+        content = f"""## 🎉 Recovery Complete - Access Restored
+
+Hi {user_name},
+
+Great news! Your key recovery request has been successfully completed. You can now access your encrypted survey data using your new password.
+
+### Recovery Details
+
+- **Request ID:** `{request_id}`
+- **Survey:** {survey_name}
+- **Status:** ✅ Completed
+
+### Access Your Survey
+
+Your data is now accessible. Click below to open your survey:
+
+[**Open Survey**]({survey_url})
+
+Or copy and paste this URL:
+
+```
+{survey_url}
+```
+
+### Important Security Reminders
+
+- **Remember your new password** - Store it securely
+- **Consider setting up a recovery phrase** - This helps prevent future lockouts
+- **Enable 2FA** if you haven't already
+
+### What Happened
+
+Your encryption keys have been recovered from our secure key escrow and re-encrypted with your new password. The original escrowed keys remain protected for future recovery needs.
+
+### Need Help?
+
+If you experience any issues accessing your data, please contact your administrator.
+
+---
+
+The {branding.get("title", "CheckTick")} Team
+"""
+
+    return send_branded_email(
+        to_email=to_email,
+        subject="🎉 Recovery Complete - Your Data Access Has Been Restored",
+        markdown_content=content,
+        branding=branding,
+    )
+
+
 def send_recovery_rejected_email(
     to_email: str,
     user_name: str,
