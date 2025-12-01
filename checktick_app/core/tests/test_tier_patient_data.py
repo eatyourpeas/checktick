@@ -7,8 +7,8 @@ These tests verify that FREE tier users cannot:
 3. Access patient data surveys after downgrading from a paid tier
 """
 
-import pytest
 from django.contrib.auth import get_user_model
+import pytest
 
 from checktick_app.core.models import UserProfile
 from checktick_app.core.tier_limits import check_patient_data_permission
@@ -168,7 +168,9 @@ class TestSurveyPatientDataDetection:
 class TestDowngradeScenario:
     """Test the downgrade scenario where user had patient data access but lost it."""
 
-    def test_patient_survey_readonly_after_downgrade(self, db, pro_user, patient_details_group):
+    def test_patient_survey_readonly_after_downgrade(
+        self, db, pro_user, patient_details_group
+    ):
         """Patient data survey should be readonly after user downgrades to FREE."""
         # Create survey while user is on PRO
         survey = Survey.objects.create(
@@ -191,7 +193,9 @@ class TestDowngradeScenario:
         # Survey should now be readonly
         assert survey.is_patient_data_readonly() is True
 
-    def test_regular_survey_not_readonly_after_downgrade(self, db, pro_user, regular_group):
+    def test_regular_survey_not_readonly_after_downgrade(
+        self, db, pro_user, regular_group
+    ):
         """Regular survey should not be affected by downgrade."""
         survey = Survey.objects.create(
             name="Regular Survey",
