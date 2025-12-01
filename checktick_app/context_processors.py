@@ -10,7 +10,6 @@ from checktick_app.surveys.models import (
     Organization,
     OrganizationMembership,
     SurveyMembership,
-    Team,
     TeamMembership,
 )
 
