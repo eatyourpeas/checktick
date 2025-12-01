@@ -651,7 +651,7 @@ A:
 
 **For technical details:**
 - See: [Patient Data Encryption (Technical Spec)](patient-data-encryption.md)
-- See: [Vault Integration (Developers)](vault-integration.md)
+- See: [Vault Integration](vault.md)
 
 ---
 

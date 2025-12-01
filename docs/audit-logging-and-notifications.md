@@ -566,4 +566,4 @@ Create these dashboards in your SIEM:
 - [Key Management for Administrators](/docs/key-management-for-administrators/) - Admin procedures
 - [Recovery Dashboard](/docs/recovery-dashboard/) - Dashboard specifications
 - [Business Continuity](/docs/business-continuity/) - Disaster recovery
-- [Vault Setup](/docs/self-hosting-vault-setup/) - SIEM deployment
+- [Vault Setup](/docs/vault/) - SIEM deployment

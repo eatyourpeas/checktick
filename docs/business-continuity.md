@@ -447,7 +447,7 @@ Maintain an emergency contact list:
 
 - [Encryption for Users](/docs/encryption-for-users/) - End-user guide
 - [Key Management for Administrators](/docs/key-management-for-administrators/) - Admin procedures
-- [Vault Setup](/docs/self-hosting-vault-setup/) - Deploying Vault
+- [Vault Setup](/docs/vault/) - Deploying Vault
 - [Self-Hosting Backup](/docs/self-hosting-backup/) - Backup procedures
 
 ## Getting Help

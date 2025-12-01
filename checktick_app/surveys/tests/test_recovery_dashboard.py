@@ -275,7 +275,13 @@ class TestRecoveryExecuteAction:
         url = reverse(
             "surveys:recovery_execute", kwargs={"request_id": recovery_request.id}
         )
-        response = client.post(url, {"new_password": "securepassword123", "confirm_password": "securepassword123"})
+        response = client.post(
+            url,
+            {
+                "new_password": "securepassword123",
+                "confirm_password": "securepassword123",
+            },
+        )
         assert response.status_code == 403
 
     def test_execute_requires_password(
@@ -309,7 +315,9 @@ class TestRecoveryExecuteAction:
         url = reverse(
             "surveys:recovery_execute", kwargs={"request_id": recovery_request.id}
         )
-        response = client.post(url, {"new_password": "short", "confirm_password": "short"})
+        response = client.post(
+            url, {"new_password": "short", "confirm_password": "short"}
+        )
 
         # Should redirect with error
         assert response.status_code == 302
@@ -329,7 +337,13 @@ class TestRecoveryExecuteAction:
         url = reverse(
             "surveys:recovery_execute", kwargs={"request_id": recovery_request.id}
         )
-        response = client.post(url, {"new_password": "securepassword123", "confirm_password": "differentpassword"})
+        response = client.post(
+            url,
+            {
+                "new_password": "securepassword123",
+                "confirm_password": "differentpassword",
+            },
+        )
 
         # Should redirect with error
         assert response.status_code == 302
@@ -357,21 +371,27 @@ class TestRecoveryExecuteAction:
             self.executed_by = admin
             self.status = RecoveryRequest.Status.COMPLETED
             self.save()
-            return b'fake_kek'
+            return b"fake_kek"
 
-        monkeypatch.setattr(RecoveryRequest, 'execute_recovery', mock_execute_recovery)
+        monkeypatch.setattr(RecoveryRequest, "execute_recovery", mock_execute_recovery)
 
         # Mock the email sending
         monkeypatch.setattr(
-            'checktick_app.core.email_utils.send_recovery_completed_email',
-            MagicMock(return_value=True)
+            "checktick_app.core.email_utils.send_recovery_completed_email",
+            MagicMock(return_value=True),
         )
 
         client.force_login(superuser)
         url = reverse(
             "surveys:recovery_execute", kwargs={"request_id": recovery_request.id}
         )
-        response = client.post(url, {"new_password": "securepassword123", "confirm_password": "securepassword123"})
+        response = client.post(
+            url,
+            {
+                "new_password": "securepassword123",
+                "confirm_password": "securepassword123",
+            },
+        )
 
         # Should redirect
         assert response.status_code == 302
@@ -395,7 +415,13 @@ class TestRecoveryExecuteAction:
         url = reverse(
             "surveys:recovery_execute", kwargs={"request_id": recovery_request.id}
         )
-        response = client.post(url, {"new_password": "securepassword123", "confirm_password": "securepassword123"})
+        response = client.post(
+            url,
+            {
+                "new_password": "securepassword123",
+                "confirm_password": "securepassword123",
+            },
+        )
 
         # Should redirect with error message
         assert response.status_code == 302

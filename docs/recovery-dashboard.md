@@ -691,5 +691,5 @@ class RecoveryAuditEntry(models.Model):
 
 - [Key Management for Administrators](/docs/key-management-for-administrators/) - Admin procedures
 - [Audit Logging and Notifications](/docs/audit-logging-and-notifications/) - Logging requirements
-- [Vault Integration](/docs/vault-integration/) - Developer API
+- [Vault Integration](/docs/vault/) - Developer API
 - [Business Continuity](/docs/business-continuity/) - Disaster recovery

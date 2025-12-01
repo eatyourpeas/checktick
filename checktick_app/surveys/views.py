@@ -8624,7 +8624,9 @@ def recovery_execute(request: HttpRequest, request_id: str) -> HttpResponse:
             from checktick_app.core.email_utils import send_recovery_completed_email
 
             survey_url = request.build_absolute_uri(
-                reverse("surveys:dashboard", kwargs={"slug": recovery_request.survey.slug})
+                reverse(
+                    "surveys:dashboard", kwargs={"slug": recovery_request.survey.slug}
+                )
             )
             send_recovery_completed_email(
                 to_email=recovery_request.user.email,

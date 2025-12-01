@@ -382,16 +382,24 @@ CheckTick implements defence-in-depth security across multiple layers:
 |---------|----------------|---------|
 | **Field-Level Encryption** | AES-256-GCM | Per-survey keys for sensitive demographics |
 | **Whole-Response Encryption** | AES-256-GCM with Vault | Encrypted storage for complete survey responses |
-| **Key Management** | HashiCorp Vault | Secure key storage with transit encryption |
+| **Key Management** | HashiCorp Vault | Self-hosted in the UK for data sovereignty |
 | **Key Recovery** | Multi-party approval | Dual-admin approval with time delays |
 | **SSO User Passphrases** | Required for encryption | SSO users must set passphrase for decryption access |
 
+#### UK Data Sovereignty
+
+CheckTick self-hosts its own HashiCorp Vault instance within the UK to ensure all encryption keys and sensitive data remain under UK jurisdiction. This approach:
+
+- **Keeps data local**: All encryption keys stored on UK infrastructure
+- **No third-party cloud dependency**: Keys never leave CheckTick-controlled systems
+- **GDPR compliant**: Full control over data residency and processing
+- **NHS-ready**: Meets NHS data handling requirements
+
 For detailed encryption documentation, see:
 
-- [Encryption Overview](encryption.md)
-- [Patient Data Encryption](patient-data-encryption.md)
-- [Individual User Encryption](encryption-individual-users.md)
-- [Organisation User Encryption](encryption-organisation-users.md)
+- [Encryption for Users](encryption-for-users.md) - How encryption works for each subscription tier
+- [Encryption Technical Reference](encryption-technical-reference.md) - Developer implementation guide
+- [Vault Integration](vault.md) - Key management and Vault deployment
 
 ### Rate Limiting
 

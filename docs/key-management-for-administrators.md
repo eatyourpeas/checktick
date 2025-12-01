@@ -442,7 +442,7 @@ Configure alerts for unusual activity:
 
 For self-hosted SIEM on Northflank:
 
-1. Deploy Elasticsearch addon (see [Vault Setup Guide](/docs/self-hosting-vault-setup/))
+1. Deploy Elasticsearch addon (see [Vault Setup Guide](/docs/vault/))
 2. Configure Vault audit backend to forward logs
 3. Set up Kibana for visualization
 4. Create alert rules for thresholds above
@@ -558,8 +558,7 @@ For HIPAA compliance:
 
 - [Encryption for Users](/docs/encryption-for-users/) - End-user encryption guide
 - [Business Continuity](/docs/business-continuity/) - Disaster recovery procedures
-- [Vault Setup](/docs/self-hosting-vault-setup/) - Deploying HashiCorp Vault
-- [Vault Integration](/docs/vault-integration/) - Developer API reference
+- [Vault Integration](/docs/vault/) - Deploying HashiCorp Vault (includes developer API reference)
 
 ---
 
