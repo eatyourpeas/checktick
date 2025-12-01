@@ -259,3 +259,5 @@ certs/
 *.pem
 *.crt
 *.key
+
+vault/*.pem
