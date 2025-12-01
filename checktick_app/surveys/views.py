@@ -4372,6 +4372,43 @@ def user_management_hub(request: HttpRequest) -> HttpResponse:
         email = (request.POST.get("email") or "").strip().lower()
         role = request.POST.get("role")
         User = get_user_model()
+
+        # Handle team creation (org admins only)
+        if scope == "create_team":
+            if not org or not can_manage_org_users(request.user, org):
+                return HttpResponse("Not authorized to create teams", status=403)
+            team_name = (request.POST.get("team_name") or "").strip()
+            team_size = request.POST.get("team_size", Team.Size.SMALL)
+            if not team_name:
+                return HttpResponse("Team name is required", status=400)
+            if team_size not in dict(Team.Size.choices):
+                team_size = Team.Size.SMALL
+            # Create team under this org
+            new_team = Team.objects.create(
+                name=team_name,
+                owner=request.user,
+                organization=org,
+                size=team_size,
+            )
+            # Add creator as team admin
+            TeamMembership.objects.create(
+                team=new_team,
+                user=request.user,
+                role=TeamMembership.Role.ADMIN,
+            )
+            AuditLog.objects.create(
+                actor=request.user,
+                scope=AuditLog.Scope.ORGANIZATION,
+                organization=org,
+                action=AuditLog.Action.CREATE,
+                metadata={
+                    "team_id": new_team.id,
+                    "team_name": new_team.name,
+                    "team_size": new_team.size,
+                },
+            )
+            return HttpResponse(f"Team '{team_name}' created", status=200)
+
         user = User.objects.filter(email__iexact=email).first()
         if not user:
             return HttpResponse("User not found by email", status=400)

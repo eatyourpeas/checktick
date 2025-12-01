@@ -621,7 +621,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
+<script nonce="{{ request.csp_nonce }}">
 document.addEventListener('DOMContentLoaded', function() {
   // Team size selector functionality
   const teamSelector = document.getElementById('team-size-selector');

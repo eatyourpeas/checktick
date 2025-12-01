@@ -10,6 +10,8 @@ from checktick_app.surveys.models import (
     Organization,
     OrganizationMembership,
     SurveyMembership,
+    Team,
+    TeamMembership,
 )
 
 logger = logging.getLogger(__name__)
@@ -112,6 +114,9 @@ def branding(request):
         can_manage_any_users = (
             OrganizationMembership.objects.filter(
                 user=user, role=OrganizationMembership.Role.ADMIN
+            ).exists()
+            or TeamMembership.objects.filter(
+                user=user, role=TeamMembership.Role.ADMIN
             ).exists()
             or SurveyMembership.objects.filter(
                 user=user, role=SurveyMembership.Role.CREATOR
