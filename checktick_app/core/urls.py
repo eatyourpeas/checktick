@@ -32,6 +32,10 @@ urlpatterns = [
         name="payment_history",
     ),
     path("billing/success/", views_billing.checkout_success, name="checkout_success"),
-    path("billing/update-team-name/", views_billing.update_team_name, name="update_team_name"),
+    path(
+        "billing/update-team-name/",
+        views_billing.update_team_name,
+        name="update_team_name",
+    ),
     path("webhooks/payment/", views_billing.payment_webhook, name="payment_webhook"),
 ]

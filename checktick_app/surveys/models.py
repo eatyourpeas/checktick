@@ -255,6 +255,146 @@ class TeamMembership(models.Model):
         return f"{self.user.username} - {self.team.name} ({self.role})"
 
 
+class TeamInvitation(models.Model):
+    """
+    Pending invitation for a user to join a team.
+
+    When a user is invited but doesn't have an account yet, we store
+    the invitation here and process it when they sign up.
+    """
+
+    team = models.ForeignKey(
+        Team, on_delete=models.CASCADE, related_name="pending_invitations"
+    )
+    email = models.EmailField(help_text="Email address of invited user")
+    role = models.CharField(
+        max_length=20,
+        choices=TeamMembership.Role.choices,
+        default=TeamMembership.Role.CREATOR,
+    )
+    token = models.CharField(
+        max_length=64, unique=True, help_text="Unique token for invitation link"
+    )
+    invited_by = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="sent_team_invitations"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(
+        null=True, blank=True, help_text="Optional expiry date"
+    )
+    accepted_at = models.DateTimeField(
+        null=True, blank=True, help_text="When invitation was accepted"
+    )
+
+    class Meta:
+        unique_together = ("team", "email")
+        indexes = [
+            models.Index(fields=["email"]),
+            models.Index(fields=["token"]),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover
+        return f"Invitation for {self.email} to {self.team.name}"
+
+    def is_valid(self) -> bool:
+        """Check if invitation is still valid (not accepted, not expired)."""
+        if self.accepted_at:
+            return False
+        if self.expires_at and timezone.now() > self.expires_at:
+            return False
+        return True
+
+    def accept(self, user: User) -> TeamMembership:
+        """Accept invitation and create membership."""
+        from django.utils import timezone
+
+        membership, created = TeamMembership.objects.update_or_create(
+            team=self.team,
+            user=user,
+            defaults={"role": self.role},
+        )
+        self.accepted_at = timezone.now()
+        self.save(update_fields=["accepted_at"])
+        return membership
+
+    @classmethod
+    def generate_token(cls) -> str:
+        """Generate a unique invitation token."""
+        import secrets
+
+        return secrets.token_urlsafe(32)
+
+
+class OrgInvitation(models.Model):
+    """
+    Pending invitation for a user to join an organization.
+
+    When a user is invited but doesn't have an account yet, we store
+    the invitation here and process it when they sign up.
+    """
+
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="pending_invitations"
+    )
+    email = models.EmailField(help_text="Email address of invited user")
+    role = models.CharField(
+        max_length=20,
+        choices=OrganizationMembership.Role.choices,
+        default=OrganizationMembership.Role.VIEWER,
+    )
+    token = models.CharField(
+        max_length=64, unique=True, help_text="Unique token for invitation link"
+    )
+    invited_by = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="sent_org_invitations"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(
+        null=True, blank=True, help_text="Optional expiry date"
+    )
+    accepted_at = models.DateTimeField(
+        null=True, blank=True, help_text="When invitation was accepted"
+    )
+
+    class Meta:
+        unique_together = ("organization", "email")
+        indexes = [
+            models.Index(fields=["email"]),
+            models.Index(fields=["token"]),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover
+        return f"Invitation for {self.email} to {self.organization.name}"
+
+    def is_valid(self) -> bool:
+        """Check if invitation is still valid (not accepted, not expired)."""
+        if self.accepted_at:
+            return False
+        if self.expires_at and timezone.now() > self.expires_at:
+            return False
+        return True
+
+    def accept(self, user: User) -> OrganizationMembership:
+        """Accept invitation and create membership."""
+        from django.utils import timezone
+
+        membership, created = OrganizationMembership.objects.update_or_create(
+            organization=self.organization,
+            user=user,
+            defaults={"role": self.role},
+        )
+        self.accepted_at = timezone.now()
+        self.save(update_fields=["accepted_at"])
+        return membership
+
+    @classmethod
+    def generate_token(cls) -> str:
+        """Generate a unique invitation token."""
+        import secrets
+
+        return secrets.token_urlsafe(32)
+
+
 class QuestionGroup(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
@@ -2164,6 +2304,8 @@ class AuditLog(models.Model):
         ADD = "add", "Add"
         REMOVE = "remove", "Remove"
         UPDATE = "update", "Update"
+        CREATE = "create", "Create"
+        INVITE = "invite", "Invite"
         KEY_RECOVERY = "key_recovery", "Key Recovery"
 
     actor = models.ForeignKey(User, on_delete=models.CASCADE, related_name="audit_logs")
@@ -2174,7 +2316,11 @@ class AuditLog(models.Model):
     survey = models.ForeignKey(Survey, null=True, blank=True, on_delete=models.CASCADE)
     action = models.CharField(max_length=20, choices=Action.choices)
     target_user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="audit_targets"
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="audit_targets",
     )
     metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

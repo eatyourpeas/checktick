@@ -4,7 +4,7 @@ category: configuration
 priority: 3
 ---
 
-This document explains how organisation, team, and survey-level user management works, including roles, permissions, endpoints, and security protections.
+This document explains how organisation, team, and survey-level user management works, including roles, permissions, invitations, and security protections.
 
 ## Account Types
 
@@ -13,6 +13,20 @@ There are three types of user contexts in the system:
 - **Individual users**: Users who create surveys without an organisation or team. Individual users can only create and manage their own surveys and **cannot share surveys or invite collaborators**.
 - **Team members**: Users who belong to a team. Teams provide collaboration for 5-20 users with shared billing and role-based access.
 - **Organisation members**: Users who belong to an organisation. Organisations can host both individual members AND teams, with permissions managed by organisation admins.
+
+## Team Size Limits
+
+Teams have capacity limits based on their subscription tier:
+
+| Team Size | Maximum Members |
+|-----------|-----------------|
+| Small     | 5 members       |
+| Medium    | 10 members      |
+| Large     | 20 members      |
+
+**Note**: Pending invitations count toward the team capacity limit. For example, a Small team with 3 members and 2 pending invitations has reached its 5-member limit.
+
+**Organisation teams**: Organisations can create unlimited teams with unlimited members.
 
 ## Roles and Scopes
 
@@ -70,6 +84,52 @@ There are three membership scopes with separate roles:
 - Individual users (surveys without organisation or team) cannot access user management endpoints or share their surveys.
 - SSR UI supports email-based lookup and creation for convenience. The API endpoints expect explicit user IDs for membership resources; scoped user creation endpoints exist to create a user in a given org, team, or survey.
 
+## Inviting Users
+
+When adding a user to an organisation or team, the system handles two scenarios:
+
+### Existing Users
+
+If the email address belongs to an existing user account, they are added immediately with the specified role. The user will see the organisation/team in their dashboard on their next login.
+
+### New Users (Invitation System)
+
+If the email address does not match any existing account, an **invitation** is sent:
+
+1. **Invitation email**: The user receives a branded email inviting them to join the organisation or team
+2. **Signup link**: The email contains a link to create an account
+3. **Automatic membership**: When the user signs up with that email address, they are automatically added to the organisation/team with the invited role
+4. **Expiration**: Invitations expire after 7 days
+
+### Managing Pending Invitations
+
+The User Management Hub displays pending invitations alongside existing members. Admins can:
+
+- **Resend**: Send the invitation email again (useful if the original was missed)
+- **Cancel**: Remove the pending invitation
+
+Pending invitations are shown with a warning indicator and include:
+- The invited email address
+- The role they will be assigned
+- How long ago the invitation was sent
+- Resend and Cancel buttons
+
+### Capacity and Invitations
+
+For teams with size limits:
+- Pending invitations count toward the team capacity
+- You cannot invite more users than your remaining capacity
+- Example: A Small team (5 max) with 3 members and 1 pending invitation can only invite 1 more user
+
+### Invitation Models
+
+The system uses two invitation models:
+
+- **TeamInvitation**: For team-level invitations
+- **OrgInvitation**: For organisation-level invitations
+
+Both track: email, role, invited_by, created_at, expires_at, and accepted_at (set when the user signs up).
+
 ## SSR Management Pages
 
 **Note**: User management pages are only accessible for organisation/team surveys. Individual users cannot share their surveys or access these pages.
@@ -81,21 +141,24 @@ Shows:
 1. **Organisation section** (if you're an org admin):
    - Your organisation and all its members
    - Quick-add form to add users to the organisation by email and role
-   - View all teams within the organisation (read-only list)
+   - Pending invitations with resend/cancel options
+   - View all teams within the organisation
 
 2. **Teams you manage section** (if you're a team admin):
    - All teams where you have admin role
    - Add/remove team members
    - Assign roles to team members
-   - View team capacity (e.g., 5/10/20 members)
-   - Check member count vs. limit
+   - View team capacity (e.g., 5/10/20 members) including pending invitations
+   - Pending invitations with resend/cancel options
 
 3. **Users by survey section**:
    - Shows surveys and their members
    - Quick-add form to assign users to surveys by email and role
 
 Actions:
+
 - Prevents an org admin from removing themselves as an admin
+- Sends invitation emails when adding users who don't have accounts
 - All actions are audit-logged
 - Shows UK spelling: "Organisation" throughout
 
@@ -105,11 +168,12 @@ Actions:
 - Non-admins receive 403
 - Actions are audit-logged
 
-- Survey users: `/surveys/{slug}/users/`
-  - **Only available for organization surveys**. Individual users cannot access this page.
-  - Owners, org admins (if the survey belongs to their org), and survey creators can add/update/remove survey members.
-  - Survey viewers see a read-only list.
-  - Actions are audit-logged.
+### Survey Users: `/surveys/{slug}/users/`
+
+- **Only available for organisation surveys**. Individual users cannot access this page.
+- Owners, org admins (if the survey belongs to their org), and survey creators can add/update/remove survey members.
+- Survey viewers see a read-only list.
+- Actions are audit-logged.
 
 ## API endpoints
 

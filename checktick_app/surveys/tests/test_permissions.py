@@ -51,14 +51,28 @@ def login(client, user):
 
 
 @pytest.mark.django_db
-def test_creator_sees_only_own_surveys(client, users, org, surveys):
+def test_creator_sees_all_org_surveys(client, users, org, surveys):
+    """Creators see all surveys in their org, but can only edit their own."""
     admin, creator, viewer, outsider, participant = users
     s1, s2 = surveys
     login(client, creator)
     res = client.get(reverse("surveys:list"))
     assert res.status_code == 200
     names = {s.name for s in res.context["surveys"]}
-    assert names == {"S1"}
+    # Creator sees all org surveys
+    assert names == {"S1", "S2"}
+
+
+@pytest.mark.django_db
+def test_creator_can_only_edit_own_surveys(client, users, org, surveys):
+    """Creators can edit their own surveys but not others in the org."""
+    admin, creator, viewer, outsider, participant = users
+    s1, s2 = surveys
+    login(client, creator)
+    # Can edit own survey
+    assert client.get(reverse("surveys:groups", kwargs={"slug": s1.slug})).status_code == 200
+    # Cannot edit other's survey
+    assert client.get(reverse("surveys:groups", kwargs={"slug": s2.slug})).status_code == 403
 
 
 @pytest.mark.django_db
@@ -73,14 +87,27 @@ def test_admin_sees_all_org_surveys(client, users, org, surveys):
 
 
 @pytest.mark.django_db
-def test_viewer_sees_only_own_surveys(client, users, org, surveys):
+def test_viewer_sees_all_org_surveys(client, users, org, surveys):
+    """Viewers see all surveys in their org but cannot edit any."""
     admin, creator, viewer, outsider, participant = users
     s1, s2 = surveys
     login(client, viewer)
     res = client.get(reverse("surveys:list"))
     assert res.status_code == 200
     names = {s.name for s in res.context["surveys"]}
-    assert names == set()
+    # Viewer sees all org surveys
+    assert names == {"S1", "S2"}
+
+
+@pytest.mark.django_db
+def test_viewer_cannot_edit_any_surveys(client, users, org, surveys):
+    """Viewers cannot edit any surveys in the org."""
+    admin, creator, viewer, outsider, participant = users
+    s1, s2 = surveys
+    login(client, viewer)
+    # Cannot edit any survey
+    assert client.get(reverse("surveys:groups", kwargs={"slug": s1.slug})).status_code == 403
+    assert client.get(reverse("surveys:groups", kwargs={"slug": s2.slug})).status_code == 403
 
 
 @pytest.mark.django_db

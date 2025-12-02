@@ -242,7 +242,9 @@ def update_team_name(request: HttpRequest) -> HttpResponse:
         return JsonResponse({"error": "Team name is required"}, status=400)
 
     if len(team_name) > 100:
-        return JsonResponse({"error": "Team name must be 100 characters or less"}, status=400)
+        return JsonResponse(
+            {"error": "Team name must be 100 characters or less"}, status=400
+        )
 
     # Get the user's owned team
     team = Team.objects.filter(owner=request.user).first()
