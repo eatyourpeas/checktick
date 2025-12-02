@@ -70,9 +70,15 @@ def test_creator_can_only_edit_own_surveys(client, users, org, surveys):
     s1, s2 = surveys
     login(client, creator)
     # Can edit own survey
-    assert client.get(reverse("surveys:groups", kwargs={"slug": s1.slug})).status_code == 200
+    assert (
+        client.get(reverse("surveys:groups", kwargs={"slug": s1.slug})).status_code
+        == 200
+    )
     # Cannot edit other's survey
-    assert client.get(reverse("surveys:groups", kwargs={"slug": s2.slug})).status_code == 403
+    assert (
+        client.get(reverse("surveys:groups", kwargs={"slug": s2.slug})).status_code
+        == 403
+    )
 
 
 @pytest.mark.django_db
@@ -106,8 +112,14 @@ def test_viewer_cannot_edit_any_surveys(client, users, org, surveys):
     s1, s2 = surveys
     login(client, viewer)
     # Cannot edit any survey
-    assert client.get(reverse("surveys:groups", kwargs={"slug": s1.slug})).status_code == 403
-    assert client.get(reverse("surveys:groups", kwargs={"slug": s2.slug})).status_code == 403
+    assert (
+        client.get(reverse("surveys:groups", kwargs={"slug": s1.slug})).status_code
+        == 403
+    )
+    assert (
+        client.get(reverse("surveys:groups", kwargs={"slug": s2.slug})).status_code
+        == 403
+    )
 
 
 @pytest.mark.django_db
