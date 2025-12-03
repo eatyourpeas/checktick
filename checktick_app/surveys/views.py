@@ -67,7 +67,6 @@ from .permissions import (
     can_export_survey_data,
     can_manage_org_users,
     can_manage_survey_users,
-    can_view_survey,
     require_can_create_datasets,
     require_can_edit,
     require_can_edit_dataset,
@@ -456,52 +455,204 @@ def _verify_captcha(request: HttpRequest) -> bool:
 
 @login_required
 def survey_list(request: HttpRequest) -> HttpResponse:
-    # Creators/Viewers: only see surveys they created (owner)
-    # Admins: see all surveys in their organization
+    """Display surveys the user has access to, grouped by access type.
+
+    Access types:
+    - Owned: Surveys the user created
+    - Team: Surveys belonging to teams the user is a member of
+    - Organisation: Surveys in organisations the user is a member of
+    - Shared: Surveys explicitly shared with the user via SurveyMembership
+    """
+    from .models import LANGUAGE_FLAGS, LANGUAGE_NAMES, SurveyMembership, TeamMembership
+
     user = request.user
-    surveys = Survey.objects.none()
-    if user.is_authenticated:
-        owned = Survey.objects.filter(owner=user)
-        org_ids = user.org_memberships.values_list("organization_id", flat=True)  # type: ignore[attr-defined]
-        if org_ids:
-            org_surveys = Survey.objects.filter(organization_id__in=list(org_ids))
-            # keep only those the user can view (admins of those orgs)
-            org_surveys = [s for s in org_surveys if can_view_survey(user, s)]
-            surveys = owned | Survey.objects.filter(id__in=[s.id for s in org_surveys])  # type: ignore[attr-defined]
-        else:
-            surveys = owned
-
-    # Filter to only show original surveys (not translations)
-    # Translations will be shown as sub-items under their originals
-    original_surveys = surveys.filter(is_original=True)
-
-    # Enrich surveys with translation data
-    from .models import LANGUAGE_FLAGS, LANGUAGE_NAMES
-
-    surveys_with_translations = []
-    for survey in original_surveys:
-        # Get all translations for this survey
-        translations = survey.get_available_translations()
-        translation_data = []
-        for trans in translations:
-            translation_data.append(
-                {
-                    "survey": trans,
-                    "flag": LANGUAGE_FLAGS.get(trans.language, "🏳️"),
-                    "language_name": LANGUAGE_NAMES.get(trans.language, trans.language),
-                    "status": trans.status,
-                }
-            )
-
-        surveys_with_translations.append(
+    if not user.is_authenticated:
+        return render(
+            request,
+            "surveys/list.html",
             {
-                "survey": survey,
-                "translations": translation_data,
-                "translation_count": len(translation_data),
-                "flag": LANGUAGE_FLAGS.get(survey.language, "🏳️"),
-                "language_name": LANGUAGE_NAMES.get(survey.language, survey.language),
-            }
+                "surveys": Survey.objects.none(),
+                "surveys_with_translations": [],
+                "grouped_surveys": [],
+                "supported_languages": SUPPORTED_SURVEY_LANGUAGES,
+                "language_flags": LANGUAGE_FLAGS,
+            },
         )
+
+    # Collect all surveys the user can access, with role information
+    survey_access = {}  # survey_id -> {survey, role, source, source_name}
+
+    # 1. Owned surveys - user is the creator/owner
+    owned_surveys = Survey.objects.filter(owner=user, is_original=True).select_related(
+        "team", "organization"
+    )
+    for survey in owned_surveys:
+        survey_access[survey.id] = {
+            "survey": survey,
+            "role": "owner",
+            "source": "owned",
+            "source_name": None,
+            "can_edit": True,
+            "can_manage": True,
+        }
+
+    # 2. Team surveys - surveys belonging to teams user is a member of
+    team_memberships = TeamMembership.objects.filter(user=user).select_related("team")
+    team_ids = [tm.team_id for tm in team_memberships]
+    team_roles = {tm.team_id: tm.role for tm in team_memberships}
+
+    if team_ids:
+        team_surveys = Survey.objects.filter(
+            team_id__in=team_ids, is_original=True
+        ).select_related("team", "organization")
+        for survey in team_surveys:
+            if survey.id not in survey_access:  # Don't override owned
+                team_role = team_roles.get(survey.team_id)
+                can_edit = team_role in [
+                    TeamMembership.Role.ADMIN,
+                    TeamMembership.Role.CREATOR,
+                ]
+                survey_access[survey.id] = {
+                    "survey": survey,
+                    "role": team_role,
+                    "source": "team",
+                    "source_name": survey.team.name if survey.team else None,
+                    "can_edit": can_edit,
+                    "can_manage": team_role == TeamMembership.Role.ADMIN,
+                }
+
+    # 3. Organisation surveys - surveys in orgs user is a member of
+    org_memberships = user.org_memberships.select_related("organization")  # type: ignore[attr-defined]
+    org_roles = {om.organization_id: om.role for om in org_memberships}
+
+    if org_roles:
+        org_surveys = Survey.objects.filter(
+            organization_id__in=list(org_roles.keys()), is_original=True
+        ).select_related("team", "organization")
+        for survey in org_surveys:
+            if survey.id not in survey_access:  # Don't override owned or team
+                org_role = org_roles.get(survey.organization_id)
+                can_edit = org_role in [
+                    OrganizationMembership.Role.ADMIN,
+                    OrganizationMembership.Role.CREATOR,
+                ]
+                survey_access[survey.id] = {
+                    "survey": survey,
+                    "role": org_role,
+                    "source": "organisation",
+                    "source_name": (
+                        survey.organization.name if survey.organization else None
+                    ),
+                    "can_edit": can_edit,
+                    "can_manage": org_role == OrganizationMembership.Role.ADMIN,
+                }
+
+    # 4. Explicit SurveyMembership - surveys shared directly with user
+    survey_memberships = SurveyMembership.objects.filter(user=user).select_related(
+        "survey", "survey__team", "survey__organization"
+    )
+    for sm in survey_memberships:
+        survey = sm.survey
+        if not survey.is_original:
+            continue
+        if survey.id not in survey_access:  # Don't override higher access
+            can_edit = sm.role in [
+                SurveyMembership.Role.CREATOR,
+                SurveyMembership.Role.EDITOR,
+            ]
+            survey_access[survey.id] = {
+                "survey": survey,
+                "role": sm.role,
+                "source": "shared",
+                "source_name": None,
+                "can_edit": can_edit,
+                "can_manage": sm.role == SurveyMembership.Role.CREATOR,
+            }
+
+    # Group surveys by source for display
+    grouped_surveys = {
+        "owned": [],
+        "team": {},  # team_name -> [surveys]
+        "organisation": {},  # org_name -> [surveys]
+        "shared": [],
+    }
+
+    for access_info in survey_access.values():
+        survey = access_info["survey"]
+        source = access_info["source"]
+
+        # Get translations
+        translations = survey.get_available_translations()
+        translation_data = [
+            {
+                "survey": trans,
+                "flag": LANGUAGE_FLAGS.get(trans.language, "🏳️"),
+                "language_name": LANGUAGE_NAMES.get(trans.language, trans.language),
+                "status": trans.status,
+            }
+            for trans in translations
+        ]
+
+        survey_data = {
+            "survey": survey,
+            "translations": translation_data,
+            "translation_count": len(translation_data),
+            "flag": LANGUAGE_FLAGS.get(survey.language, "🏳️"),
+            "language_name": LANGUAGE_NAMES.get(survey.language, survey.language),
+            "role": access_info["role"],
+            "source": source,
+            "source_name": access_info["source_name"],
+            "can_edit": access_info["can_edit"],
+            "can_manage": access_info["can_manage"],
+        }
+
+        if source == "owned":
+            grouped_surveys["owned"].append(survey_data)
+        elif source == "team":
+            team_name = access_info["source_name"] or "Unknown Team"
+            if team_name not in grouped_surveys["team"]:
+                grouped_surveys["team"][team_name] = []
+            grouped_surveys["team"][team_name].append(survey_data)
+        elif source == "organisation":
+            org_name = access_info["source_name"] or "Unknown Organisation"
+            if org_name not in grouped_surveys["organisation"]:
+                grouped_surveys["organisation"][org_name] = []
+            grouped_surveys["organisation"][org_name].append(survey_data)
+        elif source == "shared":
+            grouped_surveys["shared"].append(survey_data)
+
+    # Sort within each group by survey name
+    grouped_surveys["owned"].sort(key=lambda x: x["survey"].name.lower())
+    grouped_surveys["shared"].sort(key=lambda x: x["survey"].name.lower())
+    for team_name in grouped_surveys["team"]:
+        grouped_surveys["team"][team_name].sort(key=lambda x: x["survey"].name.lower())
+    for org_name in grouped_surveys["organisation"]:
+        grouped_surveys["organisation"][org_name].sort(
+            key=lambda x: x["survey"].name.lower()
+        )
+
+    # Flatten for backwards compatibility with template (surveys_with_translations)
+    all_surveys = list(survey_access.values())
+    surveys_with_translations = [
+        {
+            "survey": item["survey"],
+            "translations": item["survey"].get_available_translations(),
+            "translation_count": len(item["survey"].get_available_translations()),
+            "flag": LANGUAGE_FLAGS.get(item["survey"].language, "🏳️"),
+            "language_name": LANGUAGE_NAMES.get(
+                item["survey"].language, item["survey"].language
+            ),
+            "role": item["role"],
+            "can_edit": item["can_edit"],
+            "can_manage": item["can_manage"],
+        }
+        for item in all_surveys
+    ]
+
+    # Get the original queryset for tier limits
+    original_surveys = Survey.objects.filter(
+        id__in=[s["survey"].id for s in surveys_with_translations]
+    )
 
     return render(
         request,
@@ -509,6 +660,7 @@ def survey_list(request: HttpRequest) -> HttpResponse:
         {
             "surveys": original_surveys,
             "surveys_with_translations": surveys_with_translations,
+            "grouped_surveys": grouped_surveys,
             "supported_languages": SUPPORTED_SURVEY_LANGUAGES,
             "language_flags": LANGUAGE_FLAGS,
         },
@@ -4400,8 +4552,14 @@ def survey_users(request: HttpRequest, slug: str) -> HttpResponse:
 
 
 @login_required
+@ratelimit(key="user", rate="60/h", block=True, method="POST")
 def user_management_hub(request: HttpRequest) -> HttpResponse:
-    from .models import Team, TeamMembership
+    from checktick_app.core.email_utils import (
+        send_org_invitation_email,
+        send_team_invitation_email,
+    )
+
+    from .models import OrgInvitation, Team, TeamInvitation, TeamMembership
 
     # Single organisation model: pick the organisation where user is ADMIN (or None)
     org = (
@@ -4413,10 +4571,26 @@ def user_management_hub(request: HttpRequest) -> HttpResponse:
         .first()
     )
 
+    # Get org membership for non-admin users (to show org context)
+    user_org_membership = (
+        OrganizationMembership.objects.filter(user=request.user)
+        .select_related("organization")
+        .first()
+    )
+
     # Get teams where user is ADMIN
     managed_teams_qs = Team.objects.filter(
         memberships__user=request.user, memberships__role=TeamMembership.Role.ADMIN
     ).select_related("owner", "organization")
+
+    # Get teams where user is a member (non-admin) for read-only display
+    member_teams_qs = (
+        Team.objects.filter(memberships__user=request.user)
+        .exclude(
+            memberships__user=request.user, memberships__role=TeamMembership.Role.ADMIN
+        )
+        .select_related("owner", "organization")
+    )
 
     if request.method == "POST":
         # HTMX quick add flows
@@ -4459,29 +4633,75 @@ def user_management_hub(request: HttpRequest) -> HttpResponse:
                     "team_size": new_team.size,
                 },
             )
-            return HttpResponse(f"Team '{team_name}' created", status=200)
+            response = HttpResponse(f"Team '{team_name}' created", status=200)
+            response["HX-Refresh"] = "true"
+            return response
 
+        # Validate email for user management operations
+        if not email:
+            return HttpResponse("Email is required", status=400)
+
+        # Basic email format validation
+        import re
+
+        if not re.match(r"^[^@]+@[^@]+\.[^@]+$", email):
+            return HttpResponse("Invalid email format", status=400)
+
+        # Try to find user by email
         user = User.objects.filter(email__iexact=email).first()
-        if not user:
-            return HttpResponse("User not found by email", status=400)
 
         if scope == "org":
             if not org or not can_manage_org_users(request.user, org):
                 return HttpResponse(status=403)
-            mem, created = OrganizationMembership.objects.update_or_create(
-                organization=org,
-                user=user,
-                defaults={"role": role or OrganizationMembership.Role.VIEWER},
-            )
-            AuditLog.objects.create(
-                actor=request.user,
-                scope=AuditLog.Scope.ORGANIZATION,
-                organization=org,
-                action=AuditLog.Action.ADD if created else AuditLog.Action.UPDATE,
-                target_user=user,
-                metadata={"role": mem.role},
-            )
-            return HttpResponse("Added/updated in organisation", status=200)
+
+            if user:
+                # User exists - add directly
+                mem, created = OrganizationMembership.objects.update_or_create(
+                    organization=org,
+                    user=user,
+                    defaults={"role": role or OrganizationMembership.Role.VIEWER},
+                )
+                AuditLog.objects.create(
+                    actor=request.user,
+                    scope=AuditLog.Scope.ORGANIZATION,
+                    organization=org,
+                    action=AuditLog.Action.ADD if created else AuditLog.Action.UPDATE,
+                    target_user=user,
+                    metadata={"role": mem.role},
+                )
+                response = HttpResponse(
+                    f"{user.username} added to organisation", status=200
+                )
+                response["HX-Refresh"] = "true"
+                return response
+            else:
+                # User doesn't exist - send invitation
+                invite, created = OrgInvitation.objects.update_or_create(
+                    organization=org,
+                    email=email,
+                    defaults={
+                        "role": role or OrganizationMembership.Role.VIEWER,
+                        "invited_by": request.user,
+                        "token": OrgInvitation.generate_token(),
+                    },
+                )
+                # Send invitation email
+                send_org_invitation_email(
+                    to_email=email,
+                    organization=org,
+                    role=invite.role,
+                    invited_by=request.user,
+                )
+                AuditLog.objects.create(
+                    actor=request.user,
+                    scope=AuditLog.Scope.ORGANIZATION,
+                    organization=org,
+                    action=AuditLog.Action.INVITE,
+                    metadata={"email": email, "role": invite.role},
+                )
+                response = HttpResponse(f"Invitation sent to {email}", status=200)
+                response["HX-Refresh"] = "true"
+                return response
 
         elif scope == "team":
             team_id = request.POST.get("team_id")
@@ -4505,33 +4725,85 @@ def user_management_hub(request: HttpRequest) -> HttpResponse:
             if not (is_team_admin or is_org_admin):
                 return HttpResponse(status=403)
 
-            # Check team capacity
-            if not team.can_add_members():
+            # Check team capacity (including pending invitations)
+            current_count = team.memberships.count()
+            pending_count = team.pending_invitations.filter(
+                accepted_at__isnull=True
+            ).count()
+            total_count = current_count + pending_count
+
+            if total_count >= team.max_members:
                 return HttpResponse(
-                    f"Team is at maximum capacity ({team.max_members} members)",
+                    f"Team is at maximum capacity ({team.max_members} members including pending invites)",
                     status=400,
                 )
 
-            mem, created = TeamMembership.objects.update_or_create(
-                team=team,
-                user=user,
-                defaults={"role": role or TeamMembership.Role.VIEWER},
-            )
-            AuditLog.objects.create(
-                actor=request.user,
-                scope=AuditLog.Scope.ORGANIZATION,
-                organization=team.organization,
-                action=AuditLog.Action.ADD if created else AuditLog.Action.UPDATE,
-                target_user=user,
-                metadata={"role": mem.role, "team_id": team.id, "team_name": team.name},
-            )
-            return HttpResponse("Added/updated in team", status=200)
+            if user:
+                # User exists - add directly
+                mem, created = TeamMembership.objects.update_or_create(
+                    team=team,
+                    user=user,
+                    defaults={"role": role or TeamMembership.Role.VIEWER},
+                )
+                AuditLog.objects.create(
+                    actor=request.user,
+                    scope=AuditLog.Scope.ORGANIZATION,
+                    organization=team.organization,
+                    action=AuditLog.Action.ADD if created else AuditLog.Action.UPDATE,
+                    target_user=user,
+                    metadata={
+                        "role": mem.role,
+                        "team_id": team.id,
+                        "team_name": team.name,
+                    },
+                )
+                response = HttpResponse(f"{user.username} added to team", status=200)
+                response["HX-Refresh"] = "true"
+                return response
+            else:
+                # User doesn't exist - send invitation
+                invite, created = TeamInvitation.objects.update_or_create(
+                    team=team,
+                    email=email,
+                    defaults={
+                        "role": role or TeamMembership.Role.VIEWER,
+                        "invited_by": request.user,
+                        "token": TeamInvitation.generate_token(),
+                    },
+                )
+                # Send invitation email
+                send_team_invitation_email(
+                    to_email=email,
+                    team=team,
+                    role=invite.role,
+                    invited_by=request.user,
+                )
+                AuditLog.objects.create(
+                    actor=request.user,
+                    scope=AuditLog.Scope.ORGANIZATION,
+                    organization=team.organization,
+                    action=AuditLog.Action.INVITE,
+                    metadata={
+                        "email": email,
+                        "role": invite.role,
+                        "team_id": team.id,
+                        "team_name": team.name,
+                    },
+                )
+                response = HttpResponse(f"Invitation sent to {email}", status=200)
+                response["HX-Refresh"] = "true"
+                return response
 
         elif scope == "survey":
             slug = request.POST.get("slug") or ""
             survey = get_object_or_404(Survey, slug=slug)
             if not can_manage_survey_users(request.user, survey):
                 return HttpResponse(status=403)
+            if not user:
+                return HttpResponse(
+                    "User not found - survey invites require existing accounts",
+                    status=400,
+                )
             smem, created = SurveyMembership.objects.update_or_create(
                 survey=survey,
                 user=user,
@@ -4545,7 +4817,12 @@ def user_management_hub(request: HttpRequest) -> HttpResponse:
                 target_user=user,
                 metadata={"role": smem.role},
             )
-            return HttpResponse("Added/updated in survey", status=200)
+            response = HttpResponse(f"{user.username} added to survey", status=200)
+            response["HX-Refresh"] = "true"
+            return response
+
+        # Unknown scope - should not reach here
+        return HttpResponse(f"Unknown scope: {scope}", status=400)
 
     # Build users grouped by surveys for this organisation
     grouped = []
@@ -4574,13 +4851,29 @@ def user_management_hub(request: HttpRequest) -> HttpResponse:
 
         # Get teams within this organisation
         org_teams_qs = Team.objects.filter(organization=org).prefetch_related(
-            "memberships__user"
+            "memberships__user", "pending_invitations"
         )
         for team in org_teams_qs:
             team_members = team.memberships.select_related("user").order_by(
                 "user__username"
             )
-            org_teams.append({"team": team, "members": team_members})
+            pending_invites = team.pending_invitations.filter(
+                accepted_at__isnull=True
+            ).order_by("-created_at")
+            org_teams.append(
+                {
+                    "team": team,
+                    "members": team_members,
+                    "pending_invitations": pending_invites,
+                }
+            )
+
+        # Get org pending invitations
+        org_pending_invitations = OrgInvitation.objects.filter(
+            organization=org, accepted_at__isnull=True
+        ).order_by("-created_at")
+    else:
+        org_pending_invitations = OrgInvitation.objects.none()
 
     # Build data for teams user manages (not within their org)
     managed_teams = []
@@ -4588,19 +4881,175 @@ def user_management_hub(request: HttpRequest) -> HttpResponse:
         team_members = team.memberships.select_related("user").order_by(
             "user__username"
         )
-        managed_teams.append({"team": team, "members": team_members})
+        pending_invites = team.pending_invitations.filter(
+            accepted_at__isnull=True
+        ).order_by("-created_at")
+        managed_teams.append(
+            {
+                "team": team,
+                "members": team_members,
+                "pending_invitations": pending_invites,
+            }
+        )
+
+    # Build data for teams user is a member of (read-only view)
+    member_teams = []
+    for team in member_teams_qs:
+        user_membership = team.memberships.filter(user=request.user).first()
+        team_members = team.memberships.select_related("user").order_by(
+            "user__username"
+        )
+        member_teams.append(
+            {
+                "team": team,
+                "members": team_members,
+                "user_role": user_membership.role if user_membership else None,
+            }
+        )
 
     return render(
         request,
         "surveys/user_management_hub.html",
         {
             "org": org,
+            "user_org_membership": user_org_membership,
             "members": members,
             "grouped": grouped,
             "org_teams": org_teams,
             "managed_teams": managed_teams,
+            "member_teams": member_teams,
+            "org_pending_invitations": org_pending_invitations,
         },
     )
+
+
+@login_required
+@require_http_methods(["POST"])
+@ratelimit(key="user", rate="20/h", block=True)
+def resend_invitation(request: HttpRequest) -> HttpResponse:
+    """Resend a pending team or org invitation email."""
+    from checktick_app.core.email_utils import (
+        send_org_invitation_email,
+        send_team_invitation_email,
+    )
+
+    from .models import OrgInvitation, TeamInvitation, TeamMembership
+
+    invitation_type = request.POST.get("type")  # "team" or "org"
+    invitation_id = request.POST.get("invitation_id")
+
+    if not invitation_type or not invitation_id:
+        return HttpResponse("Missing invitation type or ID", status=400)
+
+    if invitation_type == "team":
+        invite = get_object_or_404(TeamInvitation, id=invitation_id)
+
+        # Check if user can manage this team
+        is_team_admin = TeamMembership.objects.filter(
+            team=invite.team, user=request.user, role=TeamMembership.Role.ADMIN
+        ).exists()
+        is_org_admin = (
+            invite.team.organization
+            and OrganizationMembership.objects.filter(
+                organization=invite.team.organization,
+                user=request.user,
+                role=OrganizationMembership.Role.ADMIN,
+            ).exists()
+        )
+
+        if not (is_team_admin or is_org_admin):
+            return HttpResponse("Not authorized", status=403)
+
+        if invite.accepted_at:
+            return HttpResponse("Invitation already accepted", status=400)
+
+        # Resend email
+        send_team_invitation_email(
+            to_email=invite.email,
+            team=invite.team,
+            role=invite.role,
+            invited_by=request.user,
+        )
+        return HttpResponse(f"Invitation resent to {invite.email}", status=200)
+
+    elif invitation_type == "org":
+        invite = get_object_or_404(OrgInvitation, id=invitation_id)
+
+        # Check if user can manage this org
+        if not OrganizationMembership.objects.filter(
+            organization=invite.organization,
+            user=request.user,
+            role=OrganizationMembership.Role.ADMIN,
+        ).exists():
+            return HttpResponse("Not authorized", status=403)
+
+        if invite.accepted_at:
+            return HttpResponse("Invitation already accepted", status=400)
+
+        # Resend email
+        send_org_invitation_email(
+            to_email=invite.email,
+            organization=invite.organization,
+            role=invite.role,
+            invited_by=request.user,
+        )
+        return HttpResponse(f"Invitation resent to {invite.email}", status=200)
+
+    return HttpResponse("Invalid invitation type", status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+@ratelimit(key="user", rate="30/h", block=True)
+def cancel_invitation(request: HttpRequest) -> HttpResponse:
+    """Cancel a pending team or org invitation."""
+    from .models import OrgInvitation, TeamInvitation, TeamMembership
+
+    invitation_type = request.POST.get("type")  # "team" or "org"
+    invitation_id = request.POST.get("invitation_id")
+
+    if not invitation_type or not invitation_id:
+        return HttpResponse("Missing invitation type or ID", status=400)
+
+    if invitation_type == "team":
+        invite = get_object_or_404(TeamInvitation, id=invitation_id)
+
+        # Check if user can manage this team
+        is_team_admin = TeamMembership.objects.filter(
+            team=invite.team, user=request.user, role=TeamMembership.Role.ADMIN
+        ).exists()
+        is_org_admin = (
+            invite.team.organization
+            and OrganizationMembership.objects.filter(
+                organization=invite.team.organization,
+                user=request.user,
+                role=OrganizationMembership.Role.ADMIN,
+            ).exists()
+        )
+
+        if not (is_team_admin or is_org_admin):
+            return HttpResponse("Not authorized", status=403)
+
+        email = invite.email
+        invite.delete()
+        return HttpResponse(f"Invitation for {email} cancelled", status=200)
+
+    elif invitation_type == "org":
+        invite = get_object_or_404(OrgInvitation, id=invitation_id)
+
+        # Check if user can manage this org
+        if not OrganizationMembership.objects.filter(
+            organization=invite.organization,
+            user=request.user,
+            role=OrganizationMembership.Role.ADMIN,
+        ).exists():
+            return HttpResponse("Not authorized", status=403)
+
+        email = invite.email
+        invite.delete()
+        return HttpResponse(f"Invitation for {email} cancelled", status=200)
+
+    return HttpResponse("Invalid invitation type", status=400)
 
 
 @login_required

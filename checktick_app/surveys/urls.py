@@ -8,6 +8,16 @@ urlpatterns = [
     path("", views.survey_list, name="list"),
     # User management hub (must be before slug routes)
     path("manage/users/", views.user_management_hub, name="user_management_hub"),
+    path(
+        "manage/users/resend-invitation/",
+        views.resend_invitation,
+        name="resend_invitation",
+    ),
+    path(
+        "manage/users/cancel-invitation/",
+        views.cancel_invitation,
+        name="cancel_invitation",
+    ),
     # Superuser Platform Recovery Console (must be before slug routes)
     path("recovery/", views.recovery_dashboard, name="recovery_dashboard"),
     path(

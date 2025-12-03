@@ -9,9 +9,16 @@
     <span>{% trans 'User management' %}</span>
   </h1>
 
-  {% if not org and not managed_teams %}
+  {% if not org and not managed_teams and not member_teams %}
     <div class="alert">
       {% trans "You don't have an organisation or team to manage yet." %}
+    </div>
+  {% endif %}
+
+  {# Show org context for non-admin members #}
+  {% if not org and user_org_membership %}
+    <div class="alert alert-info mb-4">
+      <span>{% blocktrans with org_name=user_org_membership.organization.name role=user_org_membership.role %}You are a member of organisation <strong>{{ org_name }}</strong> with role <strong>{{ role }}</strong>.{% endblocktrans %}</span>
     </div>
   {% endif %}
 
@@ -23,12 +30,12 @@
           <span>{% trans 'Organisation' %}: {{ org.name }}</span>
         </h2>
         <div class="mb-3">
-          <form hx-post="{% url 'surveys:user_management_hub' %}" hx-target="#org-add-result" hx-swap="innerHTML" method="post" class="flex items-end gap-2">
+          <form hx-post="{% url 'surveys:user_management_hub' %}" hx-target="#org-add-result" hx-swap="innerHTML" method="post" class="flex items-end gap-2 js-reset-on-success">
             {% csrf_token %}
             <input type="hidden" name="scope" value="org" />
             <label class="form-control">
               <span class="label"><span class="label-text">{% trans 'User email' %}</span></span>
-              <input type="email" name="email" class="input input-bordered" placeholder="user@example.com" />
+              <input type="email" name="email" class="input input-bordered" placeholder="user@example.com" required />
             </label>
             <label class="form-control">
               <span class="label"><span class="label-text">{% trans 'Role' %}</span></span>
@@ -49,7 +56,7 @@
           <div id="org-add-result" class="text-sm mt-2 opacity-80"></div>
         </div>
 
-        <h3 class="font-semibold">{% blocktrans count counter=members|length %}All users ({{ counter }}){% plural %}All users ({{ counter }}){% endblocktrans %}</h3>
+        <h3 class="font-semibold">{% trans 'Members' %} ({{ members|length }}){% if org_pending_invitations %} · <span class="text-warning">{% trans 'Pending' %} ({{ org_pending_invitations|length }})</span>{% endif %}</h3>
         <ul class="list-disc pl-5">
           {% for mem in members %}
             <li>
@@ -58,6 +65,25 @@
           {% empty %}
             <li class="opacity-70">
               {% trans 'No users yet' %}
+            </li>
+          {% endfor %}
+          {% for invite in org_pending_invitations %}
+            <li class="text-warning">
+              {{ invite.email }} <span class="badge badge-ghost badge-sm">{{ invite.role }}</span> <span class="badge badge-warning badge-sm">{% trans 'pending' %}</span>
+              <span class="text-xs opacity-60 ml-1">{{ invite.created_at|timesince }} {% trans 'ago' %}</span>
+              <form hx-post="{% url 'surveys:resend_invitation' %}" hx-target="#org-invite-{{ invite.id }}-result" hx-swap="innerHTML" method="post" class="inline">
+                {% csrf_token %}
+                <input type="hidden" name="type" value="org" />
+                <input type="hidden" name="invitation_id" value="{{ invite.id }}" />
+                <button type="submit" class="btn btn-ghost btn-xs">{% trans 'Resend' %}</button>
+              </form>
+              <form hx-post="{% url 'surveys:cancel_invitation' %}" hx-target="#org-invite-{{ invite.id }}-result" hx-swap="innerHTML" method="post" class="inline" hx-confirm="{% trans 'Cancel invitation for' %} {{ invite.email }}?">
+                {% csrf_token %}
+                <input type="hidden" name="type" value="org" />
+                <input type="hidden" name="invitation_id" value="{{ invite.id }}" />
+                <button type="submit" class="btn btn-ghost btn-xs text-error">{% trans 'Cancel' %}</button>
+              </form>
+              <span id="org-invite-{{ invite.id }}-result" class="text-xs"></span>
             </li>
           {% endfor %}
         </ul>
@@ -71,7 +97,7 @@
           {% include 'components/icons/users.html' with classes='w-5 h-5 text-base-content' %}
           <span>{% trans 'Create a team' %}</span>
         </h2>
-        <form hx-post="{% url 'surveys:user_management_hub' %}" hx-target="#create-team-result" hx-swap="innerHTML" method="post" class="flex items-end gap-2 flex-wrap">
+        <form hx-post="{% url 'surveys:user_management_hub' %}" hx-target="#create-team-result" hx-swap="innerHTML" method="post" class="flex items-end gap-2 flex-wrap js-reset-on-success">
           {% csrf_token %}
           <input type="hidden" name="scope" value="create_team" />
           <label class="form-control">
@@ -112,7 +138,7 @@
                   <div>
                     <h3 class="font-semibold">{{ team_info.team.name }}</h3>
                     <span class="badge badge-sm badge-ghost">{{ team_info.team.get_size_display }}</span>
-                    <span class="badge badge-sm badge-ghost">{% blocktrans count counter=team_info.members|length %}{{ counter }} member{% plural %}{{ counter }} members{% endblocktrans %}</span>
+                    <span class="badge badge-sm badge-ghost">{{ team_info.members|length }}{% if team_info.pending_invitations %}+{{ team_info.pending_invitations|length }}{% endif %}/{{ team_info.team.max_members }}</span>
                   </div>
                 </div>
                 <ul class="list-disc pl-5 text-sm">
@@ -123,6 +149,24 @@
                   {% empty %}
                     <li class="opacity-70">
                       {% trans 'No members yet' %}
+                    </li>
+                  {% endfor %}
+                  {% for invite in team_info.pending_invitations %}
+                    <li class="text-warning">
+                      {{ invite.email }} <span class="badge badge-xs badge-ghost">{{ invite.role }}</span> <span class="badge badge-warning badge-xs">{% trans 'pending' %}</span>
+                      <form hx-post="{% url 'surveys:resend_invitation' %}" hx-target="#team-invite-{{ invite.id }}-result" hx-swap="innerHTML" method="post" class="inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="type" value="team" />
+                        <input type="hidden" name="invitation_id" value="{{ invite.id }}" />
+                        <button type="submit" class="btn btn-ghost btn-xs">{% trans 'Resend' %}</button>
+                      </form>
+                      <form hx-post="{% url 'surveys:cancel_invitation' %}" hx-target="#team-invite-{{ invite.id }}-result" hx-swap="innerHTML" method="post" class="inline" hx-confirm="{% trans 'Cancel invitation?' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="type" value="team" />
+                        <input type="hidden" name="invitation_id" value="{{ invite.id }}" />
+                        <button type="submit" class="btn btn-ghost btn-xs text-error">{% trans 'Cancel' %}</button>
+                      </form>
+                      <span id="team-invite-{{ invite.id }}-result" class="text-xs"></span>
                     </li>
                   {% endfor %}
                 </ul>
@@ -147,18 +191,18 @@
               <div>
                 <h3 class="font-semibold">{{ team_data.team.name }}</h3>
                 <span class="badge badge-sm badge-ghost">{{ team_data.team.get_size_display }}</span>
-                <span class="badge badge-sm badge-ghost">{{ team_data.team.current_member_count }}/{{ team_data.team.max_members }} {% trans 'members' %}</span>
+                <span class="badge badge-sm badge-ghost">{{ team_data.members|length }}{% if team_data.pending_invitations %}+{{ team_data.pending_invitations|length }}{% endif %}/{{ team_data.team.max_members }}</span>
               </div>
             </div>
 
             <div class="mb-3">
-              <form hx-post="{% url 'surveys:user_management_hub' %}" hx-target="#team-{{ team_data.team.id }}-add-result" hx-swap="innerHTML" method="post" class="flex items-end gap-2">
+              <form hx-post="{% url 'surveys:user_management_hub' %}" hx-target="#team-{{ team_data.team.id }}-add-result" hx-swap="innerHTML" method="post" class="flex items-end gap-2 js-reset-on-success">
                 {% csrf_token %}
                 <input type="hidden" name="scope" value="team" />
                 <input type="hidden" name="team_id" value="{{ team_data.team.id }}" />
                 <label class="form-control">
                   <span class="label"><span class="label-text">{% trans 'User email' %}</span></span>
-                  <input type="email" name="email" class="input input-bordered input-sm" placeholder="user@example.com" />
+                  <input type="email" name="email" class="input input-bordered input-sm" placeholder="user@example.com" required />
                 </label>
                 <label class="form-control">
                   <span class="label"><span class="label-text">{% trans 'Role' %}</span></span>
@@ -179,11 +223,68 @@
               <div id="team-{{ team_data.team.id }}-add-result" class="text-sm mt-2 opacity-80"></div>
             </div>
 
+            <ul class="list-disc pl-5 text-sm">
+              {% for mem in team_data.members %}
+                <li>
+                  {{ mem.user.username }} <span class="badge badge-xs badge-ghost">{{ mem.role }}</span>
+                </li>
+              {% empty %}
+                <li class="opacity-70">
+                  {% trans 'No members yet' %}
+                </li>
+              {% endfor %}
+              {% for invite in team_data.pending_invitations %}
+                <li class="text-warning">
+                  {{ invite.email }} <span class="badge badge-xs badge-ghost">{{ invite.role }}</span> <span class="badge badge-warning badge-xs">{% trans 'pending' %}</span>
+                  <form hx-post="{% url 'surveys:resend_invitation' %}" hx-target="#managed-team-invite-{{ invite.id }}-result" hx-swap="innerHTML" method="post" class="inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="type" value="team" />
+                    <input type="hidden" name="invitation_id" value="{{ invite.id }}" />
+                    <button type="submit" class="btn btn-ghost btn-xs">{% trans 'Resend' %}</button>
+                  </form>
+                  <form hx-post="{% url 'surveys:cancel_invitation' %}" hx-target="#managed-team-invite-{{ invite.id }}-result" hx-swap="innerHTML" method="post" class="inline" hx-confirm="{% trans 'Cancel invitation?' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="type" value="team" />
+                    <input type="hidden" name="invitation_id" value="{{ invite.id }}" />
+                    <button type="submit" class="btn btn-ghost btn-xs text-error">{% trans 'Cancel' %}</button>
+                  </form>
+                  <span id="managed-team-invite-{{ invite.id }}-result" class="text-xs"></span>
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  {# Read-only view for team members (non-admins) #}
+  {% if member_teams %}
+    <div class="card bg-base-100 shadow mb-6">
+      <div class="card-body">
+        <h2 class="inline-flex items-center gap-2 font-semibold text-lg text-base-content">
+          {% include 'components/icons/users.html' with classes='w-5 h-5 text-base-content' %}
+          <span>{% trans 'Your teams' %}</span>
+        </h2>
+        {% for team_data in member_teams %}
+          <div class="border border-base-300 rounded-lg p-4 mb-4">
+            <div class="flex justify-between items-start mb-3">
+              <div>
+                <h3 class="font-semibold">{{ team_data.team.name }}</h3>
+                {% if team_data.team.organization %}
+                  <span class="badge badge-sm badge-info">{{ team_data.team.organization.name }}</span>
+                {% endif %}
+                <span class="badge badge-sm badge-ghost">{{ team_data.team.get_size_display }}</span>
+                <span class="badge badge-sm badge-primary">{% blocktrans with role=team_data.user_role %}Your role: {{ role }}{% endblocktrans %}</span>
+              </div>
+            </div>
+
             <h4 class="font-semibold text-sm mb-2">{% trans 'Team members' %}</h4>
             <ul class="list-disc pl-5 text-sm">
               {% for mem in team_data.members %}
                 <li>
                   {{ mem.user.username }} <span class="badge badge-xs badge-ghost">{{ mem.role }}</span>
+                  {% if mem.user == request.user %}<span class="badge badge-xs badge-accent">{% trans 'You' %}</span>{% endif %}
                 </li>
               {% empty %}
                 <li class="opacity-70">
@@ -205,16 +306,16 @@
           <span>{% trans 'Users by survey' %}</span>
         </h2>
         <div class="mb-3">
-          <form hx-post="{% url 'surveys:user_management_hub' %}" hx-target="#survey-add-result" hx-swap="innerHTML" method="post" class="flex items-end gap-2">
+          <form hx-post="{% url 'surveys:user_management_hub' %}" hx-target="#survey-add-result" hx-swap="innerHTML" method="post" class="flex items-end gap-2 js-reset-on-success">
             {% csrf_token %}
             <input type="hidden" name="scope" value="survey" />
             <label class="form-control">
               <span class="label"><span class="label-text">{% trans 'Survey slug' %}</span></span>
-              <input type="text" name="slug" class="input input-bordered w-48" placeholder="survey-slug" />
+              <input type="text" name="slug" class="input input-bordered w-48" placeholder="survey-slug" required />
             </label>
             <label class="form-control">
               <span class="label"><span class="label-text">{% trans 'User email' %}</span></span>
-              <input type="email" name="email" class="input input-bordered" placeholder="user@example.com" />
+              <input type="email" name="email" class="input input-bordered" placeholder="user@example.com" required />
             </label>
             <label class="form-control">
               <span class="label"><span class="label-text">{% trans 'Role' %}</span></span>
@@ -259,4 +360,37 @@
       </div>
     </div>
   {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script nonce="{{ request.csp_nonce }}">
+  // Handle successful form submissions - reset form and show success
+  document.addEventListener('htmx:afterRequest', function(event) {
+    if (event.detail.successful && event.detail.xhr.status === 200) {
+      var form = event.detail.elt;
+      if (form.classList.contains('js-reset-on-success')) {
+        form.reset();
+      }
+    }
+  });
+
+  // Handle error responses - display error message in target
+  document.addEventListener('htmx:beforeSwap', function(event) {
+    // Allow 400 and 403 responses to be swapped into the target
+    if (event.detail.xhr.status === 400 || event.detail.xhr.status === 403) {
+      event.detail.shouldSwap = true;
+      event.detail.isError = false;
+    }
+  });
+
+  // Style error responses
+  document.addEventListener('htmx:afterSwap', function(event) {
+    if (event.detail.xhr && (event.detail.xhr.status === 400 || event.detail.xhr.status === 403)) {
+      event.detail.target.classList.add('text-error');
+    } else if (event.detail.xhr && event.detail.xhr.status === 200) {
+      event.detail.target.classList.remove('text-error');
+      event.detail.target.classList.add('text-success');
+    }
+  });
+</script>
 {% endblock %}

@@ -84,6 +84,26 @@
             </div>
           </div>
         {% endif %}
+        {% if stats.team_admin_count %}
+          <div class="tooltip" data-tip="{% blocktrans count teams=stats.team_admin_count %}You are an administrator of {{ teams }} team{% plural %}You are an administrator of {{ teams }} teams{% endblocktrans %}">
+            <div class="indicator">
+              <span class="indicator-item badge badge-accent text-xs">{{ stats.team_admin_count }}</span>
+              <div class="bg-accent text-accent-content rounded-full w-12 h-12 flex items-center justify-center">
+                {% include "components/icons/users.html" with classes="w-6 h-6" %}
+              </div>
+            </div>
+          </div>
+        {% endif %}
+        {% if stats.team_memberships and not stats.team_admin_count %}
+          <div class="tooltip" data-tip="{% blocktrans count teams=stats.team_memberships %}You are a member of {{ teams }} team{% plural %}You are a member of {{ teams }} teams{% endblocktrans %}">
+            <div class="indicator">
+              <span class="indicator-item badge badge-neutral text-xs">{{ stats.team_memberships }}</span>
+              <div class="bg-neutral text-neutral-content rounded-full w-12 h-12 flex items-center justify-center">
+                {% include "components/icons/users.html" with classes="w-6 h-6" %}
+              </div>
+            </div>
+          </div>
+        {% endif %}
         {% if stats.surveys_owned %}
           <div class="tooltip" data-tip="{% blocktrans count surveys=stats.surveys_owned %}You own {{ surveys }} survey{% plural %}You own {{ surveys }} surveys{% endblocktrans %}">
             <div class="indicator">
@@ -125,14 +145,14 @@
           </div>
         {% endif %}
         {% if stats.responses_submitted %}
-          <div class="tooltip" data-tip="{% blocktrans count responses=stats.responses_submitted %}You have submitted {{ responses }} response to surveys{% plural %}You have submitted {{ responses }} responses to surveys{% endblocktrans %}">
+          <a href="{% url 'core:my_surveys' %}" class="tooltip" data-tip="{% blocktrans count responses=stats.responses_submitted %}You have submitted {{ responses }} response to surveys - Click to view{% plural %}You have submitted {{ responses }} responses to surveys - Click to view{% endblocktrans %}">
             <div class="indicator">
               <span class="indicator-item badge badge-warning text-xs">{{ stats.responses_submitted }}</span>
-              <div class="bg-warning text-warning-content rounded-full w-12 h-12 flex items-center justify-center">
+              <div class="bg-warning text-warning-content rounded-full w-12 h-12 flex items-center justify-center hover:ring-2 hover:ring-warning hover:ring-offset-2 transition-all">
                 {% include "components/icons/clipboard.html" with classes="w-6 h-6" %}
               </div>
             </div>
-          </div>
+          </a>
         {% endif %}
         {% if stats.tokens_created %}
           <div class="tooltip" data-tip="{% blocktrans count tokens=stats.tokens_created %}You have created {{ tokens }} invitation token{% plural %}You have created {{ tokens }} invitation tokens{% endblocktrans %}">
@@ -190,12 +210,12 @@
           </div>
         </div>
 
-        {% if subscription_info.subscription_status %}
+        {% if subscription_info.subscription_status and subscription_info.subscription_status != 'none' %}
         <div>
           <p class="text-sm opacity-70">{% trans "Status" %}</p>
           <p class="text-base">
             <span class="badge {% if subscription_info.subscription_status == 'active' %}badge-success{% elif subscription_info.subscription_status == 'canceled' %}badge-warning{% else %}badge-neutral{% endif %}">
-              {{ subscription_info.subscription_status|title }}
+              {% if subscription_info.subscription_status == 'canceled' %}{% trans "Cancelled" %}{% else %}{{ subscription_info.subscription_status|title }}{% endif %}
             </span>
           </p>
         </div>

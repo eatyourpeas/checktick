@@ -4,7 +4,7 @@ category: configuration
 priority: 3
 ---
 
-This document explains how organisation, team, and survey-level user management works, including roles, permissions, endpoints, and security protections.
+This document explains how organisation, team, and survey-level user management works, including roles, permissions, invitations, and security protections.
 
 ## Account Types
 
@@ -13,6 +13,20 @@ There are three types of user contexts in the system:
 - **Individual users**: Users who create surveys without an organisation or team. Individual users can only create and manage their own surveys and **cannot share surveys or invite collaborators**.
 - **Team members**: Users who belong to a team. Teams provide collaboration for 5-20 users with shared billing and role-based access.
 - **Organisation members**: Users who belong to an organisation. Organisations can host both individual members AND teams, with permissions managed by organisation admins.
+
+## Team Size Limits
+
+Teams have capacity limits based on their subscription tier:
+
+| Team Size | Maximum Members |
+|-----------|-----------------|
+| Small     | 5 members       |
+| Medium    | 10 members      |
+| Large     | 20 members      |
+
+**Note**: Pending invitations count toward the team capacity limit. For example, a Small team with 3 members and 2 pending invitations has reached its 5-member limit.
+
+**Organisation teams**: Organisations can create unlimited teams with unlimited members.
 
 ## Roles and Scopes
 
@@ -70,6 +84,52 @@ There are three membership scopes with separate roles:
 - Individual users (surveys without organisation or team) cannot access user management endpoints or share their surveys.
 - SSR UI supports email-based lookup and creation for convenience. The API endpoints expect explicit user IDs for membership resources; scoped user creation endpoints exist to create a user in a given org, team, or survey.
 
+## Inviting Users
+
+When adding a user to an organisation or team, the system handles two scenarios:
+
+### Existing Users
+
+If the email address belongs to an existing user account, they are added immediately with the specified role. The user will see the organisation/team in their dashboard on their next login.
+
+### New Users (Invitation System)
+
+If the email address does not match any existing account, an **invitation** is sent:
+
+1. **Invitation email**: The user receives a branded email inviting them to join the organisation or team
+2. **Signup link**: The email contains a link to create an account
+3. **Automatic membership**: When the user signs up with that email address, they are automatically added to the organisation/team with the invited role
+4. **Expiration**: Invitations expire after 7 days
+
+### Managing Pending Invitations
+
+The User Management Hub displays pending invitations alongside existing members. Admins can:
+
+- **Resend**: Send the invitation email again (useful if the original was missed)
+- **Cancel**: Remove the pending invitation
+
+Pending invitations are shown with a warning indicator and include:
+- The invited email address
+- The role they will be assigned
+- How long ago the invitation was sent
+- Resend and Cancel buttons
+
+### Capacity and Invitations
+
+For teams with size limits:
+- Pending invitations count toward the team capacity
+- You cannot invite more users than your remaining capacity
+- Example: A Small team (5 max) with 3 members and 1 pending invitation can only invite 1 more user
+
+### Invitation Models
+
+The system uses two invitation models:
+
+- **TeamInvitation**: For team-level invitations
+- **OrgInvitation**: For organisation-level invitations
+
+Both track: email, role, invited_by, created_at, expires_at, and accepted_at (set when the user signs up).
+
 ## SSR Management Pages
 
 **Note**: User management pages are only accessible for organisation/team surveys. Individual users cannot share their surveys or access these pages.
@@ -81,21 +141,24 @@ Shows:
 1. **Organisation section** (if you're an org admin):
    - Your organisation and all its members
    - Quick-add form to add users to the organisation by email and role
-   - View all teams within the organisation (read-only list)
+   - Pending invitations with resend/cancel options
+   - View all teams within the organisation
 
 2. **Teams you manage section** (if you're a team admin):
    - All teams where you have admin role
    - Add/remove team members
    - Assign roles to team members
-   - View team capacity (e.g., 5/10/20 members)
-   - Check member count vs. limit
+   - View team capacity (e.g., 5/10/20 members) including pending invitations
+   - Pending invitations with resend/cancel options
 
 3. **Users by survey section**:
    - Shows surveys and their members
    - Quick-add form to assign users to surveys by email and role
 
 Actions:
+
 - Prevents an org admin from removing themselves as an admin
+- Sends invitation emails when adding users who don't have accounts
 - All actions are audit-logged
 - Shows UK spelling: "Organisation" throughout
 
@@ -105,11 +168,12 @@ Actions:
 - Non-admins receive 403
 - Actions are audit-logged
 
-- Survey users: `/surveys/{slug}/users/`
-  - **Only available for organization surveys**. Individual users cannot access this page.
-  - Owners, org admins (if the survey belongs to their org), and survey creators can add/update/remove survey members.
-  - Survey viewers see a read-only list.
-  - Actions are audit-logged.
+### Survey Users: `/surveys/{slug}/users/`
+
+- **Only available for organisation surveys**. Individual users cannot access this page.
+- Owners, org admins (if the survey belongs to their org), and survey creators can add/update/remove survey members.
+- Survey viewers see a read-only list.
+- Actions are audit-logged.
 
 ## API endpoints
 
@@ -210,6 +274,160 @@ For security and data integrity reasons, account deletion is restricted:
 
 **For users needing account deletion**: Contact your system administrator, who can safely perform the deletion through the admin interface after confirming the impact on shared data.
 
+## Organisation Administration Workflow
+
+This section describes the typical workflow for managing organisations and their teams.
+
+### Creating an Organisation
+
+Organisations are created by **platform administrators (superusers)** through the Platform Admin portal. The typical workflow is:
+
+1. **Navigate to Platform Admin**: Click your avatar in the top-right corner → Admin Tools → Platform Admin
+2. **Create Organisation**: Click "Create New Organisation" and fill in:
+   - **Name**: The organisation's display name
+   - **Owner Email**: The email address of the organisation owner (must have an existing account)
+   - **Billing Type**: Choose from Per Seat, Flat Rate, Invoice, or Free
+   - **Pricing**: Set the price per seat or flat rate price as appropriate
+   - **Max Seats**: Optionally limit the number of members (leave blank for unlimited)
+   - **Billing Contact**: Email address for billing communications
+   - **Notes**: Internal notes about billing arrangements
+
+3. **Send Invitation**: After creating the organisation, generate an invite link and optionally send an email to the owner. The owner can then complete setup and configure their organisation.
+
+4. **Monitor Status**: View organisation status in the dashboard - pending setup, active, past due, etc.
+
+### Organisation Owner Setup
+
+When an organisation owner receives their invitation:
+
+1. They click the setup link in the email (or are given the link by the admin)
+2. They log in with their account credentials
+3. They review and confirm their organisation settings
+4. They can immediately start inviting members and creating teams
+
+### Creating Teams Within an Organisation
+
+Organisation owners and admins can create teams within their organisation:
+
+1. **Navigate to User Management**: Go to `/surveys/manage/users/`
+2. **Create Team**: In the Organisation section, click "Create Team"
+3. **Configure Team**:
+   - **Name**: The team's display name
+   - **Size**: Choose Small (5), Medium (10), Large (20), or Custom
+   - **Max Surveys**: Set the maximum number of surveys the team can create
+
+4. **Invite Team Members**: Add members by email with appropriate roles (Admin, Creator, Viewer)
+
+### Team Hierarchy and Permissions
+
+When teams are created within an organisation:
+
+- **Organisation admins** automatically have admin access to all teams
+- **Team admins** can only manage their specific team
+- **Team members** can collaborate on surveys within the team
+- **Billing** is managed at the organisation level, not per-team
+
+### Managing Organisation Billing
+
+Platform administrators can manage billing through the Platform Admin portal:
+
+1. **Edit Organisation**: Click on an organisation → Edit
+2. **Update Billing**:
+   - Change billing type (Per Seat, Flat Rate, Invoice, Free)
+   - Adjust pricing
+   - Update max seats
+   - Modify billing contact
+
+3. **Track Usage**: View current seat usage, survey counts, and estimated revenue
+
+### Deactivating an Organisation
+
+To deactivate an organisation (e.g., for non-payment):
+
+1. Navigate to the organisation detail page in Platform Admin
+2. Click "Deactivate Organisation"
+3. The organisation and all its members will be marked inactive
+4. Members will no longer be able to access organisation resources
+5. The organisation can be reactivated later if needed
+
+---
+
+## Superuser Portal: Platform Statistics
+
+Superusers have access to a comprehensive statistics dashboard at `/platform-admin/stats/`.
+
+### Accessing Platform Statistics
+
+1. Click your avatar in the top-right corner
+2. Navigate to Admin Tools → Platform Admin
+3. Click "Statistics" in the sidebar or navigate to `/platform-admin/stats/`
+
+### Available Statistics
+
+#### Billing Breakdown
+
+The statistics page shows a breakdown of organisations by billing type:
+
+| Metric | Description |
+|--------|-------------|
+| Per Seat | Number of organisations using per-seat billing |
+| Flat Rate | Number of organisations with fixed monthly pricing |
+| Invoice | Number of organisations on manual invoice billing |
+| Free | Number of free/trial organisations |
+
+#### Status Breakdown
+
+View organisations by subscription status:
+
+| Status | Description |
+|--------|-------------|
+| Pending | Organisations awaiting owner setup |
+| Active | Fully operational organisations |
+| Past Due | Organisations with overdue payments |
+| Canceled | Cancelled subscriptions |
+| Trialing | Organisations in trial period |
+
+#### Revenue Estimates
+
+The dashboard provides estimated monthly revenue calculations:
+
+- **Per-seat revenue**: Sum of (seats × price_per_seat) for all per-seat orgs
+- **Flat-rate revenue**: Sum of all flat_rate_price values
+- **Total estimated MRR**: Combined monthly recurring revenue
+
+**Note**: Invoice-based organisations are not included in automated revenue calculations as their billing is handled manually.
+
+#### Usage Metrics
+
+Additional metrics available:
+
+- Total number of organisations
+- Total members across all organisations
+- Total teams across all organisations
+- Total surveys across all organisations
+- Organisations requiring attention (past due, over seat limit, etc.)
+
+### Dashboard Overview
+
+The main Platform Admin dashboard (`/platform-admin/`) provides:
+
+- **Quick Stats**: Total orgs, members, teams, surveys
+- **Recent Organisations**: Latest organisations created
+- **Attention Required**: Organisations needing admin intervention (past due, inactive, etc.)
+- **Quick Actions**: Create new organisation, view all organisations, view statistics
+
+### Rate Limiting
+
+Platform admin endpoints are rate-limited to prevent abuse:
+
+| Action | Rate Limit |
+|--------|------------|
+| View dashboard/details | 30 requests/hour |
+| List organisations | 20 requests/hour |
+| Create/edit organisations | 10 requests/hour |
+
+---
+
 ## Testing
 
 The test suite includes:
@@ -217,5 +435,6 @@ The test suite includes:
 - JWT auth enforcement (missing/invalid tokens, refresh flow)
 - API permission tests for list/detail/update/seed
 - SSR portal tests for org/survey user management behaviors and permission boundaries
+- Platform admin permission tests (superuser-only access, rate limiting)
 
 All tests are designed to ensure that protections are consistent and robust across SSR and API.

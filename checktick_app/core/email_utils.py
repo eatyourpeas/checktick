@@ -1429,3 +1429,216 @@ The {branding.get("title", "CheckTick")} Security Team
         markdown_content=content,
         branding=branding,
     )
+
+
+# =============================================================================
+# Team and Organization Invitation Email Functions
+# =============================================================================
+
+
+def send_team_invitation_email(
+    to_email: str,
+    team,
+    role: str,
+    invited_by,
+) -> bool:
+    """Send team invitation email to a new user.
+
+    Args:
+        to_email: Recipient email address (no existing account)
+        team: Team object
+        role: Role being offered (admin, creator, viewer)
+        invited_by: User who sent the invitation
+
+    Returns:
+        True if email sent successfully, False otherwise
+    """
+    from django.conf import settings
+
+    logger.info(
+        f"Attempting to send team invitation email to {to_email} for team: {team.name}"
+    )
+
+    branding = get_platform_branding()
+
+    site_url = getattr(settings, "SITE_URL", "http://localhost:8000")
+    signup_link = f"{site_url}/signup/?email={to_email}"
+
+    # Get organization name if team is part of one
+    organization_name = None
+    if team.organization:
+        organization_name = team.organization.name
+
+    role_display = role.title()
+    subject = f"You're invited to join {team.name}"
+
+    try:
+        markdown_content = render_to_string(
+            "emails/team_invitation.md",
+            {
+                "team_name": team.name,
+                "role": role,
+                "role_display": role_display,
+                "invited_by_name": invited_by.get_full_name() or invited_by.username,
+                "invited_by_email": invited_by.email,
+                "signup_link": signup_link,
+                "organization_name": organization_name,
+                "brand_title": branding["title"],
+            },
+        )
+    except TemplateDoesNotExist:
+        org_line = f"as part of **{organization_name}** " if organization_name else ""
+        markdown_content = f"""## You're Invited to Join {team.name}
+
+Hi there,
+
+**{invited_by.get_full_name() or invited_by.username}** has invited you to join their team on {branding["title"]}.
+
+### Invitation Details
+
+- **Team:** {team.name}
+- **Your Role:** {role_display}
+- **Invited by:** {invited_by.get_full_name() or invited_by.username} ({invited_by.email})
+
+{org_line}
+
+### Get Started
+
+To accept this invitation and join the team, create your account:
+
+[**Create Account**]({signup_link})
+
+Or copy and paste this URL:
+
+```
+{signup_link}
+```
+
+Once you create your account with **{to_email}**, you'll automatically be added to the team.
+
+### What You'll Be Able to Do
+
+As a **{role_display}**, you'll be able to:
+{"- Manage team settings and members" if role == "admin" else ""}
+{"- Create and edit surveys" if role in ("admin", "creator") else ""}
+- View team surveys and data
+
+---
+
+If you have any questions, please contact {invited_by.email}.
+
+The {branding["title"]} Team
+"""
+
+    return send_branded_email(
+        to_email=to_email,
+        subject=subject,
+        markdown_content=markdown_content,
+        branding=branding,
+        context={
+            "team_name": team.name,
+            "role": role,
+            "invited_by": invited_by,
+            "signup_link": signup_link,
+        },
+    )
+
+
+def send_org_invitation_email(
+    to_email: str,
+    organization,
+    role: str,
+    invited_by,
+) -> bool:
+    """Send organization invitation email to a new user.
+
+    Args:
+        to_email: Recipient email address (no existing account)
+        organization: Organization object
+        role: Role being offered (admin, creator, viewer)
+        invited_by: User who sent the invitation
+
+    Returns:
+        True if email sent successfully, False otherwise
+    """
+    from django.conf import settings
+
+    logger.info(
+        f"Attempting to send organization invitation email to {to_email} for org: {organization.name}"
+    )
+
+    branding = get_platform_branding()
+
+    site_url = getattr(settings, "SITE_URL", "http://localhost:8000")
+    signup_link = f"{site_url}/signup/?email={to_email}"
+
+    role_display = role.title()
+    subject = f"You're invited to join {organization.name}"
+
+    try:
+        markdown_content = render_to_string(
+            "emails/org_invitation.md",
+            {
+                "org_name": organization.name,
+                "role": role,
+                "role_display": role_display,
+                "invited_by_name": invited_by.get_full_name() or invited_by.username,
+                "invited_by_email": invited_by.email,
+                "signup_link": signup_link,
+                "brand_title": branding["title"],
+            },
+        )
+    except TemplateDoesNotExist:
+        markdown_content = f"""## You're Invited to Join {organization.name}
+
+Hi there,
+
+**{invited_by.get_full_name() or invited_by.username}** has invited you to join their organization on {branding["title"]}.
+
+### Invitation Details
+
+- **Organization:** {organization.name}
+- **Your Role:** {role_display}
+- **Invited by:** {invited_by.get_full_name() or invited_by.username} ({invited_by.email})
+
+### Get Started
+
+To accept this invitation and join the organization, create your account:
+
+[**Create Account**]({signup_link})
+
+Or copy and paste this URL:
+
+```
+{signup_link}
+```
+
+Once you create your account with **{to_email}**, you'll automatically be added to the organization.
+
+### What You'll Be Able to Do
+
+As a **{role_display}**, you'll be able to:
+{"- Manage organization settings, teams, and members" if role == "admin" else ""}
+{"- Create and edit surveys across the organization" if role in ("admin", "creator") else ""}
+- View organization surveys and data
+- Collaborate with team members
+
+---
+
+If you have any questions, please contact {invited_by.email}.
+
+The {branding["title"]} Team
+"""
+
+    return send_branded_email(
+        to_email=to_email,
+        subject=subject,
+        markdown_content=markdown_content,
+        branding=branding,
+        context={
+            "org_name": organization.name,
+            "role": role,
+            "invited_by": invited_by,
+            "signup_link": signup_link,
+        },
+    )

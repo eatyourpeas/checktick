@@ -20,6 +20,7 @@ from checktick_app.surveys.models import (
     SurveyAccessToken,
     SurveyMembership,
     SurveyResponse,
+    TeamMembership,
 )
 
 from .forms import (
@@ -309,6 +310,10 @@ def profile(request):
             user=user, role=OrganizationMembership.Role.ADMIN
         ).count(),
         "org_memberships": OrganizationMembership.objects.filter(user=user).count(),
+        "team_admin_count": TeamMembership.objects.filter(
+            user=user, role=TeamMembership.Role.ADMIN
+        ).count(),
+        "team_memberships": TeamMembership.objects.filter(user=user).count(),
         "surveys_owned": Survey.objects.filter(owner=user).count(),
         "survey_creator_count": SurveyMembership.objects.filter(
             user=user, role=SurveyMembership.Role.CREATOR
@@ -342,9 +347,12 @@ def profile(request):
         [(theme, theme) for theme in DARK_THEMES] if DARK_THEMES else []
     )
 
-    # Check if user can manage any users (owns org, is admin, or is staff)
+    # Check if user can manage any users (owns org, is org/team admin, or is staff)
     can_manage_any_users = (
-        user.is_staff or stats["orgs_owned"] > 0 or stats["org_admin_count"] > 0
+        user.is_staff
+        or stats["orgs_owned"] > 0
+        or stats["org_admin_count"] > 0
+        or stats["team_admin_count"] > 0
     )
 
     # Get subscription information
@@ -376,6 +384,13 @@ def profile(request):
 
 
 def signup(request):
+    # Get the 'next' URL from query params (e.g., from survey invite link)
+    next_url = request.GET.get("next") or request.POST.get("next")
+
+    # Validate next_url to prevent open redirect vulnerabilities
+    if next_url and not next_url.startswith("/"):
+        next_url = None
+
     if request.method == "POST":
         form = SignupForm(request.POST)
         if form.is_valid():
@@ -401,11 +416,17 @@ def signup(request):
             selected_tier = request.POST.get("tier", "free").lower()
 
             # Handle tier-based signup flow
-            # FREE: Go straight to surveys
+            # FREE: Go straight to surveys (or next_url if provided)
             # PRO/TEAM: Redirect to pricing to complete payment immediately
             # Organisation/Enterprise: Contact sales (shouldn't reach here from form)
             if selected_tier == "free":
-                # FREE tier - go directly to surveys
+                # FREE tier - redirect to next_url if provided, otherwise surveys
+                if next_url:
+                    messages.success(
+                        request,
+                        _("Welcome to CheckTick! You can now complete the survey."),
+                    )
+                    return redirect(next_url)
                 messages.success(
                     request,
                     _("Welcome to CheckTick! Start by creating your first survey."),
@@ -413,6 +434,9 @@ def signup(request):
                 return redirect("surveys:list")
             elif selected_tier in ("pro", "team_small", "team_medium", "team_large"):
                 # Self-service paid tiers - redirect to pricing for immediate payment
+                # Store next_url for after payment completion
+                if next_url:
+                    request.session["pending_next_url"] = next_url
                 request.session["pending_tier"] = selected_tier
                 request.session["auto_open_checkout"] = True  # Signal JS to auto-open
                 tier_display = selected_tier.upper().replace("_", " ")
@@ -428,6 +452,12 @@ def signup(request):
             else:
                 # Organisation, Enterprise, or unknown - fallback to surveys
                 # These tiers require contacting sales and shouldn't be selectable in form
+                if next_url:
+                    messages.success(
+                        request,
+                        _("Welcome to CheckTick! You can now complete the survey."),
+                    )
+                    return redirect(next_url)
                 messages.success(
                     request,
                     _("Welcome to CheckTick! Start by creating your first survey."),
@@ -435,7 +465,7 @@ def signup(request):
                 return redirect("surveys:list")
     else:
         form = SignupForm()
-    return render(request, "registration/signup.html", {"form": form})
+    return render(request, "registration/signup.html", {"form": form, "next": next_url})
 
 
 @login_required
@@ -451,6 +481,11 @@ def complete_signup(request):
 
     if request.method == "POST":
         account_type = request.POST.get("account_type")
+
+        # Get next URL from POST (from hidden field populated via sessionStorage)
+        next_url = request.POST.get("next")
+        if next_url and next_url.startswith("/"):
+            request.session["pending_next_url"] = next_url
 
         # Mark OIDC signup as completed
         if hasattr(request.user, "oidc"):
@@ -482,21 +517,40 @@ def complete_signup(request):
                     user=request.user,
                     role=OrganizationMembership.Role.ADMIN,
                 )
+            # Clear the signup completion flag
+            pending_next_url = request.session.pop("pending_next_url", None)
+            request.session.pop("needs_signup_completion", None)
+
+            if pending_next_url:
+                messages.success(
+                    request,
+                    _("Organisation created. You can now complete the survey."),
+                )
+                return redirect(pending_next_url)
+
             messages.success(
                 request, _("Organisation created. You are an organisation admin.")
             )
-            # Clear the signup completion flag
-            request.session.pop("needs_signup_completion", None)
             return redirect("surveys:org_users", org_id=org.id)
 
-        # Individual account - just clear the flag and redirect to surveys
+        # Individual account - just clear the flag and redirect
+        # Check if there's a pending survey URL from invite flow
+        pending_next_url = request.session.pop("pending_next_url", None)
+        request.session.pop("needs_signup_completion", None)
+
+        if pending_next_url:
+            messages.success(
+                request,
+                _("Account setup complete! You can now complete the survey."),
+            )
+            return redirect(pending_next_url)
+
         messages.success(
             request,
             _(
                 "Account setup complete! Welcome to CheckTick. Start by creating your first survey."
             ),
         )
-        request.session.pop("needs_signup_completion", None)
         return redirect("surveys:list")
 
     return render(
@@ -1064,6 +1118,50 @@ def can_user_safely_delete_own_account(user):
 
 
 @login_required
+def my_surveys(request):
+    """
+    Show surveys the user has participated in (completed).
+    Displays survey name, completion date, and survey open/close period.
+    """
+    from checktick_app.surveys.models import SurveyResponse
+
+    # Get all responses by this user, with related survey data
+    responses = (
+        SurveyResponse.objects.filter(submitted_by=request.user)
+        .select_related("survey", "survey__organization")
+        .order_by("-submitted_at")
+    )
+
+    # Build participation list with relevant info
+    participations = []
+    for response in responses:
+        survey = response.survey
+        participations.append(
+            {
+                "survey_name": survey.name,
+                "organization_name": (
+                    survey.organization.name if survey.organization else None
+                ),
+                "submitted_at": response.submitted_at,
+                "survey_start_at": survey.start_at,
+                "survey_end_at": survey.end_at,
+                "survey_status": survey.status,
+                "survey_slug": survey.slug,
+                "is_live": survey.is_live() if hasattr(survey, "is_live") else False,
+            }
+        )
+
+    return render(
+        request,
+        "core/my_surveys.html",
+        {
+            "participations": participations,
+            "total_count": len(participations),
+        },
+    )
+
+
+@login_required
 def delete_account(request):
     """
     Allow individual users to delete their own account if it's safe to do so.
@@ -1185,5 +1283,146 @@ def configure_branding(request):
         {
             "form": form,
             "branding": branding,
+        },
+    )
+
+
+def org_setup(request, token: str):
+    """Organization setup/onboarding view.
+
+    This view handles the setup flow for organization owners:
+    1. Validates the setup token
+    2. Shows organization details and T&Cs
+    3. Creates user account if needed (or logs in existing)
+    4. Makes user the org owner/admin
+    5. Redirects to payment (if self-service) or dashboard (if invoiced)
+
+    Args:
+        token: The setup token from the invite link
+    """
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+
+    # Find organization by setup token
+    try:
+        org = Organization.objects.get(setup_token=token, is_active=True)
+    except Organization.DoesNotExist:
+        messages.error(
+            request,
+            _(
+                "Invalid or expired organization setup link. Please contact your administrator."
+            ),
+        )
+        return redirect("core:home")
+
+    # Check if already set up
+    if org.setup_completed_at:
+        messages.info(
+            request,
+            _(
+                "This organization has already been set up. Please sign in to access it."
+            ),
+        )
+        return redirect("login")
+
+    if request.method == "POST":
+        # Handle form submission
+        email = request.POST.get("email", "").strip().lower()
+        password = request.POST.get("password", "")
+        accept_terms = request.POST.get("accept_terms")
+
+        if not accept_terms:
+            messages.error(request, _("You must accept the terms and conditions."))
+            return render(request, "core/org_setup.html", {"org": org, "email": email})
+
+        if not email:
+            messages.error(request, _("Email is required."))
+            return render(request, "core/org_setup.html", {"org": org})
+
+        # Check if user exists
+        existing_user = User.objects.filter(email__iexact=email).first()
+
+        if existing_user:
+            # Existing user - check password
+            from django.contrib.auth import authenticate
+
+            user = authenticate(request, username=email, password=password)
+            if not user:
+                messages.error(
+                    request,
+                    _(
+                        "An account with this email already exists. Please enter your password to continue."
+                    ),
+                )
+                return render(
+                    request,
+                    "core/org_setup.html",
+                    {"org": org, "email": email, "existing_user": True},
+                )
+        else:
+            # New user - create account
+            if not password or len(password) < 8:
+                messages.error(request, _("Password must be at least 8 characters."))
+                return render(
+                    request, "core/org_setup.html", {"org": org, "email": email}
+                )
+
+            user = User.objects.create_user(
+                username=email,
+                email=email,
+                password=password,
+            )
+
+        # Update organization ownership and complete setup
+        org.owner = user
+        org.complete_setup()
+
+        # Ensure user is an admin member
+        OrganizationMembership.objects.get_or_create(
+            organization=org,
+            user=user,
+            defaults={"role": OrganizationMembership.Role.ADMIN},
+        )
+
+        # Update user's profile to organization tier
+        from checktick_app.core.models import UserProfile
+
+        profile = UserProfile.get_or_create_for_user(user)
+        profile.account_tier = UserProfile.AccountTier.ORGANIZATION
+        profile.save(update_fields=["account_tier", "updated_at"])
+
+        # Log the user in
+        login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+
+        # Send welcome email
+        try:
+            from .email_utils import send_welcome_email
+
+            send_welcome_email(user)
+        except Exception as e:
+            logger.error(f"Failed to send welcome email: {e}")
+
+        messages.success(
+            request,
+            _("Welcome to %(org_name)s! Your organization account is now active.")
+            % {"org_name": org.name},
+        )
+
+        # Redirect based on billing type
+        if org.billing_type == Organization.BillingType.INVOICE:
+            # Invoice billing - no payment needed, go to dashboard
+            return redirect("surveys:list")
+        else:
+            # Self-service payment - redirect to checkout
+            # TODO: Implement payment checkout with custom price
+            return redirect("surveys:list")
+
+    # GET request - show setup form
+    return render(
+        request,
+        "core/org_setup.html",
+        {
+            "org": org,
         },
     )
