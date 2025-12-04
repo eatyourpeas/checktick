@@ -9930,3 +9930,75 @@ def admin_recovery_reject(request: HttpRequest, request_id: str) -> HttpResponse
         redirect_url += f"?team={context['team'].id}"
 
     return redirect(redirect_url)
+
+
+def validate_nhs_number(request: HttpRequest) -> HttpResponse:
+    """
+    HTMX endpoint to validate and format an NHS number.
+    Returns the formatted number with validation status.
+    """
+    from nhs_number import is_valid, standardise_format
+
+    value = request.POST.get("nhs_number", "").strip()
+
+    # Remove any existing spaces/formatting
+    digits_only = "".join(c for c in value if c.isdigit())
+
+    if not digits_only:
+        # Empty input - return empty input field
+        return HttpResponse(
+            '<input type="text" name="nhs_number" '
+            'class="grow min-w-0 bg-transparent outline-none border-0" '
+            'placeholder="NHS number" '
+            'hx-post="/surveys/validate/nhs-number/" '
+            'hx-trigger="blur, keyup changed delay:500ms" '
+            'hx-target="closest label" '
+            'hx-swap="outerHTML" />'
+        )
+
+    # Validate using the nhs-number package
+    try:
+        normalised = standardise_format(digits_only)
+        valid = is_valid(normalised)
+    except Exception:
+        valid = False
+
+    # Format as 3 3 4 pattern
+    if len(digits_only) == 10:
+        formatted = f"{digits_only[:3]} {digits_only[3:6]} {digits_only[6:]}"
+    else:
+        formatted = digits_only
+
+    if valid:
+        # Valid NHS number - green border, checkmark
+        return HttpResponse(
+            f'<label class="input input-bordered input-sm flex items-center gap-1.5 input-success">'
+            f'<input type="text" name="nhs_number" value="{formatted}" '
+            f'class="grow min-w-0 bg-transparent outline-none border-0" '
+            f'placeholder="NHS number" '
+            f'hx-post="/surveys/validate/nhs-number/" '
+            f'hx-trigger="blur, keyup changed delay:500ms" '
+            f'hx-target="closest label" '
+            f'hx-swap="outerHTML" />'
+            f'<svg class="w-4 h-4 text-success" xmlns="http://www.w3.org/2000/svg" '
+            f'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+            f'<polyline points="20 6 9 17 4 12"></polyline></svg>'
+            f"</label>"
+        )
+    else:
+        # Invalid NHS number - red border, X icon
+        return HttpResponse(
+            f'<label class="input input-bordered input-sm flex items-center gap-1.5 input-error">'
+            f'<input type="text" name="nhs_number" value="{formatted}" '
+            f'class="grow min-w-0 bg-transparent outline-none border-0" '
+            f'placeholder="NHS number" '
+            f'hx-post="/surveys/validate/nhs-number/" '
+            f'hx-trigger="blur, keyup changed delay:500ms" '
+            f'hx-target="closest label" '
+            f'hx-swap="outerHTML" />'
+            f'<svg class="w-4 h-4 text-error" xmlns="http://www.w3.org/2000/svg" '
+            f'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'
+            f'<line x1="18" y1="6" x2="6" y2="18"></line>'
+            f'<line x1="6" y1="6" x2="18" y2="18"></line></svg>'
+            f"</label>"
+        )
