@@ -2173,28 +2173,57 @@ def update_survey_title(request: HttpRequest, slug: str) -> JsonResponse:
 
 @login_required
 def survey_invites_pending(request: HttpRequest, slug: str) -> HttpResponse:
-    """List invited email addresses that have not yet submitted a response.
+    """List invited email addresses and their completion status.
 
-    This shows tokens created via the invite workflow where there is no
-    associated response yet.
+    This shows all tokens created via the invite workflow, indicating
+    whether each invite has been completed or is still pending.
     """
     survey = get_object_or_404(Survey, slug=slug)
     require_can_view(request.user, survey)
 
-    tokens = survey.access_tokens.filter(
-        note__icontains="Invited", response__isnull=True
-    ).order_by("-created_at")
+    # Get all tokens that were created via invite workflow
+    tokens = survey.access_tokens.filter(note__icontains="Invited").order_by(
+        "-created_at"
+    )
 
     invites = []
+    pending_count = 0
+    completed_count = 0
+
     for t in tokens:
         # Note format used when creating invites: 'Invited: email@domain'
         email = None
         if t.note and ":" in t.note:
             email = t.note.split(":", 1)[1].strip()
-        invites.append({"token": t, "email": email or t.note or ""})
+
+        # Check if this token has been used (has a response)
+        has_response = hasattr(t, "response") and t.response is not None
+        # Also check used_at field for token surveys
+        is_completed = has_response or t.used_at is not None
+
+        if is_completed:
+            completed_count += 1
+        else:
+            pending_count += 1
+
+        invites.append(
+            {
+                "token": t,
+                "email": email or t.note or "",
+                "is_completed": is_completed,
+                "completed_at": t.used_at,
+            }
+        )
 
     return render(
-        request, "surveys/invites_pending.html", {"survey": survey, "invites": invites}
+        request,
+        "surveys/invites_pending.html",
+        {
+            "survey": survey,
+            "invites": invites,
+            "pending_count": pending_count,
+            "completed_count": completed_count,
+        },
     )
 
 

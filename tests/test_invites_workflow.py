@@ -120,8 +120,16 @@ class TestDashboardInviteStats:
         assert response.context["invites_pending"] == 1
 
     def test_dashboard_invites_badge_is_clickable(self, client, user, survey):
-        """Invites badge should link to pending invites page."""
+        """Invites badge should link to pending invites page when invites exist."""
         client.force_login(user)
+
+        # Create an invite so the badge appears
+        SurveyAccessToken.objects.create(
+            survey=survey,
+            token="token1",
+            created_by=user,
+            note="Invited: user1@example.com",
+        )
 
         response = client.get(
             reverse("surveys:dashboard", kwargs={"slug": survey.slug})
@@ -137,10 +145,10 @@ class TestDashboardInviteStats:
 
 @pytest.mark.django_db
 class TestPendingInvitesView:
-    """Test the pending invites list view."""
+    """Test the invites list view."""
 
-    def test_pending_invites_lists_tokens_without_responses(self, client, user, survey):
-        """Pending invites page should list only tokens without responses."""
+    def test_invites_page_shows_all_invites_with_status(self, client, user, survey):
+        """Invites page should list all invites with their completion status."""
         client.force_login(user)
 
         # Pending invite
@@ -171,8 +179,12 @@ class TestPendingInvitesView:
 
         assert response.status_code == 200
         content = response.content.decode()
+        # Both emails should be shown
         assert "pending@example.com" in content
-        assert "used@example.com" not in content
+        assert "used@example.com" in content
+        # Check counts in context
+        assert response.context["pending_count"] == 1
+        assert response.context["completed_count"] == 1
 
     def test_pending_invites_extracts_email_from_note(self, client, user, survey):
         """Pending invites should extract email from 'Invited: email' format."""
@@ -462,10 +474,10 @@ class TestInvitesBadgeVisibility:
         # The badge should not appear
         assert 'href="/surveys/test-survey/invites/pending/">Invites:' not in content
 
-    def test_invites_badge_hidden_for_authenticated_visibility(
+    def test_invites_badge_shown_for_authenticated_visibility(
         self, client, user, survey
     ):
-        """Invites badge should NOT be shown when visibility is 'authenticated'."""
+        """Invites badge SHOULD be shown for authenticated visibility when invites exist."""
         client.force_login(user)
 
         # Change to authenticated visibility
@@ -486,8 +498,8 @@ class TestInvitesBadgeVisibility:
 
         assert response.status_code == 200
         content = response.content.decode()
-        # The badge should not appear
-        assert 'href="/surveys/test-survey/invites/pending/">Invites:' not in content
+        # The badge SHOULD appear for authenticated surveys with invites
+        assert "Invites:" in content
 
     def test_invites_badge_hidden_for_unlisted_visibility(self, client, user, survey):
         """Invites badge should NOT be shown when visibility is 'unlisted'."""

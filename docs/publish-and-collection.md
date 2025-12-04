@@ -26,6 +26,7 @@ CheckTick provides four ways to share your survey, from most secure to most open
 **Best for:** Healthcare surveys, research studies, internal assessments
 
 **How it works:**
+
 - Only people with CheckTick accounts can access your survey
 - Participants must log in before completing
 - You can invite specific people by email, or allow any authenticated user
@@ -34,6 +35,7 @@ CheckTick provides four ways to share your survey, from most secure to most open
 **Two access options:**
 
 **Invite-Only Mode** (default):
+
 - Paste email addresses into the invitation box (one per line)
 - Outlook contact format is supported: `John Smith <user@example.com>`
 - System checks if each person has a CheckTick account:
@@ -43,6 +45,7 @@ CheckTick provides four ways to share your survey, from most secure to most open
 - Resend invitations from the dashboard if needed
 
 **Self-Service Mode**:
+
 - Check "Allow any authenticated user to access"
 - Any logged-in user can access the survey
 - No invitation required, but users still need an account
@@ -53,6 +56,7 @@ CheckTick provides four ways to share your survey, from most secure to most open
 **Best for:** Controlled distribution without requiring accounts
 
 **How it works:**
+
 - Generate unique one-time codes for each participant
 - Share links like: `/surveys/your-survey/take/token/ABC123/`
 - Each code works only once
@@ -60,6 +64,7 @@ CheckTick provides four ways to share your survey, from most secure to most open
 - You can set expiry dates and export usage data
 
 **When to use:**
+
 - You want to control who can access the survey
 - You don't need to know participants' identities
 - You want to track individual completion without accounts
@@ -71,12 +76,14 @@ CheckTick provides four ways to share your survey, from most secure to most open
 **Best for:** Semi-private surveys with known audience
 
 **How it works:**
+
 - Get a secret link like: `/surveys/your-survey/take/unlisted/secret-key/`
 - Anyone with the link can complete the survey
 - Link is not discoverable on your site or through the API
 - No account required
 
 **When to use:**
+
 - Sharing with a specific group (e.g., email list, internal team)
 - You trust recipients not to share the link publicly
 - You don't need to track individual access
@@ -88,12 +95,14 @@ CheckTick provides four ways to share your survey, from most secure to most open
 **Best for:** General feedback, public surveys, anonymous data collection
 
 **How it works:**
+
 - Survey is openly accessible at: `/surveys/your-survey/take/`
 - Anyone can complete it without an account
 - Recommended to enable CAPTCHA to prevent spam
 - Rate limiting is automatically enabled
 
 **When to use:**
+
 - Public feedback forms
 - Anonymous surveys where you want maximum participation
 - Non-sensitive data collection
@@ -162,12 +171,14 @@ For details on creating translations, see [Multi-language surveys](/docs/surveys
 When your survey collects patient-identifiable information:
 
 ✅ **Use Authenticated visibility mode**
+
 - Links responses to verified user accounts
 - Provides full audit trail
 - Enables proper data governance
 - Meets healthcare compliance requirements
 
 ❌ **Don't use** Public, Unlisted, or Anonymous Invite Codes
+
 - These modes require confirmation that no patient data is collected
 - System enforces this protection when publishing
 
@@ -192,6 +203,7 @@ Set a maximum number of responses. When reached, the survey automatically closes
 ### Tracking Progress
 
 Your dashboard shows:
+
 - Current status and visibility mode
 - Total responses received
 - Today's responses
@@ -201,6 +213,7 @@ Your dashboard shows:
 ### Managing Invitations (Authenticated & Token modes)
 
 From your dashboard:
+
 - View pending invitations
 - See who has completed the survey
 - Resend invitations to non-responders
@@ -215,6 +228,7 @@ Participants can save their progress and resume later. This is especially helpfu
 ### Completion
 
 After submitting, participants see a customizable thank-you page. You can include:
+
 - Confirmation message
 - Next steps
 - Contact information
@@ -235,12 +249,14 @@ CheckTick includes enterprise-grade security:
 ## Quick Start Guide
 
 **For maximum security (healthcare/research):**
+
 1. Choose **Authenticated** visibility
 2. Leave "Allow any authenticated user" **unchecked**
 3. Paste email addresses to invite
 4. Publish!
 
 **For controlled anonymous surveys:**
+
 1. Choose **Anonymous with Invite Codes**
 2. Generate codes for your participants
 3. Confirm no patient data collected
@@ -248,6 +264,7 @@ CheckTick includes enterprise-grade security:
 5. Publish!
 
 **For public feedback:**
+
 1. Choose **Public** visibility
 2. Confirm no patient data collected
 3. Enable CAPTCHA
@@ -257,21 +274,25 @@ CheckTick includes enterprise-grade security:
 ## Troubleshooting
 
 **"Survey not live"**
+
 - Check status is **Published** (not Draft or Closed)
 - Verify you're within the start/end date window
 - Check if maximum responses has been reached
 
 **"Need to log in" (Authenticated mode)**
+
 - This is correct! Participants need accounts for authenticated surveys
 - New users will be prompted to create an account
 - Invitation emails include clear instructions
 
 **"Invalid or used token"**
+
 - Tokens can only be used once
 - Generate a new token for the participant
 - Check if the token has expired
 
 **"CAPTCHA failed"**
+
 - Ensure CAPTCHA is properly configured (see technical docs)
 - Participant may need to try again
 - Check browser isn't blocking the CAPTCHA widget

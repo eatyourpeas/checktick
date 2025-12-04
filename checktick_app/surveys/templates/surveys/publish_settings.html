@@ -43,15 +43,22 @@
                 <span class="link link-hover text-sm">{% trans "What's this?" %}</span>
               </a>
             </label>
-            <select class="select select-bordered w-full" name="visibility" required>
+            <select class="select select-bordered w-full" name="visibility" required {% if survey.status == 'published' %}disabled{% endif %}>
               <option value="authenticated" {% if survey.visibility == 'authenticated' %}selected{% endif %}>{% trans "Authenticated" %}</option>
               <option value="public" {% if survey.visibility == 'public' %}selected{% endif %}>{% trans "Public" %}</option>
               <option value="unlisted" {% if survey.visibility == 'unlisted' %}selected{% endif %}>{% trans "Unlisted" %}</option>
               <option value="token" {% if survey.visibility == 'token' %}selected{% endif %}>{% trans "Invite token" %}</option>
             </select>
+            {% if survey.status == 'published' %}
+            <input type="hidden" name="visibility" value="{{ survey.visibility }}" />
+            <label class="label">
+              <span class="label-text-alt opacity-70">{% trans "Visibility cannot be changed after publishing" %}</span>
+            </label>
+            {% else %}
             <label class="label">
               <span class="label-text-alt opacity-70">{% trans "Who can access this survey" %}</span>
             </label>
+            {% endif %}
           </div>
 
           <div>
@@ -236,6 +243,10 @@
               <div class="flex-1">
                 <label class="{% if not survey.status == 'published' or not survey.no_patient_data_ack %}cursor-pointer{% endif %} flex items-start gap-3">
                   <input type="checkbox" class="checkbox checkbox-warning border-white mt-0.5" name="no_patient_data_ack" id="no_patient_data" {% if survey.no_patient_data_ack %}checked{% endif %} {% if survey.status == 'published' and survey.no_patient_data_ack %}disabled{% endif %} required />
+                  {% if survey.status == 'published' and survey.no_patient_data_ack %}
+                  {# Hidden input to preserve value when checkbox is disabled #}
+                  <input type="hidden" name="no_patient_data_ack" value="on" />
+                  {% endif %}
                   <span class="text-sm">{% blocktrans %}I confirm no <strong>patient-identifiable data</strong> is collected in this survey. This is required when using Public, Unlisted, or Token visibility to prevent unauthorised access.{% endblocktrans %}{% if survey.status == 'published' and survey.no_patient_data_ack %} <span class="text-xs opacity-70">({% trans "Cannot be changed after publication" %})</span>{% endif %}</span>
                 </label>
               </div>

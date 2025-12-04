@@ -1,34 +1,56 @@
 {% extends 'base.html' %}
 {% load i18n %}
-{% block title %}{% trans "Pending invites" %} - {{ survey.name }}{% endblock %}
+{% block title %}{% trans "Survey Invitations" %} - {{ survey.name }}{% endblock %}
 {% block content %}
 <div class="prose">
   {% trans "Surveys" as bc_surveys %}
   {% trans "Survey Dashboard" as bc_survey_dashboard %}
-  {% include 'components/breadcrumbs.html' with crumb1_label=bc_surveys crumb1_href="/surveys/" crumb2_label=bc_survey_dashboard crumb2_href="/surveys/"|add:survey.slug|add:"/dashboard/" %}
-  <h2>{{ survey.name }} — {% trans "Pending invites" %}</h2>
+  {% trans "Invitations" as bc_invitations %}
+  {% include 'components/breadcrumbs.html' with crumb1_label=bc_surveys crumb1_href="/surveys/" crumb2_label=bc_survey_dashboard crumb2_href="/surveys/"|add:survey.slug|add:"/dashboard/" crumb3_label=bc_invitations %}
+  <h2>{{ survey.name }} — {% trans "Invitations" %}</h2>
 </div>
 
 <div class="mt-4">
-  <p class="mb-3">{% blocktrans %}The list below shows invited email addresses that have not yet submitted a response.{% endblocktrans %}</p>
+  <div class="flex flex-wrap gap-2 mb-4">
+    <span class="badge badge-lg badge-outline">{% trans "Total" %}: {{ invites|length }}</span>
+    <span class="badge badge-lg badge-success">{% trans "Completed" %}: {{ completed_count }}</span>
+    <span class="badge badge-lg badge-warning">{% trans "Pending" %}: {{ pending_count }}</span>
+  </div>
+
+  <p class="mb-3 opacity-70">{% blocktrans %}The list below shows all invited email addresses and their completion status.{% endblocktrans %}</p>
   {% if invites %}
     <div class="overflow-x-auto">
       <table class="table w-full">
         <thead>
           <tr>
+            <th>{% trans "Status" %}</th>
             <th>{% trans "Invited at" %}</th>
-            <th>{% trans "Email / Note" %}</th>
-            <th>{% trans "Token" %}</th>
+            <th>{% trans "Email" %}</th>
+            <th>{% trans "Completed at" %}</th>
             <th>{% trans "Actions" %}</th>
           </tr>
         </thead>
         <tbody>
           {% for item in invites %}
-          <tr>
-            <td>{{ item.token.created_at }}</td>
-            <td>{{ item.email }}</td>
-            <td class="font-mono text-xs">{{ item.token.token }}</td>
+          <tr class="{% if item.is_completed %}opacity-60{% endif %}">
             <td>
+              {% if item.is_completed %}
+                <span class="badge badge-success badge-sm">{% trans "Completed" %}</span>
+              {% else %}
+                <span class="badge badge-warning badge-sm">{% trans "Pending" %}</span>
+              {% endif %}
+            </td>
+            <td>{{ item.token.created_at|date:"d M Y H:i" }}</td>
+            <td>{{ item.email }}</td>
+            <td>
+              {% if item.completed_at %}
+                {{ item.completed_at|date:"d M Y H:i" }}
+              {% else %}
+                <span class="opacity-50">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if not item.is_completed %}
               <form method="post" action="{% url 'surveys:invite_resend' slug=survey.slug token_id=item.token.id %}" class="inline" onsubmit="return confirm('{% trans "Resend invitation to" %} {{ item.email }}?');">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-xs btn-outline btn-primary">
@@ -38,6 +60,9 @@
                   {% trans "Resend" %}
                 </button>
               </form>
+              {% else %}
+              <span class="opacity-50 text-sm">{% trans "No action needed" %}</span>
+              {% endif %}
             </td>
           </tr>
           {% endfor %}
@@ -45,7 +70,10 @@
       </table>
     </div>
   {% else %}
-    <div class="opacity-60">{% trans "No pending invites found." %}</div>
+    <div class="alert alert-info">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      <span>{% trans "No invitations have been sent yet. You can send invitations from the publication settings page." %}</span>
+    </div>
   {% endif %}
 
   <p class="mt-4"><a class="btn btn-primary hover:bg-primary-focus transition-colors" href="{% url 'surveys:dashboard' slug=survey.slug %}">{% trans "Back to dashboard" %}</a></p>
