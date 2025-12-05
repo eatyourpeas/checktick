@@ -141,12 +141,22 @@
         </svg>
         {% trans "Copy Survey Link" %}
       </button>
+      <button class="btn btn-outline btn-sm flex-shrink-0 show-qr-code" data-url="{{ request.scheme }}://{{ request.get_host }}/surveys/{{ survey.slug }}/take/" title="{% trans 'Show QR Code' %}">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+        </svg>
+      </button>
     {% elif survey.visibility == 'unlisted' and survey.unlisted_key %}
       <button class="btn btn-outline btn-sm flex-shrink-0 copy-survey-link" data-slug="{{ survey.slug }}" data-url="{{ request.scheme }}://{{ request.get_host }}/surveys/{{ survey.slug }}/take/unlisted/{{ survey.unlisted_key }}/">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
         </svg>
         {% trans "Copy Survey Link" %}
+      </button>
+      <button class="btn btn-outline btn-sm flex-shrink-0 show-qr-code" data-url="{{ request.scheme }}://{{ request.get_host }}/surveys/{{ survey.slug }}/take/unlisted/{{ survey.unlisted_key }}/" title="{% trans 'Show QR Code' %}">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+        </svg>
       </button>
     {% endif %}
   {% endif %}
@@ -607,8 +617,65 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }, 1000);
   }
+
+  // QR Code Modal functionality
+  const qrButtons = document.querySelectorAll('.show-qr-code');
+  const qrModal = document.getElementById('qr_code_modal');
+  const qrImage = document.getElementById('qr_code_image');
+  const qrUrlText = document.getElementById('qr_url_text');
+  const downloadQrBtn = document.getElementById('download_qr_btn');
+
+  qrButtons.forEach(button => {
+    button.addEventListener('click', function(e) {
+      e.preventDefault();
+      const url = this.dataset.url;
+      qrUrlText.textContent = url;
+
+      // Fetch QR code from server
+      fetch('{% url "surveys:get_qr_code" slug=survey.slug %}?url=' + encodeURIComponent(url))
+        .then(response => response.json())
+        .then(data => {
+          if (data.qr_code) {
+            qrImage.src = data.qr_code;
+            downloadQrBtn.onclick = function() {
+              const link = document.createElement('a');
+              link.download = '{{ survey.slug }}-qr-code.png';
+              link.href = data.qr_code;
+              link.click();
+            };
+            qrModal.showModal();
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching QR code:', error);
+        });
+    });
+  });
 });
 </script>
+
+<!-- QR Code Modal -->
+<dialog id="qr_code_modal" class="modal">
+  <div class="modal-box text-center">
+    <h3 class="text-lg font-bold mb-4">{% trans "Survey QR Code" %}</h3>
+    <img id="qr_code_image" src="" alt="{% trans 'QR Code' %}" class="mx-auto mb-4" width="200" height="200" />
+    <p id="qr_url_text" class="text-sm text-base-content/70 break-all mb-4"></p>
+    <div class="modal-action justify-center gap-2">
+      <button id="download_qr_btn" class="btn btn-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        </svg>
+        {% trans "Download" %}
+      </button>
+      <form method="dialog">
+        <button class="btn">{% trans "Close" %}</button>
+      </form>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>{% trans "close" %}</button>
+  </form>
+</dialog>
 
 <!-- Edit Title Modal -->
 <dialog id="edit_title_modal" class="modal">

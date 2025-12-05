@@ -210,6 +210,16 @@
           <label class="label">
             <span class="label-text-alt opacity-70">{% trans "Enter one email address per line. Outlook contact format is supported (Name <email@domain.com>)." %}</span>
           </label>
+
+          <div class="form-control mt-4">
+            <label class="cursor-pointer flex items-start gap-3">
+              <input type="checkbox" class="checkbox mt-0.5" name="include_qr_code" checked />
+              <div>
+                <span class="label-text font-medium">{% trans "Include QR code in invitation emails" %}</span>
+                <p class="text-sm opacity-70 mt-1">{% trans "Adds a scannable QR code to the email that links directly to the survey." %}</p>
+              </div>
+            </label>
+          </div>
         </div>
 
         <div class="form-control mb-6" id="allow-any-authenticated-section" style="display: none;">
@@ -418,6 +428,12 @@
     const formData = new FormData();
     formData.append('invite_emails', inviteEmails);
     formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+    // Include QR code checkbox
+    const qrCheckbox = document.querySelector('input[name="include_qr_code"]');
+    if (qrCheckbox && qrCheckbox.checked) {
+      formData.append('include_qr_code', 'on');
+    }
 
     fetch('{% url "surveys:send_invites_async" slug=survey.slug %}', {
       method: 'POST',

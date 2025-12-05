@@ -171,6 +171,11 @@ urlpatterns = [
         name="send_invites_async",
     ),
     path(
+        "<slug:slug>/qr-code/",
+        views.get_qr_code,
+        name="get_qr_code",
+    ),
+    path(
         "<slug:slug>/invites/status/<str:task_id>/",
         views.email_status,
         name="email_status",
