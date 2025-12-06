@@ -1,11 +1,16 @@
 """Signal handlers for core app models."""
 
-import logging
 from datetime import datetime
+import logging
 
 from axes.signals import user_locked_out
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.signals import (
+    user_logged_in,
+    user_logged_out,
+    user_login_failed,
+)
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -129,6 +134,17 @@ def send_lockout_notification(sender, request, username, credentials, **kwargs):
     except Exception as e:
         logger.error(f"Failed to send lockout notification to {user.email}: {e}")
 
+    # Log the lockout event
+    from checktick_app.surveys.models import AuditLog
+
+    AuditLog.log_security_event(
+        action=AuditLog.Action.ACCOUNT_LOCKED,
+        actor=user,
+        request=request,
+        message=f"Account locked after {getattr(settings, 'AXES_FAILURE_LIMIT', 5)} failed login attempts",
+        username_attempted=username,
+    )
+
 
 def _get_client_ip(request) -> str:
     """Extract client IP address from request, handling proxies."""
@@ -140,3 +156,61 @@ def _get_client_ip(request) -> str:
         # Take the first IP in the chain (original client)
         return x_forwarded_for.split(",")[0].strip()
     return request.META.get("REMOTE_ADDR", "Unknown")
+
+
+# Security audit logging for authentication events
+@receiver(post_save, sender=User)
+def log_user_creation(sender, instance, created, **kwargs):
+    """Log when a new user account is created."""
+    if created:
+        from checktick_app.surveys.models import AuditLog
+
+        AuditLog.log_security_event(
+            action=AuditLog.Action.USER_CREATED,
+            actor=instance,
+            message=f"User account created: {instance.email}",
+        )
+
+
+@receiver(user_logged_in)
+def log_successful_login(sender, request, user, **kwargs):
+    """Log successful login events."""
+    from checktick_app.surveys.models import AuditLog
+
+    AuditLog.log_security_event(
+        action=AuditLog.Action.LOGIN_SUCCESS,
+        actor=user,
+        request=request,
+        message=f"Successful login for {user.email}",
+    )
+
+
+@receiver(user_logged_out)
+def log_logout(sender, request, user, **kwargs):
+    """Log logout events."""
+    if user is None:
+        return
+
+    from checktick_app.surveys.models import AuditLog
+
+    AuditLog.log_security_event(
+        action=AuditLog.Action.LOGOUT,
+        actor=user,
+        request=request,
+        message=f"User logged out: {user.email}",
+    )
+
+
+@receiver(user_login_failed)
+def log_failed_login(sender, credentials, request, **kwargs):
+    """Log failed login attempts."""
+    from checktick_app.surveys.models import AuditLog
+
+    username = credentials.get("username", "")
+
+    AuditLog.log_security_event(
+        action=AuditLog.Action.LOGIN_FAILED,
+        request=request,
+        message=f"Failed login attempt for username: {username}",
+        username_attempted=username,
+    )

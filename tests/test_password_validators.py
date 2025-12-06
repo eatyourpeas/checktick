@@ -1,7 +1,7 @@
 """Tests for custom password validators."""
 
-import pytest
 from django.core.exceptions import ValidationError
+import pytest
 
 from checktick_app.core.password_validators import (
     ComplexityValidator,

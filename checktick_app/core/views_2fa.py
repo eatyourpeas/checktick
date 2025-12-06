@@ -24,6 +24,8 @@ from django_otp import user_has_device
 from django_otp.plugins.otp_totp.models import TOTPDevice
 import qrcode
 
+from checktick_app.surveys.models import AuditLog
+
 logger = logging.getLogger(__name__)
 
 
@@ -141,6 +143,20 @@ def two_factor_setup(request):
             )
             logger.info(f"2FA enabled for user {user.id}")
 
+            # Log security event
+            AuditLog.log_security_event(
+                action=AuditLog.Action.TWO_FA_ENABLED,
+                actor=user,
+                request=request,
+                message="Two-factor authentication enabled",
+            )
+            AuditLog.log_security_event(
+                action=AuditLog.Action.BACKUP_CODES_GENERATED,
+                actor=user,
+                request=request,
+                message=f"Generated {len(backup_codes)} backup codes",
+            )
+
             # Get the next URL from session (set by middleware)
             next_url = request.session.pop("2fa_next", None)
 
@@ -226,6 +242,14 @@ def two_factor_disable(request):
     messages.success(request, _("Two-factor authentication has been disabled."))
     logger.info(f"2FA disabled for user {user.id}")
 
+    # Log security event - this is a critical action
+    AuditLog.log_security_event(
+        action=AuditLog.Action.TWO_FA_DISABLED,
+        actor=user,
+        request=request,
+        message="Two-factor authentication disabled",
+    )
+
     return redirect("core:profile")
 
 
@@ -249,6 +273,14 @@ def two_factor_regenerate_backup_codes(request):
 
     backup_codes = generate_backup_codes(user)
     logger.info(f"Backup codes regenerated for user {user.id}")
+
+    # Log security event
+    AuditLog.log_security_event(
+        action=AuditLog.Action.BACKUP_CODES_GENERATED,
+        actor=user,
+        request=request,
+        message=f"Regenerated {len(backup_codes)} backup codes (old codes invalidated)",
+    )
 
     return render(
         request,
@@ -330,6 +362,15 @@ def two_factor_verify(request):
                 messages.success(
                     request, _("Successfully signed in with two-factor authentication.")
                 )
+
+                # Log successful 2FA verification
+                AuditLog.log_security_event(
+                    action=AuditLog.Action.TWO_FA_VERIFIED,
+                    actor=user,
+                    request=request,
+                    message="2FA verification successful (TOTP)",
+                )
+
                 return redirect(
                     request.session.pop("next", settings.LOGIN_REDIRECT_URL)
                 )
@@ -352,9 +393,26 @@ def two_factor_verify(request):
                         "Signed in using a backup code. Consider regenerating your backup codes."
                     ),
                 )
+
+                # Log backup code usage
+                AuditLog.log_security_event(
+                    action=AuditLog.Action.BACKUP_CODE_USED,
+                    actor=user,
+                    request=request,
+                    message="Signed in using backup code",
+                )
+
                 return redirect(
                     request.session.pop("next", settings.LOGIN_REDIRECT_URL)
                 )
+
+        # Log failed 2FA attempt
+        AuditLog.log_security_event(
+            action=AuditLog.Action.TWO_FA_FAILED,
+            actor=user,
+            request=request,
+            message="2FA verification failed - invalid code",
+        )
 
         messages.error(request, _("Invalid verification code. Please try again."))
 
