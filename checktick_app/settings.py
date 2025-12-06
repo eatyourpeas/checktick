@@ -1,9 +1,13 @@
 # SimpleJWT defaults
 from datetime import timedelta
 import os
+import sys
 from pathlib import Path
 
 import environ
+
+# Detect if running tests
+TESTING = "pytest" in sys.modules or "test" in sys.argv
 
 env = environ.Env(
     DEBUG=(bool, False),
@@ -216,6 +220,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django_otp.middleware.OTPMiddleware",
+    "checktick_app.core.middleware.Require2FAMiddleware",
     "checktick_app.core.middleware.UserLanguageMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -681,3 +686,7 @@ VAULT_ADDR = env("VAULT_ADDR", default="https://vault.checktick.internal:8200")
 VAULT_ROLE_ID = env("VAULT_ROLE_ID", default="")
 VAULT_SECRET_ID = env("VAULT_SECRET_ID", default="")
 PLATFORM_CUSTODIAN_COMPONENT = env("PLATFORM_CUSTODIAN_COMPONENT", default="")
+
+# Two-Factor Authentication
+# Require 2FA for all password users (disabled during tests)
+REQUIRE_2FA = env.bool("REQUIRE_2FA", default=not TESTING)

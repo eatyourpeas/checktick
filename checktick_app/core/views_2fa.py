@@ -142,6 +142,9 @@ def two_factor_setup(request):
             )
             logger.info(f"2FA enabled for user {user.id}")
 
+            # Get the next URL from session (set by middleware)
+            next_url = request.session.pop("2fa_next", None)
+
             # Show backup codes page
             return render(
                 request,
@@ -149,6 +152,7 @@ def two_factor_setup(request):
                 {
                     "backup_codes": backup_codes,
                     "is_initial_setup": True,
+                    "next_url": next_url,
                 },
             )
         else:

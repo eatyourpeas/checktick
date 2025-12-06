@@ -9,10 +9,19 @@
     {% include "components/icons/shield-check.html" with classes="w-6 h-6 text-base-content" only %}
     <span>{% trans "Set Up Two-Factor Authentication" %}</span>
   </h1>
-  <p class="opacity-80">{% trans "Add an extra layer of security to your account by enabling two-factor authentication (2FA)." %}</p>
 </div>
 
 <div class="mt-6 max-w-xl">
+  <div class="alert alert-info mb-6">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>
+    <div>
+      <h3 class="font-bold">{% trans "2FA is required" %}</h3>
+      <p class="text-sm">{% trans "As a healthcare application, CheckTick requires two-factor authentication for all password-based accounts to protect sensitive data." %}</p>
+    </div>
+  </div>
+
   <div class="card bg-base-100 shadow">
     <div class="card-body">
       <h2 class="card-title text-base-content">{% trans "Step 1: Scan QR Code" %}</h2>
@@ -70,7 +79,7 @@
             {% include "components/icons/shield-check.html" with classes="w-4 h-4 mr-2" only %}
             {% trans "Enable 2FA" %}
           </button>
-          <a href="{% url 'core:profile' %}" class="btn btn-ghost">{% trans "Cancel" %}</a>
+          <a href="{% url 'logout' %}" class="btn btn-ghost">{% trans "Sign Out" %}</a>
         </div>
       </form>
     </div>

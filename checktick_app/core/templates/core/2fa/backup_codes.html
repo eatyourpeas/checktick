@@ -69,9 +69,15 @@
   </div>
 
   <div class="mt-6">
+    {% if next_url %}
+    <a href="{{ next_url }}" class="btn btn-primary">
+      {% trans "I've saved my codes - Continue" %}
+    </a>
+    {% else %}
     <a href="{% url 'core:two_factor_manage' %}" class="btn btn-primary">
       {% trans "I've saved my codes" %}
     </a>
+    {% endif %}
   </div>
 </div>
 
