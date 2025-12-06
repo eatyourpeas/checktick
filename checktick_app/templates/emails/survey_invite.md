@@ -22,6 +22,15 @@ Or copy and paste this URL into your browser:
 {{ survey_link }}
 ```
 
+{% if qr_code_data_uri %}
+
+### Scan to Complete
+
+You can also scan this QR code with your phone to access the survey:
+
+![QR Code]({{ qr_code_data_uri }})
+{% endif %}
+
 ### Important Notes
 
 ⚠️ **This link can only be used once.** After you submit your response, the link will no longer work.

@@ -375,6 +375,7 @@ def send_survey_invite_email(
     survey,
     token: str,
     contact_email: Optional[str] = None,
+    qr_code_data_uri: Optional[str] = None,
 ) -> bool:
     """Send survey invitation email with unique token link.
 
@@ -383,6 +384,7 @@ def send_survey_invite_email(
         survey: Survey object
         token: Unique access token string
         contact_email: Optional contact email for questions
+        qr_code_data_uri: Optional QR code as data URI to include in email
 
     Returns:
         True if email sent successfully, False otherwise
@@ -422,6 +424,7 @@ def send_survey_invite_email(
             "end_date": end_date,
             "contact_email": contact_email,
             "brand_title": branding["title"],
+            "qr_code_data_uri": qr_code_data_uri,
         },
     )
 
@@ -436,6 +439,7 @@ def send_survey_invite_email(
             "organization_name": organization_name,
             "end_date": end_date,
             "contact_email": contact_email,
+            "qr_code_data_uri": qr_code_data_uri,
         },
     )
 
@@ -444,6 +448,7 @@ def send_authenticated_survey_invite_existing_user(
     to_email: str,
     survey,
     contact_email: Optional[str] = None,
+    qr_code_data_uri: Optional[str] = None,
 ) -> bool:
     """Send survey invitation to existing authenticated user.
 
@@ -451,6 +456,7 @@ def send_authenticated_survey_invite_existing_user(
         to_email: Recipient email address (existing user)
         survey: Survey object
         contact_email: Optional contact email for questions
+        qr_code_data_uri: Optional QR code as data URI to include in email
 
     Returns:
         True if email sent successfully, False otherwise
@@ -490,6 +496,7 @@ def send_authenticated_survey_invite_existing_user(
             "end_date": end_date,
             "contact_email": contact_email,
             "brand_title": branding["title"],
+            "qr_code_data_uri": qr_code_data_uri,
         },
     )
 
@@ -504,6 +511,7 @@ def send_authenticated_survey_invite_existing_user(
             "organization_name": organization_name,
             "end_date": end_date,
             "contact_email": contact_email,
+            "qr_code_data_uri": qr_code_data_uri,
         },
     )
 
@@ -512,6 +520,7 @@ def send_authenticated_survey_invite_new_user(
     to_email: str,
     survey,
     contact_email: Optional[str] = None,
+    qr_code_data_uri: Optional[str] = None,
 ) -> bool:
     """Send survey invitation to new user (needs to create account).
 
@@ -519,6 +528,7 @@ def send_authenticated_survey_invite_new_user(
         to_email: Recipient email address (no existing account)
         survey: Survey object
         contact_email: Optional contact email for questions
+        qr_code_data_uri: Optional QR code as data URI to include in email
 
     Returns:
         True if email sent successfully, False otherwise
@@ -562,6 +572,7 @@ def send_authenticated_survey_invite_new_user(
             "end_date": end_date,
             "contact_email": contact_email,
             "brand_title": branding["title"],
+            "qr_code_data_uri": qr_code_data_uri,
         },
     )
 
@@ -577,6 +588,7 @@ def send_authenticated_survey_invite_new_user(
             "organization_name": organization_name,
             "end_date": end_date,
             "contact_email": contact_email,
+            "qr_code_data_uri": qr_code_data_uri,
         },
     )
 

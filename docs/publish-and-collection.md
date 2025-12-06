@@ -210,6 +210,49 @@ Your dashboard shows:
 - Last 7 days activity
 - Time remaining (if end date is set)
 
+### QR Codes
+
+CheckTick can generate QR codes for your survey links, making it easy to share surveys in printed materials, posters, or presentations.
+
+**QR codes in email invitations:**
+
+When sending invitations (Authenticated or Token modes), you can include a QR code in each email:
+
+1. In the Publish Settings, look for the "Include QR code in invitation emails" checkbox
+2. This is enabled by default
+3. Each recipient gets a unique QR code linking to their survey access
+
+**QR codes on the dashboard:**
+
+For Public and Unlisted surveys, a QR button appears next to the "Copy Survey Link" button:
+
+1. Click the QR icon to view the QR code
+2. Download it as a PNG file
+3. Use it in posters, handouts, or presentations
+
+**QR codes for individual tokens:**
+
+On the Invite Tokens management page, each token has a QR button:
+
+1. Click the QR icon to view the code for that specific token
+2. Download and print for individual distribution
+3. Each QR code is unique to that token
+
+**QR codes for authenticated invites:**
+
+On the Invitations page, pending invitations show a QR button:
+
+1. Click to view the QR code for that invitation
+2. Useful for giving to participants in person
+3. Reminds them to log in with the invited email address
+
+**Best practices:**
+
+- Test the QR code works before printing
+- Include a short URL alongside the QR for accessibility
+- Ensure sufficient size (at least 2cm × 2cm for reliable scanning)
+- Use high contrast printing
+
 ### Managing Invitations (Authenticated & Token modes)
 
 From your dashboard:

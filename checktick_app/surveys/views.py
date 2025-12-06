@@ -2976,8 +2976,10 @@ def _send_invites_background(
     contact_email: str,
     user_id: int,
     task_id: str,
+    include_qr_code: bool = True,
 ) -> None:
     """Background task to send survey invitation emails."""
+    from django.conf import settings
     from django.contrib.auth import get_user_model
     from django.core.cache import cache
 
@@ -2986,6 +2988,7 @@ def _send_invites_background(
         send_authenticated_survey_invite_new_user,
         send_survey_invite_email,
     )
+    from checktick_app.core.qr_utils import generate_qr_code_data_uri
 
     User = get_user_model()
 
@@ -3029,12 +3032,22 @@ def _send_invites_background(
                 )
                 token.save()
 
+                # Generate QR code for the survey link if requested
+                qr_code_data_uri = None
+                if include_qr_code:
+                    site_url = getattr(settings, "SITE_URL", "http://localhost:8000")
+                    survey_link = (
+                        f"{site_url}/surveys/{survey.slug}/take/token/{token.token}/"
+                    )
+                    qr_code_data_uri = generate_qr_code_data_uri(survey_link, size=200)
+
                 # Send invitation email
                 if send_survey_invite_email(
                     to_email=email_address,
                     survey=survey,
                     token=token.token,
                     contact_email=contact_email,
+                    qr_code_data_uri=qr_code_data_uri,
                 ):
                     sent_count += 1
                 else:
@@ -3052,6 +3065,13 @@ def _send_invites_background(
                 )
                 token.save()
 
+                # Generate QR code for the survey link if requested
+                qr_code_data_uri = None
+                if include_qr_code:
+                    site_url = getattr(settings, "SITE_URL", "http://localhost:8000")
+                    survey_link = f"{site_url}/surveys/{survey.slug}/take/"
+                    qr_code_data_uri = generate_qr_code_data_uri(survey_link, size=200)
+
                 # Check if user exists
                 user_exists = User.objects.filter(email=email_address).exists()
 
@@ -3061,12 +3081,14 @@ def _send_invites_background(
                         to_email=email_address,
                         survey=survey,
                         contact_email=contact_email,
+                        qr_code_data_uri=qr_code_data_uri,
                     )
                 else:
                     email_sent = send_authenticated_survey_invite_new_user(
                         to_email=email_address,
                         survey=survey,
                         contact_email=contact_email,
+                        qr_code_data_uri=qr_code_data_uri,
                     )
 
                 if email_sent:
@@ -3125,6 +3147,7 @@ def send_invites_async(request: HttpRequest, slug: str) -> JsonResponse:
     visibility = survey.visibility
     end_at = survey.end_at
     contact_email = request.user.email if request.user.email else None
+    include_qr_code = request.POST.get("include_qr_code") == "on"
 
     # Generate task ID
     task_id = str(uuid.uuid4())
@@ -3153,6 +3176,7 @@ def send_invites_async(request: HttpRequest, slug: str) -> JsonResponse:
             contact_email,
             request.user.id,
             task_id,
+            include_qr_code,
         ),
     )
     thread.start()
@@ -3177,6 +3201,59 @@ def email_status(request: HttpRequest, slug: str, task_id: str) -> JsonResponse:
         )
 
     return JsonResponse(status_data)
+
+
+@login_required
+@require_http_methods(["GET"])
+@ratelimit(key="user", rate="100/h", block=True)
+def get_qr_code(request: HttpRequest, slug: str) -> JsonResponse:
+    """Generate a QR code for a survey URL.
+
+    Security considerations:
+    - Requires authentication (@login_required)
+    - Requires view permission on the survey (require_can_view)
+    - Rate limited to 100 requests per hour per user
+    - Validates URL contains the survey slug to prevent abuse
+    - Validates URL is from the same host (prevents generating QR for arbitrary URLs)
+    """
+    from urllib.parse import urlparse
+
+    from checktick_app.core.qr_utils import generate_qr_code_data_uri
+
+    survey = get_object_or_404(Survey, slug=slug)
+    require_can_view(request.user, survey)
+
+    url = request.GET.get("url")
+    if not url:
+        return JsonResponse({"error": "URL parameter required"}, status=400)
+
+    # Security: Validate URL is for this survey
+    if survey.slug not in url:
+        return JsonResponse({"error": "Invalid URL for this survey"}, status=400)
+
+    # Security: Validate URL is from the same host (prevent QR codes for arbitrary external URLs)
+    try:
+        parsed_url = urlparse(url)
+        request_host = request.get_host().split(":")[0]  # Remove port if present
+        url_host = parsed_url.netloc.split(":")[0] if parsed_url.netloc else ""
+
+        # Allow if URL host matches request host, or if it's a relative URL
+        if url_host and url_host != request_host:
+            # Also check against SITE_URL setting for cases where host differs
+            site_url = getattr(settings, "SITE_URL", "")
+            if site_url:
+                site_host = urlparse(site_url).netloc.split(":")[0]
+                if url_host != site_host:
+                    return JsonResponse(
+                        {"error": "URL must be for this site"}, status=400
+                    )
+            else:
+                return JsonResponse({"error": "URL must be for this site"}, status=400)
+    except Exception:
+        return JsonResponse({"error": "Invalid URL format"}, status=400)
+
+    qr_code = generate_qr_code_data_uri(url, size=200)
+    return JsonResponse({"qr_code": qr_code})
 
 
 @login_required
