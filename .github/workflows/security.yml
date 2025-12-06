@@ -26,25 +26,21 @@ jobs:
               with:
                   python-version: "3.12"
 
-            - name: Install Poetry
-              run: pip install poetry==2.2.1
-
-            - name: Export requirements
+            - name: Install Poetry and export plugin
               run: |
-                  poetry export -f requirements.txt --without-hashes -o requirements.txt
-                  poetry export -f requirements.txt --without-hashes --with dev -o requirements-dev.txt
+                  pip install poetry==2.2.1
+                  poetry self add poetry-plugin-export
 
-            - name: Run pip-audit on production dependencies
-              uses: pypa/gh-action-pip-audit@v1.1.0
-              with:
-                  inputs: requirements.txt
-                  summary: true
+            - name: Install dependencies and run pip-audit
+              run: |
+                  poetry install --no-root
+                  poetry run pip-audit --strict --desc on
+              continue-on-error: false
 
-            - name: Run pip-audit on dev dependencies
-              uses: pypa/gh-action-pip-audit@v1.1.0
-              with:
-                  inputs: requirements-dev.txt
-                  summary: true
+            - name: Audit dev dependencies
+              run: |
+                  poetry install --no-root --with dev
+                  poetry run pip-audit --desc on
               continue-on-error: true # Dev deps are less critical
 
     codeql:
@@ -70,19 +66,5 @@ jobs:
               with:
                   category: "/language:python"
 
-    secrets-scan:
-        name: Secrets Scan
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
-
-            - name: GitGuardian scan
-              uses: GitGuardian/ggshield-action@v1.34.0
-              env:
-                  GITHUB_PUSH_BEFORE_SHA: ${{ github.event.before }}
-                  GITHUB_PUSH_BASE_SHA: ${{ github.event.base_ref }}
-                  GITHUB_PULL_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-                  GITHUB_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-                  GITGUARDIAN_API_KEY: ${{ secrets.GITGUARDIAN_API_KEY }}
+    # Note: Secrets scanning is handled by pre-commit hooks (ggshield)
+    # which run on every commit and push locally
