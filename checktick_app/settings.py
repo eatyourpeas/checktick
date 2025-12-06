@@ -260,6 +260,13 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    # Custom validators for healthcare compliance
+    {
+        "NAME": "checktick_app.core.password_validators.ComplexityValidator",
+        "OPTIONS": {"min_character_types": 3},
+    },
+    {"NAME": "checktick_app.core.password_validators.NoRepeatingCharactersValidator"},
+    {"NAME": "checktick_app.core.password_validators.NoSequentialCharactersValidator"},
 ]
 
 # Authentication backends: include AxesStandaloneBackend (renamed in django-axes >= 5.0)
