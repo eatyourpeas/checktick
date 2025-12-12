@@ -17,6 +17,7 @@ from django_ratelimit.decorators import ratelimit
 
 from checktick_app.core.billing import PaymentAPIError, payment_client
 from checktick_app.core.email_utils import (
+    send_payment_failed_email,
     send_subscription_cancelled_email,
     send_subscription_created_email,
 )
@@ -758,7 +759,19 @@ def handle_gocardless_payment_failed(event: dict) -> None:
         profile.subscription_status = UserProfile.SubscriptionStatus.PAST_DUE
         profile.save(update_fields=["subscription_status", "updated_at"])
         logger.info(f"Payment failed for user {profile.user.username}: {description}")
-        # TODO: Send payment failed email notification
+
+        # Send payment failed email notification
+        try:
+            send_payment_failed_email(
+                user=profile.user,
+                tier=profile.account_tier,
+                failure_reason=description,
+                grace_period_days=7,
+            )
+            logger.info(f"Payment failed email sent to {profile.user.email}")
+        except Exception as e:
+            logger.error(f"Failed to send payment failed email: {e}")
+
     except UserProfile.DoesNotExist:
         logger.warning(f"No user found for subscription ID: {subscription_id}")
 
