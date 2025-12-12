@@ -224,7 +224,7 @@ All client-side JavaScript libraries are self-hosted with Subresource Integrity 
 |---------|---------|--------------|
 | HTMX | Dynamic updates | ✅ SHA-384 |
 | SortableJS | Drag-and-drop | ✅ SHA-384 |
-| Paddle.js | Payments | ✅ SHA-384 |
+
 
 See [CDN Libraries](/docs/cdn-libraries/) for current versions and hashes.
 

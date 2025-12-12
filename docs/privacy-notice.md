@@ -73,14 +73,13 @@ We automatically collect:
 
 When you subscribe to a paid tier:
 
-* **Payment processing** is handled by Paddle, our payment processor
+* **Payment processing** is handled by our secure payment provider
 * We **do not store** your credit card or banking information
-* We receive from Paddle:
+* We receive from our payment provider:
   - Transaction IDs
   - Subscription status
   - Payment status
   - Billing country (for tax purposes)
-* See Paddle's Privacy Policy: https://www.paddle.com/legal/privacy
 
 ### 2.5 Cookies and Similar Technologies
 
@@ -158,10 +157,9 @@ We will never sell, rent, or trade your personal information to third parties fo
 
 We share data with trusted service providers who help us operate the Service:
 
-* **Paddle** (payment processing)
+* **Payment Provider** (payment processing)
   - Purpose: Process subscriptions and payments
   - Data shared: Email, billing country, transaction information
-  - Privacy Policy: https://www.paddle.com/legal/privacy
 
 * **Cloud Infrastructure Providers**
   - Purpose: Host the application and database

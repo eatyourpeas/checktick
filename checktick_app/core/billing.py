@@ -3,7 +3,6 @@
 This module provides a unified interface for interacting with the payment processor API
 for subscription management, customer creation, and webhook handling.
 
-Currently implements Paddle as the payment processor.
 Automatically uses sandbox in DEBUG mode and production otherwise.
 """
 
@@ -27,7 +26,6 @@ class PaymentAPIError(Exception):
 class PaymentClient:
     """Client for interacting with payment processor API.
 
-    Currently implements Paddle as the payment processor.
     Automatically configured based on DEBUG setting:
     - DEBUG=True: Uses sandbox environment
     - DEBUG=False: Uses production environment
