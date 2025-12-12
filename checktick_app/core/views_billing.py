@@ -260,6 +260,120 @@ def update_team_name(request: HttpRequest) -> HttpResponse:
     return JsonResponse({"success": True, "team_name": team_name})
 
 
+# =============================================================================
+# GoCardless Checkout Flow
+# =============================================================================
+
+
+@login_required
+@require_http_methods(["POST"])
+@ratelimit(key="user", rate="10/h", block=True)
+def start_checkout(request: HttpRequest) -> HttpResponse:
+    """Start GoCardless checkout by creating a redirect flow.
+
+    Creates a redirect flow and redirects the user to GoCardless
+    to set up their Direct Debit mandate.
+    """
+    from checktick_app.core.billing import get_or_create_redirect_flow
+
+    tier = request.POST.get("tier", "pro")
+
+    # Validate tier
+    if tier not in settings.SUBSCRIPTION_TIERS:
+        messages.error(request, "Invalid subscription tier selected.")
+        return redirect("core:pricing")
+
+    # Generate a unique session token
+    import uuid
+    session_token = str(uuid.uuid4())
+
+    # Store checkout info in session
+    request.session["checkout_session_token"] = session_token
+    request.session["checkout_tier"] = tier
+
+    # Build success URL
+    success_url = request.build_absolute_uri(reverse("core:checkout_complete"))
+
+    try:
+        redirect_url = get_or_create_redirect_flow(
+            user=request.user,
+            tier=tier,
+            success_url=success_url,
+            session_token=session_token,
+        )
+
+        if not redirect_url:
+            messages.error(request, "Failed to create checkout session.")
+            return redirect("core:pricing")
+
+        logger.info(f"User {request.user.username} starting checkout for tier: {tier}")
+        return redirect(redirect_url)
+
+    except Exception as e:
+        logger.error(f"Error creating redirect flow for {request.user.username}: {e}")
+        messages.error(request, "An error occurred. Please try again.")
+        return redirect("core:pricing")
+
+
+@login_required
+@require_http_methods(["GET"])
+def checkout_complete(request: HttpRequest) -> HttpResponse:
+    """Complete GoCardless checkout after user returns from redirect.
+
+    Called when customer returns from GoCardless after authorising Direct Debit.
+    Completes the redirect flow and creates the subscription.
+    """
+    from checktick_app.core.billing import (
+        complete_mandate_setup,
+        create_subscription_for_user,
+    )
+
+    redirect_flow_id = request.GET.get("redirect_flow_id")
+    if not redirect_flow_id:
+        messages.error(request, "Invalid checkout session.")
+        return redirect("core:pricing")
+
+    # Get session data
+    session_token = request.session.get("checkout_session_token")
+    tier = request.session.get("checkout_tier", "pro")
+
+    if not session_token:
+        messages.error(request, "Checkout session expired. Please try again.")
+        return redirect("core:pricing")
+
+    try:
+        # Complete the redirect flow (creates customer and mandate)
+        customer_id, mandate_id = complete_mandate_setup(
+            user=request.user,
+            redirect_flow_id=redirect_flow_id,
+            session_token=session_token,
+        )
+
+        # Create the subscription
+        subscription_id = create_subscription_for_user(
+            user=request.user,
+            tier=tier,
+            mandate_id=mandate_id,
+        )
+
+        # Clear session data
+        request.session.pop("checkout_session_token", None)
+        request.session.pop("checkout_tier", None)
+
+        logger.info(
+            f"Checkout complete for {request.user.username}: "
+            f"subscription={subscription_id}, tier={tier}"
+        )
+
+        messages.success(request, "Your subscription has been set up successfully!")
+        return redirect("core:checkout_success")
+
+    except Exception as e:
+        logger.error(f"Error completing checkout for {request.user.username}: {e}")
+        messages.error(request, "An error occurred setting up your subscription. Please contact support.")
+        return redirect("core:pricing")
+
+
 @csrf_exempt
 @require_http_methods(["POST"])
 @ratelimit(key="ip", rate="100/m", block=True)
