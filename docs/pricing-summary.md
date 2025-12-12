@@ -6,11 +6,8 @@ priority: 2
 
 # CheckTick Pricing Summary
 
-**Prepared for: Paddle**
-**Date: 4 December 2025**
-**Version: 1.0**
-
-*This document is for Paddle's records and is not published in the public documentation.*
+**Date: December 2025**
+**Version: 1.1**
 
 ---
 
@@ -18,7 +15,7 @@ priority: 2
 
 CheckTick is a secure survey platform designed for healthcare and research organisations. We offer tiered pricing to accommodate individuals, teams, and enterprise deployments.
 
-All payments are processed through **Paddle** as our Merchant of Record.
+All payments are processed securely through our UK-based payment provider.
 
 ---
 
@@ -121,15 +118,15 @@ Enterprise tier provides a fully independent deployment of the CheckTick platfor
 
 ### Payment Processing
 
-- **Merchant of Record:** Paddle
-- **Currency:** GBP (£) - other currencies available via Paddle
+- **Currency:** GBP (£)
 - **Billing Cycles:** Monthly or Annual
 - **Annual Discount:** ~17% (2 months free equivalent)
-- **Payment Methods:** Credit/debit cards, PayPal, Google Pay, Apple Pay
+- **Payment Methods:** Direct Debit (UK bank accounts), Credit/Debit cards
+- **UK Only:** CheckTick is currently available to UK customers only
 
 ### Refund Policy
 
-In accordance with Paddle's Checkout Buyer Terms:
+In accordance with UK Consumer Contracts Regulations:
 
 - **14-day right to cancel** for consumers on initial subscriptions
 - Refunds may be granted at our discretion beyond 14 days

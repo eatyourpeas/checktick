@@ -81,8 +81,8 @@ We reserve the right to suspend or terminate your account if:
 ### 4.1 Billing
 * Subscriptions are billed monthly or annually in advance
 * Prices are stated in GBP (£) and exclude applicable taxes
-* Payment processing is handled by Paddle, our payment processor
-* You authorize Paddle to charge your chosen payment method
+* Payment processing is handled by our secure payment provider
+* You authorize our payment provider to charge your chosen payment method
 * All fees are non-refundable except as stated in our Refund Policy
 
 ### 4.2 Subscription Changes

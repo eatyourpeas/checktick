@@ -12,7 +12,7 @@ This Refund Policy explains our policies regarding refunds, cancellations, and b
 
 ## 1. Overview
 
-CheckTick subscriptions are processed through Paddle, our payment processor and Merchant of Record. All payments are handled securely by Paddle, and refunds are subject to this policy and [Paddle's Checkout Buyer Terms and Conditions](https://www.paddle.com/legal/checkout-buyer-terms).
+CheckTick subscriptions are processed through our secure payment provider. All payments are handled securely, and refunds are subject to this policy.
 
 ### 1.1 Key Points
 
@@ -58,7 +58,7 @@ CheckTick offers paid subscriptions for:
 You can cancel your subscription at any time through:
 
 * Your **Account Settings** in CheckTick
-* The **Paddle customer portal** (link provided in your subscription emails)
+* The **customer portal** (link provided in your subscription emails)
 * Contacting our support team
 
 ### 3.2 Effect of Cancellation
@@ -86,22 +86,21 @@ When downgrading from a paid tier to FREE:
 
 We want you to be happy with CheckTick. If you're not satisfied, we may grant refunds at our discretion beyond the statutory 14-day period. Contact us at [support@checktick.com](mailto:support@checktick.com) to discuss your situation.
 
-Refunds are processed through Paddle, our Merchant of Record. This does not affect your statutory rights as a consumer in relation to products which are not as described, faulty, or not fit for purpose.
+Refunds are processed through our payment provider. This does not affect your statutory rights as a consumer in relation to products which are not as described, faulty, or not fit for purpose.
 
 ### 4.2 Consumer Right to Cancel (14-Day Cooling Off Period)
 
-If you are a consumer, you have the right to cancel your subscription within **14 days** of your initial purchase without giving any reason. This is in accordance with [Paddle's Checkout Buyer Terms](https://www.paddle.com/legal/checkout-buyer-terms).
+If you are a consumer, you have the right to cancel your subscription within **14 days** of your initial purchase without giving any reason. This is in accordance with UK Consumer Contracts Regulations.
 
 **How to exercise your right to cancel:**
 
-* Contact Paddle at [https://paddle.net/](https://paddle.net/) before the 14-day period expires
-* Or contact us at [support@checktick.com](mailto:support@checktick.com)
+* Contact us at [support@checktick.com](mailto:support@checktick.com) before the 14-day period expires
 * To meet the cancellation deadline, you must send your cancellation request before the 14-day period expires
 
 **Effect of cancellation:**
 
-* Paddle will reimburse all payments received from you
-* Reimbursement will be made within 14 days of Paddle being informed of your cancellation
+* We will reimburse all payments received from you
+* Reimbursement will be made within 14 days of being informed of your cancellation
 * The same payment method used for the original transaction will be used for the refund
 * No fees will be charged for the reimbursement
 
@@ -112,7 +111,7 @@ If you are a consumer, you have the right to cancel your subscription within **1
 
 ### 4.3 Additional Refund Circumstances
 
-Beyond the 14-day consumer right to cancel, we may provide refunds in these circumstances (at our and Paddle's discretion):
+Beyond the 14-day consumer right to cancel, we may provide refunds in these circumstances (at our discretion):
 
 **1. Service Unavailability**
 
@@ -145,7 +144,7 @@ The following situations are **not** eligible for refunds:
 * Account termination due to Terms of Service violations
 * Features not meeting your expectations (unless they are genuinely broken)
 * Your encryption keys being lost (this is your responsibility)
-* Third-party payment processor fees (charged by Paddle)
+* Third-party payment processor fees
 * Wire transfer payments (see section 4.6)
 
 ### 4.5 Annual Subscriptions
@@ -158,7 +157,7 @@ For annual subscriptions:
 
 ### 4.6 Wire Transfer Payments
 
-Orders where payments are made via wire transfer are not protected under the Consumer Credit Act and are therefore not eligible for a refund through standard processes. However, for transactions above £100 (or equivalent), you may be entitled to a refund at Paddle's discretion.
+Orders where payments are made via wire transfer are not protected under the Consumer Credit Act and are therefore not eligible for a refund through standard processes. However, for transactions above £100 (or equivalent), you may be entitled to a refund at our discretion.
 
 ## 5. How to Request a Refund
 
@@ -172,7 +171,7 @@ To request a refund:
    - Explain the reason for your refund request
 
 2. **Provide Information**
-   - Transaction ID or receipt from Paddle
+   - Transaction ID or receipt
    - Date of charge
    - Description of the issue (if applicable)
 
@@ -182,13 +181,13 @@ To request a refund:
 
 4. **Decision**
    - You will receive a decision via email
-   - Approved refunds are processed through Paddle
+   - Approved refunds are processed through our payment provider
 
 ### 5.2 Processing Time
 
 * Approved refunds are typically processed within 5-10 business days
 * The refund will be returned to your original payment method
-* Bank processing times may vary (typically 3-10 business days after Paddle processes the refund)
+* Bank processing times may vary (typically 3-10 business days after our payment provider processes the refund)
 
 ## 6. Upgrades and Downgrades
 
@@ -216,7 +215,7 @@ When you downgrade:
 
 If a payment fails:
 
-* Paddle will automatically retry the payment several times
+* Our payment provider will automatically retry the payment several times
 * We will notify you via email
 * Your access to paid features may be suspended during this time
 
@@ -230,22 +229,20 @@ If a payment fails:
 
 To resolve payment issues:
 
-* Update your payment method in the Paddle customer portal
-* Contact Paddle support: [https://paddle.com/support](https://paddle.com/support)
-* Contact us if you need assistance
+* Update your payment method in your account settings
+* Contact us if you need assistance at [support@checktick.com](mailto:support@checktick.com)
 
 ## 8. Taxes and Fees
 
 ### 8.1 VAT and Sales Tax
 
-* Prices displayed at checkout include any applicable taxes (VAT, sales tax, etc.)
-* Tax rates depend on your billing location
-* Paddle handles all tax calculations and remittance
+* Prices displayed at checkout include any applicable taxes (VAT)
+* UK VAT (20%) applies to all customers
+* All tax calculations and remittance are handled automatically
 
 ### 8.2 Transaction Fees
 
-* Paddle charges transaction fees (typically 5% + £0.50 per transaction)
-* These fees are included in the displayed price
+* Payment processing fees are included in the displayed price
 * Transaction fees are **not refundable** even if a refund is granted
 
 ## 9. Enterprise Contracts
@@ -262,13 +259,13 @@ For enterprise refund inquiries, please contact your account manager or our ente
 
 ### 10.1 Dispute Process
 
-In accordance with [Paddle's Checkout Buyer Terms](https://www.paddle.com/legal/checkout-buyer-terms), you agree to contact Paddle prior to raising a request for a chargeback or any dispute with your bank or card issuer.
+You agree to contact us prior to raising a request for a chargeback or any dispute with your bank.
 
-If you dispute a charge with your bank or credit card company (chargeback):
+If you dispute a charge with your bank (chargeback):
 
 * Your account will be immediately suspended
-* Paddle will provide evidence of the transaction to refute invalid chargeback requests
-* If you make a card payment and later dispute a legitimate charge without merit or legitimate reason, Paddle reserves the right to prohibit you from using their services
+* We will provide evidence of the transaction to refute invalid chargeback requests
+* If you dispute a legitimate charge without merit or legitimate reason, we reserve the right to prohibit you from using our services
 * If the chargeback is upheld, your account may be permanently closed
 * Chargeback fees may be charged to your account
 
@@ -295,7 +292,6 @@ Changes do not apply retroactively to refund requests made before the change.
 For refund requests or questions about this policy:
 
 * **Email:** [support@checktick.com](support@checktick.com)
-* **Paddle Support:** [https://paddle.com/support](https://paddle.com/support) (for payment processor issues)
 * **GitHub Issues:** [https://github.com/eatyourpeas/checktick/issues](https://github.com/eatyourpeas/checktick/issues)
 * **Documentation:** [https://checktick.com/docs/](https://checktick.com/docs/)
 
@@ -304,8 +300,7 @@ For refund requests or questions about this policy:
 If you are not satisfied with our response to a refund request:
 
 1. **Internal Review:** Request an escalation to a senior team member
-2. **Payment Processor:** Contact Paddle directly at https://paddle.com/support
-3. **Legal Options:** See the Dispute Resolution section in our Terms of Service
+2. **Legal Options:** See the Dispute Resolution section in our Terms of Service
 
 ## 15. Fair Usage
 
@@ -319,4 +314,4 @@ We reserve the right to deny refund requests that appear to be:
 
 **Last Updated: 4 December 2025**
 
-We strive to be fair and transparent with our refund policy. This policy is aligned with [Paddle's Checkout Buyer Terms and Conditions](https://www.paddle.com/legal/checkout-buyer-terms). If you have any questions or concerns, please don't hesitate to contact us. We're here to help!
+We strive to be fair and transparent with our refund policy. If you have any questions or concerns, please don't hesitate to contact us. We're here to help!

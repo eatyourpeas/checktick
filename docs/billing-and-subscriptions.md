@@ -10,7 +10,7 @@ This guide explains how billing works in CheckTick, including subscriptions, pay
 
 ## Overview
 
-CheckTick uses Paddle as our payment processor to handle all billing securely. We offer flexible subscription plans to suit individual users, small teams, and large organizations.
+CheckTick uses a secure payment provider to handle all billing. We offer flexible subscription plans to suit individual users, small teams, and large organizations.
 
 > **Note for Self-Hosters:** If you're running CheckTick with `SELF_HOSTED=true` in your environment configuration, billing features are automatically hidden and all users get Enterprise-level features without payment requirements.
 
@@ -75,15 +75,13 @@ Teams provide shared billing and collaboration for groups of 5-20 users.
 
 ## Payment Methods
 
-CheckTick accepts the following payment methods through Paddle:
+CheckTick accepts the following payment methods:
 
+- Direct Debit (UK bank accounts)
 - Credit cards (Visa, Mastercard, American Express)
 - Debit cards
-- PayPal
-- Google Pay
-- Apple Pay
 
-All payments are processed securely by Paddle, our payment partner. CheckTick never stores your complete payment information.
+All payments are processed securely by our payment provider. CheckTick never stores your complete payment information.
 
 ## Starting a Subscription
 
@@ -93,7 +91,7 @@ All payments are processed securely by Paddle, our payment partner. CheckTick ne
 2. Select your desired plan
 3. Complete the registration form
 4. Click "Create account"
-5. You'll be redirected to Paddle's secure checkout
+5. You'll be redirected to our secure checkout
 6. Enter your payment details
 7. Complete the payment
 8. Your account is activated immediately
@@ -127,7 +125,7 @@ You'll see:
 1. Log in to CheckTick
 2. Go to **Profile** > **Subscription**
 3. Click **Update Payment Method**
-4. You'll be redirected to Paddle's secure portal
+4. You'll be redirected to the secure payment portal
 5. Update your payment details
 6. Changes take effect immediately
 
@@ -232,10 +230,10 @@ If a payment fails:
 1. **Day 1**: Payment attempt fails
    - You receive an email notification
    - Account remains active
-   - Paddle retries payment automatically
+   - Payment retry is attempted automatically
 
 2. **Day 3**: First retry
-   - Paddle attempts payment again
+   - Payment attempt made again
    - Email reminder sent
 
 3. **Day 7**: Second retry
@@ -262,7 +260,7 @@ To fix a past due account:
 
 ### Refund Policy
 
-In accordance with [Paddle's Checkout Buyer Terms](https://www.paddle.com/legal/checkout-buyer-terms):
+In accordance with UK Consumer Contracts Regulations:
 
 - **14-day right to cancel** for consumers on initial subscriptions
 - **No automatic refunds** on subscription renewals or unused subscription periods
@@ -273,7 +271,7 @@ In accordance with [Paddle's Checkout Buyer Terms](https://www.paddle.com/legal/
 
 To request a refund within the 14-day cancellation period:
 
-1. Contact Paddle at [https://paddle.net/](https://paddle.net/) or email us at [support@checktick.com](mailto:support@checktick.com)
+1. Email us at [support@checktick.com](mailto:support@checktick.com)
 2. Include your account email and order number
 3. Refunds are processed within 14 days of the cancellation request
 4. Refunds go back to the original payment method
@@ -315,10 +313,10 @@ Team admins can:
 
 ### Payment Security
 
-- All payments processed by **Paddle**, a PCI-compliant payment provider
-- CheckTick never stores complete payment card details
+- All payments processed by a **PCI-compliant payment provider**
+- CheckTick never stores complete payment card or bank details
 - SSL/TLS encryption for all payment pages
-- 3D Secure authentication for card payments
+- Strong Customer Authentication (SCA) for card payments
 
 ### Data Protection
 
@@ -354,12 +352,11 @@ Each invoice includes:
 - Payment method
 - Subscription period
 
-### VAT for EU Customers
+### VAT for UK Customers
 
-- VAT is automatically calculated based on your location
-- UK VAT (20%) applies for UK customers
-- EU VAT rates apply for EU customers
-- Reverse charge available for businesses with valid VAT numbers
+- UK VAT (20%) applies to all customers
+- VAT is automatically added at checkout
+- VAT invoices are available for download
 
 ## Troubleshooting
 
