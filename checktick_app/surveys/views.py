@@ -2133,6 +2133,12 @@ def survey_dashboard(request: HttpRequest, slug: str) -> HttpResponse:
         "primary_hex": style.get("primary_color"),
         "font_css_url": style.get("font_css_url"),
     }
+
+    # Compute response analytics for insights charts
+    from .services.response_analytics import compute_response_analytics
+
+    analytics = compute_response_analytics(survey)
+
     ctx = {
         "survey": survey,
         "total": total,
@@ -2162,6 +2168,8 @@ def survey_dashboard(request: HttpRequest, slug: str) -> HttpResponse:
         # Translation management
         "available_translations": survey.get_available_translations(),
         "supported_languages": SUPPORTED_SURVEY_LANGUAGES,
+        # Response insights
+        "analytics": analytics,
     }
 
     # Import language constants for flags
@@ -5993,10 +6001,9 @@ def survey_export_csv(
     # Get professional group configuration
     prof_group, professional_fields, _ = _get_professional_group_and_fields(survey)
 
-    # Get all questions ordered
-    questions = list(
-        survey.questions.select_related("group").order_by("group__position", "order")
-    )
+    # Get all questions ordered by group position (from survey.style) then by question order
+    all_questions = list(survey.questions.select_related("group").all())
+    questions = _order_questions_by_group(survey, all_questions)
 
     def generate():
         import csv

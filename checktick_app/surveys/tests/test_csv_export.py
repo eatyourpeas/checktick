@@ -2,7 +2,6 @@
 Tests for CSV export functionality.
 """
 
-import pytest
 from django.test import TestCase
 
 from checktick_app.surveys.views import _format_answer_for_export
@@ -125,6 +124,7 @@ class TestCSVExportIntegration(TestCase):
     def test_export_requires_authentication(self):
         """Export endpoint should require login for existing surveys."""
         from django.contrib.auth import get_user_model
+
         from checktick_app.surveys.models import Survey
 
         TEST_PASSWORD = "x"  # noqa: S105
