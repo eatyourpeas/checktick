@@ -8,8 +8,8 @@ Tests verify that the response insights partial:
 4. Handles edge cases gracefully
 """
 
-import pytest
 from django.test import Client
+import pytest
 
 from checktick_app.surveys.services.response_analytics import compute_response_analytics
 
