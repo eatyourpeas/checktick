@@ -576,7 +576,7 @@ Any updates here require a CSS rebuild.
 
 Keep breadcrumb labels terse and consistent (e.g., “Survey Dashboard”, “Question Group Builder”, “Question Builder”).
 
-## Internationalization (i18n)
+## Internationalisation (i18n)
 
 This project ships with Django i18n enabled. Themes and UI copy should use Django’s translation tags and helpers so labels, buttons, and help text can be translated cleanly without forking templates.
 

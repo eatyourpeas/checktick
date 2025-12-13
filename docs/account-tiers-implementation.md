@@ -121,7 +121,7 @@ class Survey(models.Model):
 | **AI Features** |
 | AI Survey Assistant | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | AI-Generated Survey Translations | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Internationalization** |
+| **Internationalisation** |
 | Multi-language Interface (i18n) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Survey Translation Support | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | All Supported Languages | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |

@@ -411,6 +411,10 @@ def signup(request):
     if next_url and not next_url.startswith("/"):
         next_url = None
 
+    # Get selected tier before form validation (not a form field, just POST data)
+    # nosemgrep: python.django.security.django-using-request-post-after-is-valid
+    selected_tier = request.POST.get("tier", "free").lower() if request.method == "POST" else "free"
+
     if request.method == "POST":
         form = SignupForm(request.POST)
         if form.is_valid():
@@ -431,9 +435,6 @@ def signup(request):
 
                 logger = logging.getLogger(__name__)
                 logger.error(f"Failed to send welcome email to {user.username}: {e}")
-
-            # Get selected tier (default to free)
-            selected_tier = request.POST.get("tier", "free").lower()
 
             # Handle tier-based signup flow
             # FREE: Go straight to surveys (or next_url if provided)
@@ -654,14 +655,19 @@ DOC_CATEGORIES = {
         "order": 8,
         "icon": "🧪",
     },
-    "internationalization": {
-        "title": "Internationalization",
+    "internationalisation": {
+        "title": "Internationalisation",
         "order": 9,
         "icon": "🌍",
     },
+    "accessibility-and-inclusion": {
+        "title": "Accessibility and Inclusion",
+        "order": 10,
+        "icon": "♿",
+    },
     "getting-involved": {
         "title": "Getting Involved",
-        "order": 10,
+        "order": 11,
         "icon": "🤝",
     },
 }

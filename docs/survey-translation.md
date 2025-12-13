@@ -1,7 +1,7 @@
 ---
 title: Survey Translation
-category: internationalization
-priority: 3
+category: accessibility-and-inclusion
+priority: 2
 ---
 
 # Survey Translation

@@ -1,7 +1,7 @@
 ---
 title: Accessibility
-category: internationalization
-priority: 2
+category: accessibility-and-inclusion
+priority: 1
 ---
 
 # Accessibility
