@@ -70,28 +70,29 @@ In this example, the "Feedback details" question only appears if the user answer
 
 For complete syntax details, see the [Import Documentation](import.md).
 
-### The Branching Visualizer
+### The Survey Map
 
-The survey builder includes a visual **Branching Flow** diagram that shows your entire survey structure at a glance. This visualizer helps you:
+The survey builder includes a visual **Survey Map** diagram that shows your entire survey structure at a glance. This visualizer helps you:
 
 - **See the flow** - Understand how questions connect
 - **Identify patterns** - Spot complex branching paths
 - **Catch issues** - Notice unreachable questions or logic errors
 - **Share understanding** - Show stakeholders how the survey works
 
-#### Reading the Visualizer
+#### Reading the Survey Map
 
-The branching visualizer uses a git-graph style to display your survey:
+The Survey Map uses a git-graph style to display your survey with square connector lines:
 
-- **Circles** represent questions
-- **Lines** show the default question flow
-- **Colored arrows** indicate conditional branches:
-  - ▶ Show Question
-  - Fast-forward icon for Jump to Question
-  - ✕ Skip Question
-  - ■ End Survey
+- **Circles** represent questions (accent color for regular, primary for those with conditions)
+- **Vertical lines** show the default question flow
+- **Colored dashed lines** indicate conditional branches:
+  - Green for "Jump to"
+  - Amber for "Skip"
+  - Red for "End Survey"
+- **Condition labels** appear on branch lines showing the trigger (e.g., "> 17")
 - **Shaded regions** group questions together
-- **Badges** show condition counts and repeat settings
+- **Hover** over questions to see the full question text
+- **Hover** over branch lines to see the full condition details
 
 Questions are organized into their groups, making it easy to see which questions belong together and how they flow.
 
@@ -154,9 +155,9 @@ REPEAT
 
 For a limited repeat count, use `REPEAT-5` (or any number).
 
-### Repeats in the Visualizer
+### Repeats in the Survey Map
 
-When viewing the branching flow diagram, repeating groups are clearly marked with a repeat badge showing:
+When viewing the Survey Map diagram, repeating groups are clearly marked with a repeat badge showing:
 - A circular arrow icon
 - The maximum repeat count (or ∞ for unlimited)
 

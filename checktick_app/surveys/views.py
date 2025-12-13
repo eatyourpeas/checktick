@@ -30,6 +30,7 @@ from django.http import (
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.html import escape
 from django.utils.text import slugify
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_http_methods
@@ -445,6 +446,7 @@ def _verify_captcha(request: HttpRequest) -> bool:
         ).encode()
         req = urllib.request.Request("https://hcaptcha.com/siteverify", data=data)
         req.add_header("Content-Type", "application/x-www-form-urlencoded")
+        # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
         with urllib.request.urlopen(req, timeout=5) as resp:  # nosec B310
             import json as _json
 
@@ -3267,8 +3269,13 @@ def survey_publish_update(request: HttpRequest, slug: str) -> HttpResponse:
     start_at = request.POST.get("start_at") or None
     end_at = request.POST.get("end_at") or None
     max_responses = request.POST.get("max_responses") or None
-    captcha_required = bool(request.POST.get("captcha_required"))
-    no_patient_data_ack = bool(request.POST.get("no_patient_data_ack"))
+    captcha_required = request.POST.get("captcha_required") in ("true", "on", "1", True)
+    no_patient_data_ack = request.POST.get("no_patient_data_ack") in (
+        "true",
+        "on",
+        "1",
+        True,
+    )
 
     # Coerce types
     from django.utils.dateparse import parse_datetime
@@ -4212,6 +4219,8 @@ def survey_groups(request: HttpRequest, slug: str) -> HttpResponse:
         cols = group_repeat_map.get(g.id, [])
         if cols:
             info_list = []
+            # Use the first collection for editing (groups should only be in one repeat)
+            first_col = cols[0]
             for c in cols:
                 cap = (
                     "Unlimited"
@@ -4220,7 +4229,14 @@ def survey_groups(request: HttpRequest, slug: str) -> HttpResponse:
                 )
                 parent_note = f" (child of {c.parent.name})" if c.parent_id else ""
                 info_list.append(f"{c.name} — max {cap}{parent_note}")
-            repeat_info[g.id] = {"is_repeated": True, "tooltip": "; ".join(info_list)}
+            repeat_info[g.id] = {
+                "is_repeated": True,
+                "tooltip": "; ".join(info_list),
+                "collection_id": first_col.id,
+                "collection_name": first_col.name,
+                "min_count": first_col.min_count or 0,
+                "max_count": first_col.max_count,
+            }
         else:
             repeat_info[g.id] = {"is_repeated": False, "tooltip": ""}
 
@@ -4443,6 +4459,119 @@ def survey_group_repeat_remove(
         messages.success(request, "Group removed from repeat.")
     else:
         messages.info(request, "This group was not part of a repeat.")
+    return redirect("surveys:groups", slug=slug)
+
+
+@login_required
+@require_http_methods(["POST"])
+def survey_groups_repeat_remove(request: HttpRequest, slug: str) -> HttpResponse:
+    """Remove multiple groups from their repeats (collections) in this survey.
+
+    Accepts a comma-separated list of group IDs in POST data.
+    If a collection becomes empty after removal, delete it as well.
+    """
+    survey = get_object_or_404(Survey, slug=slug)
+    require_can_edit(request.user, survey)
+
+    group_ids_raw = request.POST.get("group_ids", "")
+    group_ids = [int(i) for i in group_ids_raw.split(",") if i.isdigit()]
+
+    if not group_ids:
+        messages.info(request, "No groups selected.")
+        return redirect("surveys:groups", slug=slug)
+
+    # Filter to groups that belong to this survey
+    valid_groups = survey.question_groups.filter(id__in=group_ids)
+    valid_ids = set(valid_groups.values_list("id", flat=True))
+
+    if not valid_ids:
+        messages.info(request, "Selected groups not found in this survey.")
+        return redirect("surveys:groups", slug=slug)
+
+    # Remove items linking these groups within this survey's collections
+    items_qs = CollectionItem.objects.filter(
+        collection__survey=survey,
+        item_type=CollectionItem.ItemType.GROUP,
+        group_id__in=valid_ids,
+    )
+    affected_collections = set(items_qs.values_list("collection_id", flat=True))
+    deleted, _ = items_qs.delete()
+
+    # Re-number remaining items per affected collection and delete empties
+    for cid in affected_collections:
+        col = CollectionDefinition.objects.filter(id=cid, survey=survey).first()
+        if not col:
+            continue
+        remaining = list(col.items.order_by("order", "id"))
+        if not remaining:
+            # If this collection is a child of a parent collection, remove its link too
+            CollectionItem.objects.filter(child_collection=col).delete()
+            col.delete()
+            continue
+        # Compact orders
+        for idx, it in enumerate(remaining):
+            if it.order != idx:
+                it.order = idx
+                it.save(update_fields=["order"])
+
+    if deleted:
+        count = len(valid_ids)
+        if count == 1:
+            messages.success(request, "Group removed from repeat.")
+        else:
+            messages.success(request, f"{count} groups removed from their repeats.")
+    else:
+        messages.info(request, "Selected groups were not part of any repeats.")
+    return redirect("surveys:groups", slug=slug)
+
+
+@login_required
+@require_http_methods(["POST"])
+def survey_groups_repeat_edit(request: HttpRequest, slug: str) -> HttpResponse:
+    """Edit an existing repeat (collection) settings: name, min/max counts."""
+    survey = get_object_or_404(Survey, slug=slug)
+    require_can_edit(request.user, survey)
+
+    collection_id = request.POST.get("collection_id")
+    if not collection_id:
+        messages.error(request, "No repeat specified.")
+        return redirect("surveys:groups", slug=slug)
+
+    try:
+        collection_id = int(collection_id)
+    except ValueError:
+        messages.error(request, "Invalid repeat ID.")
+        return redirect("surveys:groups", slug=slug)
+
+    collection = CollectionDefinition.objects.filter(
+        id=collection_id, survey=survey
+    ).first()
+    if not collection:
+        messages.error(request, "Repeat not found.")
+        return redirect("surveys:groups", slug=slug)
+
+    # Update fields
+    name = request.POST.get("name", "").strip()
+    if name:
+        collection.name = name
+
+    min_count_raw = request.POST.get("min_count", "0")
+    try:
+        collection.min_count = int(min_count_raw) if min_count_raw else 0
+    except ValueError:
+        collection.min_count = 0
+
+    max_count_raw = request.POST.get("max_count", "")
+    if max_count_raw:
+        try:
+            collection.max_count = int(max_count_raw)
+        except ValueError:
+            collection.max_count = None
+    else:
+        collection.max_count = None
+
+    collection.save(update_fields=["name", "min_count", "max_count"])
+    messages.success(request, f"Repeat '{collection.name}' updated.")
     return redirect("surveys:groups", slug=slug)
 
 
@@ -4701,6 +4830,7 @@ def user_management_hub(request: HttpRequest) -> HttpResponse:
 
     if request.method == "POST":
         # HTMX quick add flows
+        # nosemgrep: python.django.security.injection.reflected-data-httpresponse.reflected-data-httpresponse
         scope = request.POST.get("scope")
         email = (request.POST.get("email") or "").strip().lower()
         role = request.POST.get("role")
@@ -9079,9 +9209,15 @@ def branching_data_api(request: HttpRequest, slug: str) -> JsonResponse:
     conditions_data = {}
 
     for index, q in enumerate(ordered_questions):
+        # Truncate text for display, but keep full text for tooltips
+        display_text = q.text
+        if len(display_text) > 50:
+            display_text = display_text[:47] + "..."
+
         question_data = {
             "id": str(q.id),
-            "text": q.text,
+            "text": display_text,
+            "full_text": q.text,  # Full question text for hover tooltip
             "order": index,
             "group_name": q.group.name if q.group else None,
             "group_id": str(q.group.id) if q.group else None,
@@ -9093,6 +9229,33 @@ def branching_data_api(request: HttpRequest, slug: str) -> JsonResponse:
         if conditions:
             conditions_data[str(q.id)] = []
             for cond in conditions:
+                # Build human-readable summary of condition using plain words
+                summary_parts = []
+                if cond.operator and cond.value:
+                    op_display = {
+                        "eq": "equals",
+                        "neq": "not equal to",
+                        "gt": "greater than",
+                        "gte": "at least",
+                        "lt": "less than",
+                        "lte": "at most",
+                        "contains": "contains",
+                        "not_contains": "does not contain",
+                        "exists": "has a value",
+                        "not_exists": "is empty",
+                    }.get(cond.operator, cond.operator)
+                    summary_parts.append(f"{op_display} {cond.value}")
+                elif cond.operator in ("exists", "not_exists"):
+                    # These operators don't need a value
+                    op_display = (
+                        "has a value" if cond.operator == "exists" else "is empty"
+                    )
+                    summary_parts.append(op_display)
+                elif cond.description:
+                    summary_parts.append(cond.description)
+
+                summary = " ".join(summary_parts) if summary_parts else ""
+
                 cond_data = {
                     "operator": cond.operator,
                     "value": cond.value or "",
@@ -9101,6 +9264,7 @@ def branching_data_api(request: HttpRequest, slug: str) -> JsonResponse:
                         str(cond.target_question.id) if cond.target_question else None
                     ),
                     "description": cond.description or "",
+                    "summary": summary,  # Human-readable condition for branch label
                 }
                 conditions_data[str(q.id)].append(cond_data)
 
@@ -10099,6 +10263,8 @@ def validate_postcode(request: HttpRequest) -> HttpResponse:
 
     # Remove extra spaces and normalise
     postcode = " ".join(value.split())
+    # Escape for safe HTML embedding
+    postcode_html = escape(postcode)
 
     if not postcode:
         # Empty input - return empty input field
@@ -10120,7 +10286,7 @@ def validate_postcode(request: HttpRequest) -> HttpResponse:
         # API not configured - return input without validation styling
         return HttpResponse(
             f'<label class="input input-bordered input-sm flex items-center gap-1.5">'
-            f'<input type="text" name="post_code" value="{postcode}" '
+            f'<input type="text" name="post_code" value="{postcode_html}" '
             f'class="grow min-w-0 bg-transparent outline-none border-0" '
             f'placeholder="Post code" '
             f'hx-post="/surveys/validate/postcode/" '
@@ -10153,7 +10319,7 @@ def validate_postcode(request: HttpRequest) -> HttpResponse:
         # API error - don't show error to user, just no validation styling
         return HttpResponse(
             f'<label class="input input-bordered input-sm flex items-center gap-1.5">'
-            f'<input type="text" name="post_code" value="{postcode}" '
+            f'<input type="text" name="post_code" value="{postcode_html}" '
             f'class="grow min-w-0 bg-transparent outline-none border-0" '
             f'placeholder="Post code" '
             f'hx-post="/surveys/validate/postcode/" '
@@ -10172,7 +10338,7 @@ def validate_postcode(request: HttpRequest) -> HttpResponse:
         # Valid postcode - green border, checkmark
         return HttpResponse(
             f'<label class="input input-bordered input-sm flex items-center gap-1.5 input-success">'
-            f'<input type="text" name="post_code" value="{postcode}" '
+            f'<input type="text" name="post_code" value="{postcode_html}" '
             f'class="grow min-w-0 bg-transparent outline-none border-0" '
             f'placeholder="Post code" '
             f'hx-post="/surveys/validate/postcode/" '
@@ -10188,7 +10354,7 @@ def validate_postcode(request: HttpRequest) -> HttpResponse:
         # Invalid postcode - red border, X icon
         return HttpResponse(
             f'<label class="input input-bordered input-sm flex items-center gap-1.5 input-error">'
-            f'<input type="text" name="post_code" value="{postcode}" '
+            f'<input type="text" name="post_code" value="{postcode_html}" '
             f'class="grow min-w-0 bg-transparent outline-none border-0" '
             f'placeholder="Post code" '
             f'hx-post="/surveys/validate/postcode/" '

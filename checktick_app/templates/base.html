@@ -71,6 +71,7 @@
           <ul tabindex="0" class="menu menu-sm dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-52 p-2 shadow">
             {% if user.is_authenticated %}
               <li><a href="/surveys">{% trans "Surveys" %}</a></li>
+              <li><a href="{% url 'surveys:published_templates_list' %}">{% trans "Question Groups" %}</a></li>
               {% if can_create_datasets %}
                 <li><a href="{% url 'surveys:dataset_list' %}">{% trans "Datasets" %}</a></li>
               {% endif %}
@@ -116,6 +117,7 @@
         <ul class="menu menu-horizontal px-1">
           {% if user.is_authenticated %}
             <li><a href="/surveys">{% trans "Surveys" %}</a></li>
+            <li><a href="{% url 'surveys:published_templates_list' %}">{% trans "Question Groups" %}</a></li>
             {% if can_create_datasets %}
               <li><a href="{% url 'surveys:dataset_list' %}">{% trans "Datasets" %}</a></li>
             {% endif %}
@@ -132,8 +134,8 @@
       </div>
       <div class="navbar-end">
         {% if user.is_authenticated %}
-          {# Upgrade button for FREE tier users - not shown for self-hosted #}
-          {% if user.profile.account_tier == 'free' and not self_hosted %}
+          {# Upgrade button for FREE tier users - not shown for self-hosted or superusers #}
+          {% if user.profile.account_tier == 'free' and not self_hosted and not user.is_superuser %}
             <a href="{% url 'core:pricing' %}" class="btn btn-primary btn-sm mr-2 animate-pulse">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4 mr-1">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
