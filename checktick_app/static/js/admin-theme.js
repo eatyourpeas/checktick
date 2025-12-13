@@ -12,8 +12,8 @@
     var presetsMeta = document.querySelector('meta[name="theme-presets"]');
     var presets = presetsMeta
       ? presetsMeta.content.split(",")
-      : ["nord", "business"];
-    var LIGHT_PRESET = presets[0] || "nord";
+      : ["corporate", "business"];
+    var LIGHT_PRESET = presets[0] || "corporate";
     var DARK_PRESET = presets[1] || "business";
 
     function themeToPreset(t) {

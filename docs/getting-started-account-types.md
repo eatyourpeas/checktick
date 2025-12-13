@@ -217,7 +217,7 @@ When running CheckTick in self-hosted mode (with `SELF_HOSTED=true` in settings)
 - No payment integration required
 - Superusers can configure platform branding via:
   - Web UI: Navigate to `/branding/`
-  - CLI: `python manage.py configure_branding --theme nord --logo path/to/logo.png`
+  - CLI: `python manage.py configure_branding --theme corporate --logo path/to/logo.png`
 - Full control over infrastructure and data
 - Suitable for institutions requiring on-premises deployment
 

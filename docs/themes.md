@@ -56,14 +56,14 @@ All 32 daisyUI themes are loaded in CheckTick:
 Themes are applied via the `data-theme` attribute on `<html>` or `<body>`:
 
 ```html
-<html data-theme="nord">
+<html data-theme="corporate">
 ```
 
 ### Logical Naming System
 
 CheckTick uses a **logical naming system** to separate user preferences from actual daisyUI presets:
 
-- **checktick-light** (logical name) → maps to selected light preset (default: "nord")
+- **checktick-light** (logical name) → maps to selected light preset (default: "corporate")
 - **checktick-dark** (logical name) → maps to selected dark preset (default: "business")
 - JavaScript automatically applies the correct daisyUI preset based on configuration
 
@@ -103,7 +103,7 @@ The context processor (`checktick_app/context_processors.py`) implements the 3-t
 
 ```python
 # 1. Start with platform defaults (environment vars + SiteBranding)
-preset_light = settings.BRAND_THEME_PRESET_LIGHT or "nord"
+preset_light = settings.BRAND_THEME_PRESET_LIGHT or "corporate"
 preset_dark = settings.BRAND_THEME_PRESET_DARK or "business"
 
 if SiteBranding:
@@ -142,7 +142,7 @@ if user_org and (user_org.theme_preset_light or user_org.theme_preset_dark):
 ```python
 class SiteBranding(models.Model):
     default_theme = models.CharField(max_length=64)  # checktick-light/dark
-    theme_preset_light = models.CharField(max_length=64)  # nord, etc.
+    theme_preset_light = models.CharField(max_length=64)  # corporate, etc.
     theme_preset_dark = models.CharField(max_length=64)   # business, etc.
     theme_light_css = models.TextField()  # Custom CSS variables
     theme_dark_css = models.TextField()   # Custom CSS variables
@@ -280,11 +280,11 @@ from checktick_app.core.themes import (
 )
 
 # Check theme color scheme
-scheme = get_theme_color_scheme("nord")  # "light"
+scheme = get_theme_color_scheme("corporate")  # "light"
 
 # Generate theme CSS
 light_css, dark_css = generate_theme_css_for_brand(
-    preset_light="nord",
+    preset_light="corporate",
     preset_dark="business",
     custom_light_css="--color-primary: oklch(65% 0.21 25);",
     custom_dark_css="--color-primary: oklch(45% 0.18 25);"
@@ -309,7 +309,7 @@ light_css, dark_css = generate_theme_css_for_brand(
 - Where it's stored: `SiteBranding` model in the database (`theme_preset_light`, `theme_preset_dark`, `theme_css_light`, `theme_css_dark`)
 - How it's applied:
   - The base template (`base.html`) uses the configured presets in the `data-theme` attribute
-  - The logical theme names `checktick-light` and `checktick-dark` are mapped to the actual preset names (e.g., `nord` or `business`)
+  - The logical theme names `checktick-light` and `checktick-dark` are mapped to the actual preset names (e.g., `corporate` or `business`)
   - Custom CSS from the theme generator is injected as CSS variables under the `checktick-light` and `checktick-dark` theme selectors
   - Theme switching happens via JavaScript that maps the logical names to the actual presets
   - Environment variables `BRAND_THEME_PRESET_LIGHT` and `BRAND_THEME_PRESET_DARK` provide deployment-level defaults
@@ -339,7 +339,7 @@ light_css, dark_css = generate_theme_css_for_brand(
 
 2. Choose theme presets:
 
-   - Light theme preset: Select from 20 options (default: `nord`)
+   - Light theme preset: Select from 20 options (default: `corporate`)
    - Dark theme preset: Select from 12 options (default: `business`)
    - The logical names `checktick-light` and `checktick-dark` are preserved for compatibility
 

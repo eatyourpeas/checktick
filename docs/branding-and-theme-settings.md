@@ -34,7 +34,7 @@ CheckTick uses a **cascading theme system** with three levels:
 
               ↓ Overrides- BRAND_THEME (str) — Default logical theme name. Values: "checktick-light" or "checktick-dark". Default: "checktick-light".
 
-┌─────────────────────────────────────┐- BRAND_THEME_PRESET_LIGHT (str) — daisyUI preset for light mode. Default: "nord". Available: light, cupcake, bumblebee, emerald, corporate, retro, cyberpunk, valentine, garden, lofi, pastel, fantasy, nord, cmyk, autumn, acid, lemonade, winter, nord, sunset.
+┌─────────────────────────────────────┐- BRAND_THEME_PRESET_LIGHT (str) — daisyUI preset for light mode. Default: "corporate". Available: light, cupcake, bumblebee, emerald, corporate, retro, cyberpunk, valentine, garden, lofi, pastel, fantasy, nord, cmyk, autumn, acid, lemonade, winter, sunset.
 
 │  3. Survey Theme                    │  ← Survey creator sets (affects survey pages)- BRAND_THEME_PRESET_DARK (str) — daisyUI preset for dark mode. Default: "business". Available: dark, synthwave, halloween, forest, aqua, black, luxury, dracula, business, night, coffee, dim.
 
@@ -107,7 +107,7 @@ Different users can control different levels:- **theme_preset_dark** — daisyUI
 python manage.py configure_branding --show
 
 # Set theme presets
-python manage.py configure_branding --theme-light nord --theme-dark business
+python manage.py configure_branding --theme-light corporate --theme-dark business
 
 # Upload logo files
 python manage.py configure_branding --logo path/to/logo.png --logo-dark path/to/logo-dark.png
@@ -148,7 +148,7 @@ Platform administrators set the default theme for the entire CheckTick deploymen
 
 - Regular users and organization owners cannot change platform defaults2. **Actual daisyUI preset names** (nord, business, etc.) are applied to the DOM:
 
-   - `<html data-theme="nord">` for light mode
+   - `<html data-theme="corporate">` for light mode
 
 ### Where to Configure   - `<html data-theme="business">` for dark mode
 
@@ -198,7 +198,7 @@ Platform administrators set the default theme for the entire CheckTick deploymen
 
 **20 Light Themes:**- **Profile UI**: `checktick_app/core/templates/core/profile.html` (theme preset dropdowns)
 
-nord (default), nord, light, cupcake, bumblebee, emerald, corporate, retro, cyberpunk, valentine, garden, lofi, pastel, fantasy, cmyk, autumn, acid, lemonade, winter, sunset- **Theme switcher JS**: `checktick_app/static/js/theme-toggle.js`, `admin-theme.js`
+corporate (default), nord, light, cupcake, bumblebee, emerald, corporate, retro, cyberpunk, valentine, garden, lofi, pastel, fantasy, cmyk, autumn, acid, lemonade, winter, sunset- **Theme switcher JS**: `checktick_app/static/js/theme-toggle.js`, `admin-theme.js`
 
 - **Survey dashboard style form**: `checktick_app/surveys/templates/surveys/dashboard.html`
 
@@ -418,13 +418,13 @@ When multiple theme levels are configured, CheckTick uses this precedence:
 
 **Scenario 1: Platform + Organization**
 
-- Platform set to: nord (light), business (dark)
+- Platform set to: corporate (light), business (dark)
 - Organization set to: corporate (light), luxury (dark)
 - **Result:** Organization members see corporate/luxury, non-members see nord/business
 
 **Scenario 2: All Three Levels**
 
-- Platform: nord/business
+- Platform: corporate/business
 - Organization: corporate/luxury
 - Survey: cupcake/forest
 - **Result:** Survey pages show cupcake/forest, other pages show corporate/luxury
@@ -433,7 +433,7 @@ When multiple theme levels are configured, CheckTick uses this precedence:
 
 - Organization previously had custom theme
 - Owner clicks "Reset to Defaults"
-- **Result:** Organization members now see platform theme (nord/business)
+- **Result:** Organization members now see platform theme (corporate/business)
 
 ## Troubleshooting
 

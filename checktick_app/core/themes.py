@@ -155,7 +155,7 @@ def get_preset_theme_reference(preset_name: str) -> str:
     The actual theme variables are inherited from the preset.
 
     Args:
-        preset_name: The daisyUI preset theme name (e.g., 'nord', 'business')
+        preset_name: The daisyUI preset theme name (e.g., 'corporate', 'business')
 
     Returns:
         CSS string that references the preset theme
@@ -178,7 +178,7 @@ def generate_theme_css_for_brand(
     Generate CSS for checktick-light and checktick-dark themes based on brand settings.
 
     Args:
-        preset_light: daisyUI preset name for light theme (default: "nord")
+        preset_light: daisyUI preset name for light theme (default: "corporate")
         preset_dark: daisyUI preset name for dark theme (default: "business")
         custom_css_light: Custom CSS overrides for light theme
         custom_css_dark: Custom CSS overrides for dark theme
@@ -186,7 +186,7 @@ def generate_theme_css_for_brand(
     Returns:
         Tuple of (light_css, dark_css) ready to inject in <style> tags
     """
-    preset_light = preset_light or "nord"
+    preset_light = preset_light or "corporate"
     preset_dark = preset_dark or "business"
 
     # For light theme

@@ -37,7 +37,7 @@ All self-hosted CheckTick deployments automatically include **Enterprise tier fe
 
 - **Custom Branding**: Superusers can configure platform branding via:
   - Web UI: Navigate to `/branding/` from your profile page
-  - CLI: `python manage.py configure_branding --theme nord --logo path/to/logo.png`
+  - CLI: `python manage.py configure_branding --theme corporate --logo path/to/logo.png`
 - **No Limits**: All users get unlimited surveys and full collaboration features
 - **Full Control**: Complete control over data and infrastructure
 
@@ -50,6 +50,7 @@ See [Branding and Theme Settings](branding-and-theme-settings.md) for details on
 The web interface at `/branding/` provides the easiest way to configure platform branding:
 
 **Features:**
+
 - Visual theme preview
 - Logo upload (light and dark modes)
 - Font selection
@@ -63,7 +64,7 @@ The web interface at `/branding/` provides the easiest way to configure platform
 python manage.py configure_branding --show
 
 # Set theme presets
-python manage.py configure_branding --theme-light nord --theme-dark business
+python manage.py configure_branding --theme-light corporate --theme-dark business
 
 # Upload logos
 python manage.py configure_branding --logo path/to/logo.png --logo-dark path/to/logo-dark.png
@@ -141,11 +142,11 @@ CheckTick uses **daisyUI v5.4.7** with 32 built-in theme presets:
 # Default logical theme (checktick-light or checktick-dark)
 BRAND_THEME="checktick-light"
 
-# Light mode preset (default: nord)
+# Light mode preset (default: corporate)
 # Available: light, cupcake, bumblebee, emerald, corporate, retro,
 # cyberpunk, valentine, garden, lofi, pastel, fantasy, nord,
 # cmyk, autumn, acid, lemonade, winter, nord, sunset
-BRAND_THEME_PRESET_LIGHT="nord"
+BRAND_THEME_PRESET_LIGHT="corporate"
 
 # Dark mode preset (default: business)
 # Available: dark, synthwave, halloween, forest, aqua, black,
@@ -195,22 +196,26 @@ The Django admin interface is still available as an alternative to the Branding 
 The admin interface provides access to all platform theme settings:
 
 **Theme Presets:**
+
 - `default_theme` - Logical theme name (checktick-light/checktick-dark)
 - `theme_preset_light` - daisyUI preset for light mode (dropdown with 20 options)
 - `theme_preset_dark` - daisyUI preset for dark mode (dropdown with 12 options)
 
 **Icons:**
+
 - `icon_file` - Upload light mode icon (SVG/PNG)
 - `icon_url` - Or provide URL for light mode icon
 - `icon_file_dark` - Upload dark mode icon (optional)
 - `icon_url_dark` - Or provide URL for dark mode icon
 
 **Fonts:**
+
 - `font_heading` - CSS font stack for headings
 - `font_body` - CSS font stack for body text
 - `font_css_url` - External font CSS URL (e.g., Google Fonts)
 
 **Advanced Custom CSS:**
+
 - `theme_light_css` - Custom CSS variables for light theme
 - `theme_dark_css` - Custom CSS variables for dark theme
 
@@ -223,6 +228,7 @@ The system checks configuration sources in this order:
 3. **Built-in defaults** (hardcoded in settings) - **Last resort**
 
 **Recommended workflow:**
+
 1. Set environment variables only for initial deployment defaults (optional)
 2. Use Branding Configuration UI (`/branding/`) for all ongoing changes
 3. Changes via UI/CLI take precedence and persist across container restarts
@@ -235,6 +241,7 @@ CheckTick uses **Tailwind CSS v4** with CSS-based configuration (no `tailwind.co
 ### When to Rebuild CSS
 
 Rebuild CSS when you:
+
 - Change Tailwind/daisyUI configuration in CSS files
 - Add new templates with utility classes
 - Update custom theme CSS
@@ -243,16 +250,19 @@ Rebuild CSS when you:
 ### How to Rebuild
 
 **In development (Docker):**
+
 ```bash
 docker compose exec web npm run build:css
 ```
 
 **In production (local):**
+
 ```bash
 npm run build:css
 ```
 
 **Build details:**
+ 
 - Input: `checktick_app/static/css/daisyui_themes.css`
 - Output: `checktick_app/static/build/styles.css` (minified)
 - Build time: ~250ms
@@ -282,13 +292,15 @@ Configuration example:
 CheckTick uses a **logical naming system** to separate user preferences from actual daisyUI presets:
 
 **Logical names** (stored in user preferences):
+
 - `checktick-light` - User's light mode preference
 - `checktick-dark` - User's dark mode preference
 - `system` - Follow OS preference
 
 **Physical names** (actual daisyUI presets applied to DOM):
+
 - `nord`, `business`, `cupcake`, etc.
-- Applied via `<html data-theme="nord">`
+- Applied via `<html data-theme="corporate">`
 
 **Why?** This allows changing the platform's default light/dark themes without breaking user preferences. Users who selected "light mode" will automatically get the new light preset.
 
@@ -297,7 +309,7 @@ CheckTick uses a **logical naming system** to separate user preferences from act
 1. **User preference** stored in browser localStorage (`checktick-theme`)
 2. **JavaScript** (`theme-toggle.js`) maps logical name to physical preset
 3. **Platform config** determines which preset each logical name maps to
-4. **DOM updated** with `<html data-theme="nord">` (physical name)
+4. **DOM updated** with `<html data-theme="corporate">` (physical name)
 
 ### Theme Cascade Logic
 
@@ -340,6 +352,7 @@ Only paste **CSS variable declarations**:
 ```
 
 **Do not paste:**
+
 - CSS selectors (`:root`, `[data-theme="..."]`)
 - Rule blocks with `{ }`
 - Arbitrary CSS rules
@@ -389,6 +402,7 @@ python manage.py collectstatic --noinput
 ```
 
 In Docker:
+
 ```bash
 docker compose exec web python manage.py collectstatic --noinput
 ```
@@ -421,11 +435,13 @@ docker compose exec web python manage.py collectstatic --noinput
 ### Theme Not Applying
 
 **Check precedence:**
+
 1. Database SiteBranding overrides environment variables
 2. Organization themes override platform defaults
 3. Survey themes override organization themes
 
 **Clear caches:**
+
 ```bash
 # Browser localStorage
 localStorage.removeItem('checktick-theme')
@@ -437,11 +453,13 @@ docker compose exec web python manage.py clear_cache
 ### Custom CSS Not Working
 
 **Verify format:**
+
 - Only variable declarations allowed
 - No CSS selectors or rule blocks
 - Check browser DevTools console for errors
 
 **Rebuild CSS:**
+
 ```bash
 docker compose exec web npm run build:css
 ```
@@ -449,11 +467,13 @@ docker compose exec web npm run build:css
 ### Icons Not Showing
 
 **Check file paths:**
+
 - Uploaded files: `/media/icons/...`
 - Static files: `/static/icons/...`
 - External URLs: Must be absolute and accessible
 
 **Verify media configuration:**
+
 ```python
 # settings.py
 MEDIA_URL = '/media/'
@@ -463,11 +483,13 @@ MEDIA_ROOT = BASE_DIR / 'media'
 ### Colors Look Wrong
 
 **Check theme preset:**
+
 - Verify `BRAND_THEME_PRESET_LIGHT` and `BRAND_THEME_PRESET_DARK`
 - Ensure preset name matches daisyUI options
 - Test both light and dark modes
 
 **Check custom CSS:**
+
 - Verify OKLCH color values (not hex)
 - Ensure percentage and decimal formats correct
 - Test in daisyUI Theme Generator first
@@ -481,6 +503,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 ## Support
 
 For deployment assistance:
+
 - Check [Getting Help](getting-help.md)
 - Review [Issues vs Discussions](issues-vs-discussions.md)
 - Join community discussions on GitHub
