@@ -137,6 +137,16 @@ urlpatterns = [
         name="survey_groups_repeat_create",
     ),
     path(
+        "<slug:slug>/groups/repeat/remove",
+        views.survey_groups_repeat_remove,
+        name="survey_groups_repeat_remove",
+    ),
+    path(
+        "<slug:slug>/groups/repeat/edit",
+        views.survey_groups_repeat_edit,
+        name="survey_groups_repeat_edit",
+    ),
+    path(
         "<slug:slug>/groups/<int:gid>/repeat/remove",
         views.survey_group_repeat_remove,
         name="survey_group_repeat_remove",

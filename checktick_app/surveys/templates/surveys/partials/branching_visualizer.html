@@ -1,13 +1,24 @@
-{% load static %}
+{% load static i18n %}
 
-<!-- Branching Flow Visualizer -->
+<!-- Survey Map Visualizer -->
+<style>
+  /* Fullscreen centering */
+  .flow-canvas-container:fullscreen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: oklch(var(--b2));
+  }
+  .flow-canvas-container:fullscreen .flow-canvas {
+    max-width: 100%;
+    max-height: 100%;
+  }
+</style>
 <div class="branching-visualizer bg-base-100 rounded-lg border border-base-300 p-4" data-survey-slug="{{ survey.slug }}">
   <div class="flex items-center justify-between mb-4">
     <h3 class="text-lg font-semibold flex items-center gap-2">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-      </svg>
-      <span>Branching Flow</span>
+      {% include 'components/icons/survey-map.html' with classes='w-5 h-5' %}
+      <span>{% trans 'Survey Map' %}</span>
     </h3>
     <button type="button" class="btn btn-xs btn-ghost fullscreen-btn">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -19,36 +30,38 @@
   <!-- Legend -->
   <div class="flex flex-wrap gap-3 mb-4 text-xs">
     <div class="flex items-center gap-1.5">
+      <div class="w-3 h-3 rounded bg-secondary"></div>
+      <span>{% trans 'Question Group' %}</span>
+    </div>
+    <div class="flex items-center gap-1.5">
+      <div class="w-3 h-3 rounded-full bg-accent"></div>
+      <span>{% trans 'Question' %}</span>
+    </div>
+    <div class="flex items-center gap-1.5">
       <div class="w-3 h-3 rounded-full bg-primary"></div>
-      <span>Question</span>
+      <span>{% trans 'Has conditions' %}</span>
     </div>
     <div class="flex items-center gap-1.5">
-      <div class="w-8 h-0.5 bg-primary"></div>
-      <span class="text-primary">▶</span>
-      <span>Show</span>
+      <div class="w-6 h-0.5 bg-success"></div>
+      <span>{% trans 'Jump to' %}</span>
     </div>
     <div class="flex items-center gap-1.5">
-      <div class="w-8 h-0.5 bg-primary"></div>
-      <svg class="w-3 h-3 text-primary" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M5 5l10 7-10 7V5zm10 0l10 7-10 7V5z"/>
-      </svg>
-      <span>Jump</span>
+      <div class="w-6 h-0.5 bg-warning"></div>
+      <span>{% trans 'Skip' %}</span>
     </div>
     <div class="flex items-center gap-1.5">
-      <div class="w-8 h-0.5 bg-primary"></div>
-      <span class="text-primary">✕</span>
-      <span>Skip</span>
-    </div>
-    <div class="flex items-center gap-1.5">
-      <div class="w-8 h-0.5 bg-primary"></div>
-      <span class="text-primary">■</span>
-      <span>End</span>
+      <div class="w-6 h-0.5 bg-error"></div>
+      <span>{% trans 'End survey' %}</span>
     </div>
   </div>
 
   <!-- Canvas container -->
   <div class="flow-canvas-container relative overflow-auto border border-base-300 rounded bg-base-200/30" style="height: 600px;">
     <canvas class="flow-canvas"></canvas>
+    <!-- Tooltip for hover info -->
+    <div class="survey-map-tooltip hidden absolute z-50 bg-base-100 border border-base-300 rounded-lg shadow-lg p-3 max-w-xs text-sm pointer-events-none">
+      <div class="tooltip-content"></div>
+    </div>
   </div>
 </div>
 
@@ -70,7 +83,18 @@
 
   .flow-canvas {
     display: block;
-    width: 100%;
+    /* Width and height set by JavaScript for DPI scaling */
+  }
+
+  .survey-map-tooltip {
+    transition: opacity 0.15s ease-in-out;
+    max-width: 300px;
+    word-wrap: break-word;
+  }
+
+  .survey-map-tooltip.hidden {
+    opacity: 0;
+    pointer-events: none;
   }
 </style>
 

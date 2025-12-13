@@ -1,6 +1,6 @@
 /**
- * Branching Flow Visualizer - Git-Graph Style
- * Renders a visual flow diagram of survey branching logic
+ * Survey Map Visualizer - Git-Graph Style
+ * Renders a visual flow diagram of survey branching logic with square connectors
  */
 
 (function () {
@@ -14,19 +14,54 @@
     const ctx = canvas.getContext("2d");
     const surveySlug = visualizer.dataset.surveySlug;
 
+    // Get device pixel ratio for sharp rendering on high-DPI displays
+    const dpr = window.devicePixelRatio || 1;
+
     let questions = [];
     let conditions = {};
     let groupRepeats = {};
 
-    // Function to resize canvas to container width
+    // Track node positions for hover detection
+    let nodePositionsForHover = {};
+    let branchLinesForHover = [];
+
+    // Function to resize canvas to container width with DPI scaling
     function resizeCanvas() {
       const containerWidth = container.clientWidth;
-      if (canvas.width !== containerWidth) {
-        canvas.width = containerWidth;
+      const displayWidth = containerWidth;
+      const displayHeight = canvas.height / dpr; // Get CSS height
+
+      // Only resize if dimensions changed
+      if (canvas.width !== displayWidth * dpr) {
+        // Set actual size in memory (scaled for DPI)
+        canvas.width = displayWidth * dpr;
+
+        // Set display size (CSS)
+        canvas.style.width = displayWidth + "px";
+
+        // Scale context to match DPI
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
         if (questions.length > 0) {
           drawGraph();
         }
       }
+    }
+
+    // Set canvas height with DPI scaling
+    function setCanvasHeight(height) {
+      canvas.height = height * dpr;
+      canvas.style.height = height + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    // Get logical (CSS) canvas dimensions (not scaled buffer size)
+    function getCanvasWidth() {
+      return canvas.width / dpr;
+    }
+
+    function getCanvasHeight() {
+      return canvas.height / dpr;
     }
 
     // Use solid fallback colors that work reliably
@@ -34,75 +69,64 @@
       primary: "#570df8",
       primaryFocus: "#4506cb",
       primaryContent: "#ffffff",
+      secondary: "#f000b8",
+      secondaryFocus: "#bd0091",
       accent: "#37cdbe",
       accentFocus: "#2ba69a",
       accentContent: "#ffffff",
+      success: "#36d399",
+      warning: "#fbbd23",
+      error: "#f87272",
       base100: "#ffffff",
       baseContent: "#1f2937",
       border: "#e5e7eb",
     };
 
-    // Try to get theme colors from computed styles
+    // Get theme colors from DaisyUI semantic elements (most reliable method)
     function resolveColors() {
       try {
-        // Get the actual theme being used
-        const currentTheme =
-          document.documentElement.getAttribute("data-theme") ||
-          document.body.getAttribute("data-theme");
+        // Create temporary elements with DaisyUI semantic classes to get computed colors
+        const colorClasses = {
+          primary: "bg-primary",
+          secondary: "bg-secondary",
+          accent: "bg-accent",
+          success: "bg-success",
+          warning: "bg-warning",
+          error: "bg-error",
+        };
 
-        // Try to get colors from actual themed elements on the page
-        // Look for alert-primary or other primary-colored elements
-        const primaryElement = document.querySelector(
-          '.alert-primary, .btn-primary, .bg-primary, [class*="primary"]'
-        );
-        const accentElement = document.querySelector(
-          '.alert-accent, .btn-accent, .bg-accent, [class*="accent"]'
-        );
+        for (const [colorName, className] of Object.entries(colorClasses)) {
+          const tempEl = document.createElement("div");
+          tempEl.className = className;
+          tempEl.style.position = "absolute";
+          tempEl.style.visibility = "hidden";
+          tempEl.style.width = "1px";
+          tempEl.style.height = "1px";
+          document.body.appendChild(tempEl);
 
-        if (primaryElement) {
-          const primaryStyle = getComputedStyle(primaryElement);
-          const bgColor = primaryStyle.backgroundColor;
+          const computedColor = getComputedStyle(tempEl).backgroundColor;
           if (
-            bgColor &&
-            bgColor !== "rgba(0, 0, 0, 0)" &&
-            bgColor !== "transparent"
+            computedColor &&
+            computedColor !== "rgba(0, 0, 0, 0)" &&
+            computedColor !== "transparent"
           ) {
-            colors.primary = bgColor;
+            colors[colorName] = computedColor;
           }
+
+          document.body.removeChild(tempEl);
         }
 
-        if (accentElement) {
-          const accentStyle = getComputedStyle(accentElement);
-          const bgColor = accentStyle.backgroundColor;
-          if (
-            bgColor &&
-            bgColor !== "rgba(0, 0, 0, 0)" &&
-            bgColor !== "transparent"
-          ) {
-            colors.accent = bgColor;
-          }
-        }
-
-        // Also try CSS variables as fallback
+        // Also get focus/content variants from CSS variables
         const styles = getComputedStyle(document.documentElement);
-        const p = styles.getPropertyValue("--p").trim();
-        const a = styles.getPropertyValue("--a").trim();
+        const pf = styles.getPropertyValue("--pf").trim();
+        const pc = styles.getPropertyValue("--pc").trim();
+        if (pf) colors.primaryFocus = `hsl(${pf})`;
+        if (pc) colors.primaryContent = `hsl(${pc})`;
 
-        if (p) {
-          colors.primary = `hsl(${p})`;
-          const pf = styles.getPropertyValue("--pf").trim();
-          const pc = styles.getPropertyValue("--pc").trim();
-          if (pf) colors.primaryFocus = `hsl(${pf})`;
-          if (pc) colors.primaryContent = `hsl(${pc})`;
-        }
-
-        if (a) {
-          colors.accent = `hsl(${a})`;
-          const af = styles.getPropertyValue("--af").trim();
-          const ac = styles.getPropertyValue("--ac").trim();
-          if (af) colors.accentFocus = `hsl(${af})`;
-          if (ac) colors.accentContent = `hsl(${ac})`;
-        }
+        const af = styles.getPropertyValue("--af").trim();
+        const ac = styles.getPropertyValue("--ac").trim();
+        if (af) colors.accentFocus = `hsl(${af})`;
+        if (ac) colors.accentContent = `hsl(${ac})`;
 
         const b1 = styles.getPropertyValue("--b1").trim();
         const bc = styles.getPropertyValue("--bc").trim();
@@ -185,17 +209,33 @@
         return;
       }
 
-      // Clear canvas
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Clear canvas and hover tracking (use logical dimensions - transform handles scaling)
+      ctx.clearRect(0, 0, getCanvasWidth(), getCanvasHeight());
+      nodePositionsForHover = {};
+      branchLinesForHover = [];
 
       // Git-graph style layout
+      // Condition badges on the left, nodes in center, labels/text on the right
+      // Branch lines extend left, "else" lines extend right
       const nodeRadius = 8;
-      const rowHeight = 40;
-      const startX = 30;
+      const rowHeight = 50; // Increased for condition labels
+      const baseStartX = 120; // Space on left for branch lines and condition badges
       const startY = 30;
-      const labelStartX = 50;
+      const elseBranchOffset = 40; // How far right the "else" branch goes
       const groupPadding = 10;
-      const groupSpacing = 20;
+      const groupSpacing = 25;
+
+      // Estimate content width for centering
+      // Left edge: branch lines can go about 100px left of nodes
+      // Right edge: labels + badges take about 350px from node position
+      const contentLeftMargin = 100;
+      const contentWidth = contentLeftMargin + 350; // ~450px total content width
+      const canvasWidth = getCanvasWidth();
+
+      // Calculate horizontal offset to center content
+      const horizontalOffset = Math.max(0, (canvasWidth - contentWidth) / 2);
+      const startX = baseStartX + horizontalOffset;
+      const labelStartX = startX + elseBranchOffset + 30; // Labels to the right of nodes AND else branches
 
       const nodePositions = {};
       const groupRegions = [];
@@ -227,6 +267,17 @@
           x: startX,
           y: currentY,
         };
+
+        // Store for hover detection with full question text
+        nodePositionsForHover[q.id] = {
+          x: startX,
+          y: currentY,
+          radius: 8,
+          text: q.full_text || q.text,
+          labelX: labelStartX,
+          labelWidth: 200, // Will be recalculated when drawing
+        };
+
         currentY += rowHeight;
 
         // Save last group region
@@ -240,41 +291,75 @@
         }
       });
 
-      // Adjust canvas size
-      const requiredHeight = Math.max(currentY + 30, 400);
-      canvas.height = requiredHeight;
+      // Add "End Survey" position after all questions
+      currentY += groupSpacing; // Add spacing before end node
+      const endSurveyPos = {
+        x: startX,
+        y: currentY,
+      };
+
+      // Adjust canvas size to include end survey node (with DPI scaling)
+      const requiredHeight = Math.max(currentY + 50, 400);
+      setCanvasHeight(requiredHeight);
       canvas.style.display = "block";
 
       // Ensure canvas fills container width
       resizeCanvas();
 
+      // Helper to create a pale background color
+      // Use a simple semi-transparent overlay approach for reliability
+      function getPaleBackground(baseColor) {
+        // For group backgrounds, use a very light tint
+        // Extract RGB values from any color format
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = 1;
+        tempCanvas.height = 1;
+        const tempCtx = tempCanvas.getContext("2d");
+        tempCtx.fillStyle = baseColor;
+        tempCtx.fillRect(0, 0, 1, 1);
+        const [r, g, b] = tempCtx.getImageData(0, 0, 1, 1).data;
+        return `rgba(${r}, ${g}, ${b}, 0.1)`;
+      }
+
       // Draw group background regions
       groupRegions.forEach((group, index) => {
-        // Alternate background shading
-        ctx.fillStyle =
-          index % 2 === 0
-            ? "rgba(128, 128, 128, 0.03)"
-            : "rgba(128, 128, 128, 0.06)";
-        ctx.fillRect(0, group.startY, canvas.width, group.endY - group.startY);
+        // Use pale secondary color for group backgrounds
+        ctx.fillStyle = getPaleBackground(colors.secondary);
+        ctx.fillRect(
+          0,
+          group.startY,
+          getCanvasWidth(),
+          group.endY - group.startY
+        );
 
-        // Draw group label and repeat badge if applicable
+        // Draw group label on the left side
         if (group.name) {
-          let rightX = canvas.width - 10;
+          const leftX = 10;
+          let labelY = group.startY + 8;
 
-          // Draw repeat badge if group has repeats
+          // Draw group label in secondary color
+          ctx.fillStyle = colors.secondary;
+          ctx.font = "bold 12px sans-serif";
+          ctx.textAlign = "left";
+          ctx.textBaseline = "top";
+          ctx.fillText(group.name, leftX, labelY);
+
+          // Draw repeat badge below the group name if group has repeats
           if (group.groupId && groupRepeats[group.groupId]) {
             const repeatInfo = groupRepeats[group.groupId];
             const countText =
               repeatInfo.count !== null ? String(repeatInfo.count) : "∞";
 
+            labelY += 18; // Move down below the group name
+
             // Measure count text
-            ctx.font = "bold 11px sans-serif";
+            ctx.font = "bold 10px sans-serif";
             const textWidth = ctx.measureText(countText).width;
-            const iconSize = 14;
-            const badgeWidth = iconSize + textWidth + 18; // icon + text + padding
-            const badgeHeight = 20;
-            const badgeX = rightX - badgeWidth;
-            const badgeY = group.startY + 5;
+            const iconSize = 12;
+            const badgeWidth = iconSize + textWidth + 14; // icon + text + padding
+            const badgeHeight = 18;
+            const badgeX = leftX;
+            const badgeY = labelY;
 
             // Draw badge background
             ctx.fillStyle = "rgba(59, 130, 246, 0.15)";
@@ -311,63 +396,253 @@
             ctx.stroke();
 
             // Draw repeat icon
-            const iconX = badgeX + 8;
+            const iconX = badgeX + 6;
             const iconY = badgeY + badgeHeight / 2;
             drawRepeatIcon(iconX, iconY, iconSize, "rgba(59, 130, 246, 0.9)");
 
             // Draw count text
             ctx.fillStyle = "rgba(59, 130, 246, 0.9)";
-            ctx.font = "bold 11px sans-serif";
+            ctx.font = "bold 10px sans-serif";
             ctx.textAlign = "left";
             ctx.textBaseline = "middle";
             ctx.fillText(
               countText,
-              iconX + iconSize + 3,
+              iconX + iconSize + 2,
               badgeY + badgeHeight / 2
             );
-
-            // Adjust rightX for group label
-            rightX = badgeX - 8;
           }
-
-          // Draw group label
-          ctx.fillStyle = "rgba(128, 128, 128, 0.5)";
-          ctx.font = "bold 11px sans-serif";
-          ctx.textAlign = "right";
-          ctx.textBaseline = "top";
-          ctx.fillText(group.name, rightX, group.startY + 5);
         }
       });
 
       // Draw connections (vertical lines between nodes)
-      ctx.strokeStyle = colors.border;
+      // First pass: draw all lines only
+      ctx.strokeStyle = colors.accent;
       ctx.lineWidth = 2;
+
+      // Collect all labels to draw after all lines (for proper z-order)
+      const labelsToRender = [];
 
       questions.forEach((q, index) => {
         const qConditions = conditions[q.id] || [];
         const currentPos = nodePositions[q.id];
+        const hasJumpConditions = qConditions.some(
+          (c) =>
+            c.action === "jump_to" ||
+            c.action === "skip" ||
+            c.action === "end_survey"
+        );
 
         // Draw vertical line to next question (if not last)
         if (index < questions.length - 1) {
-          const nextPos = nodePositions[questions[index + 1].id];
-          ctx.beginPath();
-          ctx.moveTo(currentPos.x, currentPos.y + nodeRadius);
-          ctx.lineTo(currentPos.x, nextPos.y - nodeRadius);
-          ctx.stroke();
+          const nextQ = questions[index + 1];
+          const nextPos = nodePositions[nextQ.id];
+
+          if (hasJumpConditions) {
+            // This question has jump conditions - draw the default "else" path
+            // with a label showing the opposite condition
+            const elseSummary = buildElseSummary(qConditions);
+            const labelInfo = drawDefaultFlowLine(
+              currentPos,
+              nextPos,
+              nodeRadius,
+              elseSummary,
+              q.full_text || q.text,
+              nextQ.full_text || nextQ.text
+            );
+            if (labelInfo) {
+              labelsToRender.push(labelInfo);
+            }
+          } else {
+            // No conditions - just draw a simple vertical line
+            ctx.beginPath();
+            ctx.moveTo(currentPos.x, currentPos.y + nodeRadius);
+            ctx.lineTo(currentPos.x, nextPos.y - nodeRadius);
+            ctx.stroke();
+          }
         }
 
         // Draw branching connections
         qConditions.forEach((cond, condIndex) => {
           if (cond.target_question && nodePositions[cond.target_question]) {
             const toPos = nodePositions[cond.target_question];
-            // Alternate sides for multiple conditions from the same question
-            const useRightSide = condIndex % 2 === 0;
-            drawBranchingLine(currentPos, toPos, cond.action, useRightSide);
+            const targetQ = questions.find(
+              (tq) => tq.id === cond.target_question
+            );
+            // Pass index to stagger multiple branches from same question
+            const branchLabelInfo = drawBranchingLine(
+              currentPos,
+              toPos,
+              cond.action,
+              condIndex,
+              cond.summary || "",
+              nodeRadius,
+              q.full_text || q.text,
+              targetQ ? targetQ.full_text || targetQ.text : "next question"
+            );
+            if (branchLabelInfo) {
+              labelsToRender.push(branchLabelInfo);
+            }
           }
         });
       });
 
-      // Draw nodes and labels
+      // Second pass: draw all condition labels (on top of lines, but under nodes)
+      labelsToRender.forEach((label) => {
+        drawConditionLabel(
+          label.labelX,
+          label.labelY,
+          label.labelText,
+          label.color
+        );
+      });
+
+      // Build a summary for the "else" / default path
+      function buildElseSummary(qConditions) {
+        // Get the opposite conditions
+        const opposites = qConditions
+          .filter(
+            (c) =>
+              c.action === "jump_to" ||
+              c.action === "skip" ||
+              c.action === "end_survey"
+          )
+          .map((c) => {
+            if (!c.summary) return null;
+            // Build opposite condition text
+            const oppositeOps = {
+              equals: "not",
+              "not equal to": "equals",
+              "greater than": "at most",
+              "at least": "less than",
+              "less than": "at least",
+              "at most": "greater than",
+              contains: "doesn't contain",
+              "does not contain": "contains",
+              "has a value": "is empty",
+              "is empty": "has a value",
+            };
+            // Try to find and replace the operator
+            for (const [op, opposite] of Object.entries(oppositeOps)) {
+              if (c.summary.startsWith(op + " ")) {
+                return opposite + c.summary.substring(op.length);
+              }
+            }
+            return "otherwise";
+          })
+          .filter(Boolean);
+
+        if (opposites.length === 0) return "otherwise";
+        if (opposites.length === 1) return opposites[0];
+        return "otherwise"; // Multiple conditions, just say "otherwise"
+      }
+
+      // Draw the default flow line (else path) - returns label info for later rendering
+      // This goes to the RIGHT side (opposite of branch lines which go left)
+      function drawDefaultFlowLine(
+        from,
+        to,
+        nodeRadius,
+        elseSummary,
+        sourceQuestionText = "",
+        targetQuestionText = ""
+      ) {
+        const elseColor = "#6b7280"; // Gray for default/else path
+        const branchOffset = 40; // Go to the right
+        const cornerX = from.x + branchOffset;
+
+        // Stop the line at the edge of the target node, not the center
+        const targetX = to.x + nodeRadius;
+
+        ctx.strokeStyle = elseColor;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 3]); // Different dash pattern from branch lines
+
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        // Horizontal out to the right
+        ctx.lineTo(cornerX, from.y);
+        // Vertical down to target level
+        ctx.lineTo(cornerX, to.y);
+        // Horizontal back toward target node (stop before arrowhead)
+        ctx.lineTo(targetX + 8, to.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Draw arrowhead pointing left (toward the target node)
+        const arrowSize = 8;
+        ctx.fillStyle = elseColor;
+        ctx.strokeStyle = elseColor;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(targetX + arrowSize, to.y - arrowSize / 2);
+        ctx.lineTo(targetX, to.y);
+        ctx.lineTo(targetX + arrowSize, to.y + arrowSize / 2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Return label info for later rendering (so labels appear on top of all lines)
+        if (elseSummary) {
+          const labelY = (from.y + to.y) / 2;
+
+          // Truncate if too long
+          let labelText = elseSummary;
+          ctx.font = "10px sans-serif";
+          const maxWidth = 80;
+          if (ctx.measureText(labelText).width > maxWidth) {
+            while (
+              ctx.measureText(labelText + "...").width > maxWidth &&
+              labelText.length > 0
+            ) {
+              labelText = labelText.slice(0, -1);
+            }
+            labelText += "...";
+          }
+
+          const textWidth = ctx.measureText(labelText).width;
+          const padding = 3;
+          const labelX = cornerX + 5;
+
+          // Store for hover detection (else lines)
+          branchLinesForHover.push({
+            x1: from.x,
+            y1: from.y,
+            x2: to.x,
+            y2: to.y,
+            cornerX: cornerX,
+            summary: elseSummary,
+            action: "else",
+            labelX: labelX,
+            labelY: labelY,
+            labelWidth: textWidth + padding * 2,
+            sourceQuestion: sourceQuestionText,
+            targetQuestion: targetQuestionText,
+            isElse: true,
+          });
+
+          return { labelX, labelY, labelText, color: elseColor };
+        }
+        return null;
+      }
+
+      // Draw condition label (called in second pass, after all lines are drawn)
+      function drawConditionLabel(labelX, labelY, labelText, color) {
+        ctx.font = "10px sans-serif";
+        const textWidth = ctx.measureText(labelText).width;
+        const padding = 3;
+
+        // Draw label background
+        ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+        ctx.fillRect(labelX, labelY - 8, textWidth + padding * 2, 16);
+
+        // Draw label text
+        ctx.fillStyle = color;
+        ctx.font = "10px sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(labelText, labelX + padding, labelY);
+      }
+
+      // Third pass: Draw nodes and labels (on top of everything)
       questions.forEach((q) => {
         const pos = nodePositions[q.id];
         const qConditions = conditions[q.id] || [];
@@ -380,9 +655,83 @@
           q.text,
           hasConditions,
           qConditions,
-          q.group_name
+          q.group_name,
+          pos.x // Pass node's x position for badge placement
         );
       });
+
+      // Draw connection from last question to End Survey
+      if (questions.length > 0) {
+        const lastQ = questions[questions.length - 1];
+        const lastPos = nodePositions[lastQ.id];
+        const lastConditions = conditions[lastQ.id] || [];
+        const hasJumpConditions = lastConditions.some(
+          (c) =>
+            c.action === "jump_to" ||
+            c.action === "skip" ||
+            c.action === "end_survey"
+        );
+
+        // Draw line from last question to end survey
+        ctx.strokeStyle = colors.accent;
+        ctx.lineWidth = 2;
+
+        if (hasJumpConditions) {
+          // Last question has conditions - draw else path to end
+          const elseColor = colors.accent;
+          const branchOffset = 40;
+          const cornerX = lastPos.x + branchOffset;
+          const targetX = endSurveyPos.x + nodeRadius;
+
+          ctx.strokeStyle = elseColor;
+          ctx.setLineDash([]);
+          ctx.beginPath();
+          ctx.moveTo(lastPos.x, lastPos.y);
+          ctx.lineTo(cornerX, lastPos.y);
+          ctx.lineTo(cornerX, endSurveyPos.y);
+          ctx.lineTo(targetX + 8, endSurveyPos.y);
+          ctx.stroke();
+
+          // Arrowhead
+          const arrowSize = 8;
+          ctx.fillStyle = elseColor;
+          ctx.beginPath();
+          ctx.moveTo(targetX + arrowSize, endSurveyPos.y - arrowSize / 2);
+          ctx.lineTo(targetX, endSurveyPos.y);
+          ctx.lineTo(targetX + arrowSize, endSurveyPos.y + arrowSize / 2);
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          // Simple vertical line
+          ctx.beginPath();
+          ctx.moveTo(lastPos.x, lastPos.y + nodeRadius);
+          ctx.lineTo(endSurveyPos.x, endSurveyPos.y - nodeRadius);
+          ctx.stroke();
+        }
+      }
+
+      // Draw End Survey node (square with error color)
+      drawEndSurveyNode(endSurveyPos.x, endSurveyPos.y, nodeRadius);
+
+      // Draw End Survey label
+      ctx.fillStyle = colors.error;
+      ctx.font = "bold 13px sans-serif";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText("End Survey", labelStartX, endSurveyPos.y);
+    }
+
+    function drawEndSurveyNode(x, y, size) {
+      // Draw a square node for end survey (different from question circles)
+      const halfSize = size;
+      ctx.fillStyle = colors.error;
+      ctx.strokeStyle = colors.error;
+      ctx.lineWidth = 2;
+
+      ctx.beginPath();
+      ctx.rect(x - halfSize, y - halfSize, halfSize * 2, halfSize * 2);
+      ctx.fill();
+      ctx.stroke();
     }
 
     function drawCircleNode(x, y, radius, hasConditions) {
@@ -427,15 +776,24 @@
       ctx.restore();
     }
 
-    function drawLabel(x, y, text, hasConditions, nodeConditions, groupName) {
-      // Draw text label to the right of the node
+    function drawLabel(
+      x,
+      y,
+      text,
+      hasConditions,
+      nodeConditions,
+      groupName,
+      nodeX
+    ) {
+      // Draw text label to the right of the node (and any right-side branches)
       ctx.fillStyle = hasConditions ? colors.primary : colors.accent;
       ctx.font = hasConditions ? "bold 13px sans-serif" : "13px sans-serif";
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
 
-      // Truncate text if too long (reserve space for group label on right)
-      const maxWidth = canvas.width - x - 150;
+      // Truncate text if too long (reserve space for group label and badge on right)
+      const badgeSpace = nodeConditions.length > 0 ? 80 : 0; // Reserve space for badge
+      const maxWidth = getCanvasWidth() - x - 150 - badgeSpace;
       let displayText = text;
       if (ctx.measureText(text).width > maxWidth) {
         while (
@@ -449,12 +807,15 @@
 
       ctx.fillText(displayText, x, y);
 
-      // Draw condition count badge below the label if present
+      // Draw condition count badge to the RIGHT of the question title
       if (nodeConditions.length > 0) {
-        const badgeY = y + 14;
         const badgeText = `${nodeConditions.length} condition${
           nodeConditions.length > 1 ? "s" : ""
         }`;
+
+        // Measure the displayed text to position badge after it
+        ctx.font = hasConditions ? "bold 13px sans-serif" : "13px sans-serif";
+        const textWidth = ctx.measureText(displayText).width;
 
         // Measure badge text
         ctx.font = "10px sans-serif";
@@ -463,13 +824,16 @@
         const badgeWidth = badgeTextWidth + badgePadding * 2;
         const badgeHeight = 16;
 
+        // Position badge to the RIGHT of the question title
+        const badgeX = x + textWidth + 8; // 8px gap after title
+
         // Draw badge background
         ctx.fillStyle = "rgba(128, 128, 128, 0.15)";
         ctx.beginPath();
         const radius = 3;
         ctx.roundRect(
-          x,
-          badgeY - badgeHeight / 2,
+          badgeX,
+          y - badgeHeight / 2,
           badgeWidth,
           badgeHeight,
           radius
@@ -480,34 +844,254 @@
         ctx.fillStyle = "rgba(128, 128, 128, 0.8)";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
-        ctx.fillText(badgeText, x + badgePadding, badgeY);
+        ctx.fillText(badgeText, badgeX + badgePadding, y);
       }
     }
 
-    function drawBranchingLine(from, to, action, useRightSide = true) {
-      // Color-code by action type
+    function drawBranchingLine(
+      from,
+      to,
+      action,
+      branchIndex = 0,
+      conditionSummary = "",
+      nodeRadius = 8,
+      sourceQuestionText = "",
+      targetQuestionText = ""
+    ) {
+      // Color-code by action type using theme colors
       const actionColors = {
-        SHOW: "#3b82f6",
-        JUMP_TO: "#10b981",
-        SKIP: "#f59e0b",
-        END_SURVEY: "#ef4444",
+        show: colors.primary,
+        jump_to: colors.success,
+        skip: colors.warning,
+        end_survey: colors.error,
       };
 
-      ctx.strokeStyle = actionColors[action] || "#6b7280";
+      const color = actionColors[action] || colors.baseContent;
+      ctx.strokeStyle = color;
       ctx.lineWidth = 2;
-      ctx.setLineDash([5, 3]);
+      ctx.setLineDash([4, 4]);
+
+      // Branch lines go to the LEFT of the main flow
+      // Each additional branch from same node goes further left
+      const branchOffset = -30 - branchIndex * 25;
+      const cornerX = from.x + branchOffset;
+
+      // Stop the line at the edge of the target node, not the center
+      const targetX = to.x - nodeRadius;
 
       ctx.beginPath();
       ctx.moveTo(from.x, from.y);
 
-      // Draw curved line for branching connections, alternating sides
-      const curveOffset = useRightSide ? 20 : -20;
-      const midX = from.x + curveOffset;
-      ctx.bezierCurveTo(midX, from.y, midX, to.y, to.x, to.y);
+      // Draw right-angle connector (like git graph)
+      // Horizontal out to the left from source
+      ctx.lineTo(cornerX, from.y);
+      // Vertical down/up to target level
+      ctx.lineTo(cornerX, to.y);
+      // Horizontal back toward target node (stop before arrowhead)
+      ctx.lineTo(targetX - 8, to.y);
 
       ctx.stroke();
       ctx.setLineDash([]);
+
+      // Draw arrowhead pointing right (toward the target node)
+      const arrowSize = 8;
+      ctx.fillStyle = color;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(targetX - arrowSize, to.y - arrowSize / 2);
+      ctx.lineTo(targetX, to.y);
+      ctx.lineTo(targetX - arrowSize, to.y + arrowSize / 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Return label info for later rendering (so labels appear on top of all lines)
+      if (conditionSummary) {
+        // Align label vertically with the target node (not midpoint)
+        const labelY = to.y;
+
+        // Truncate long condition text
+        let labelText = conditionSummary;
+        ctx.font = "10px sans-serif";
+        const maxLabelWidth = 80;
+        if (ctx.measureText(labelText).width > maxLabelWidth) {
+          while (
+            ctx.measureText(labelText + "...").width > maxLabelWidth &&
+            labelText.length > 0
+          ) {
+            labelText = labelText.slice(0, -1);
+          }
+          labelText += "...";
+        }
+
+        const textWidth = ctx.measureText(labelText).width;
+        const padding = 3;
+        const labelMargin = 6; // Gap between label right edge and the branch line
+        const labelX = cornerX - textWidth - padding * 2 - labelMargin;
+
+        // Store for hover detection
+        branchLinesForHover.push({
+          x1: from.x,
+          y1: from.y,
+          x2: to.x,
+          y2: to.y,
+          cornerX: cornerX,
+          summary: conditionSummary,
+          action: action,
+          labelX: labelX,
+          labelY: labelY,
+          labelWidth: textWidth + padding * 2,
+          sourceQuestion: sourceQuestionText,
+          targetQuestion: targetQuestionText,
+        });
+
+        return { labelX, labelY, labelText, color };
+      }
+      return null;
     }
+
+    // Tooltip functionality
+    const tooltip = visualizer.querySelector(".survey-map-tooltip");
+    const tooltipContent = tooltip
+      ? tooltip.querySelector(".tooltip-content")
+      : null;
+
+    function showTooltip(x, y, html) {
+      if (!tooltip || !tooltipContent) return;
+      tooltipContent.innerHTML = html;
+      tooltip.classList.remove("hidden");
+
+      // Position tooltip near the cursor but within viewport
+      const containerRect = container.getBoundingClientRect();
+      const tooltipRect = tooltip.getBoundingClientRect();
+
+      let tooltipX = x + 15;
+      let tooltipY = y - 10;
+
+      // Keep within container
+      if (tooltipX + tooltipRect.width > container.clientWidth) {
+        tooltipX = x - tooltipRect.width - 15;
+      }
+      if (tooltipY + tooltipRect.height > container.clientHeight) {
+        tooltipY = y - tooltipRect.height - 10;
+      }
+
+      tooltip.style.left = `${tooltipX + container.scrollLeft}px`;
+      tooltip.style.top = `${tooltipY + container.scrollTop}px`;
+    }
+
+    function hideTooltip() {
+      if (tooltip) {
+        tooltip.classList.add("hidden");
+      }
+    }
+
+    // Handle mouse movement for tooltips
+    canvas.addEventListener("mousemove", (e) => {
+      if (isPanning) {
+        hideTooltip();
+        return;
+      }
+
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left + container.scrollLeft;
+      const y = e.clientY - rect.top + container.scrollTop;
+
+      // Check if hovering over a question node
+      for (const [qId, pos] of Object.entries(nodePositionsForHover)) {
+        const q = questions.find((q) => q.id === qId);
+        if (!q) continue;
+
+        // Check node circle
+        const dx = x - pos.x;
+        const dy = y - pos.y;
+        if (Math.sqrt(dx * dx + dy * dy) < pos.radius + 5) {
+          const fullText = q.full_text || q.text;
+          const questionNumber = q.order !== undefined ? q.order + 1 : ""; // 1-indexed
+          showTooltip(
+            e.clientX - rect.left,
+            e.clientY - rect.top,
+            `<div class="font-semibold mb-1">Q${questionNumber}</div>` +
+              `<div class="text-base-content/70">${fullText}</div>`
+          );
+          canvas.style.cursor = "pointer";
+          return;
+        }
+
+        // Check label area (rectangle from labelX)
+        if (
+          x >= pos.labelX &&
+          x <= pos.labelX + pos.labelWidth + 100 &&
+          y >= pos.y - 12 &&
+          y <= pos.y + 12
+        ) {
+          const fullText = q.full_text || q.text;
+          if (fullText.length > 50) {
+            const questionNumber = q.order !== undefined ? q.order + 1 : "";
+            showTooltip(
+              e.clientX - rect.left,
+              e.clientY - rect.top,
+              `<div class="font-semibold mb-1">Q${questionNumber}</div>` +
+                `<div class="text-base-content/70">${fullText}</div>`
+            );
+            canvas.style.cursor = "pointer";
+            return;
+          }
+        }
+      }
+
+      // Check if hovering over a branch line label
+      for (const branch of branchLinesForHover) {
+        if (
+          x >= branch.labelX - 5 &&
+          x <= branch.labelX + branch.labelWidth + 5 &&
+          y >= branch.labelY - 10 &&
+          y <= branch.labelY + 10
+        ) {
+          // Build plain English explanation
+          let explanation;
+          if (branch.isElse) {
+            // Else/default flow line - simple "otherwise" message
+            explanation = `Otherwise, continue to <strong>${branch.targetQuestion}</strong>`;
+          } else {
+            // Regular branch line
+            const actionVerbs = {
+              show: "show",
+              jump_to: "go to",
+              skip: "skip to",
+              end_survey: "end the survey",
+            };
+            const actionVerb = actionVerbs[branch.action] || branch.action;
+            const targetText =
+              branch.action === "end_survey"
+                ? ""
+                : `<strong>${branch.targetQuestion}</strong>`;
+
+            explanation =
+              branch.action === "end_survey"
+                ? `If ${branch.summary}, ${actionVerb}`
+                : `If ${branch.summary}, ${actionVerb} ${targetText}`;
+          }
+
+          showTooltip(
+            e.clientX - rect.left,
+            e.clientY - rect.top,
+            `<div class="text-base-content">${explanation}</div>`
+          );
+          canvas.style.cursor = "pointer";
+          return;
+        }
+      }
+
+      hideTooltip();
+      canvas.style.cursor = "default";
+    });
+
+    canvas.addEventListener("mouseleave", () => {
+      hideTooltip();
+      canvas.style.cursor = "default";
+    });
 
     // Pan/zoom functionality
     let isPanning = false;
@@ -547,6 +1131,17 @@
         }
       });
     }
+
+    // Re-render when entering/exiting fullscreen to recalculate centering
+    document.addEventListener("fullscreenchange", () => {
+      // Small delay to let fullscreen transition complete
+      setTimeout(() => {
+        resizeCanvas();
+        if (questions.length > 0) {
+          drawGraph();
+        }
+      }, 100);
+    });
 
     // Initialize
     resizeCanvas();
