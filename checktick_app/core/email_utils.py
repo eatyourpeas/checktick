@@ -660,10 +660,7 @@ def send_subscription_created_email(
     from datetime import datetime
     import uuid
 
-    # lgtm[py/clear-text-logging-sensitive-data] - tier and billing_cycle are not credentials
-    logger.info(
-        f"Attempting to send subscription created email (tier: {tier}, cycle: {billing_cycle})"
-    )
+    logger.debug("Sending subscription created email")  # nosec - no sensitive data logged
 
     branding = get_platform_branding()
 
