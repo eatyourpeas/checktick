@@ -95,11 +95,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
       - name: Install npm dependencies and build CSS
         if: needs.changes.outputs.templates == 'true'
         run: |
-          npm ci
+          npm install
           npm run build:css
       - name: Run accessibility tests
         if: needs.changes.outputs.templates == 'true'
