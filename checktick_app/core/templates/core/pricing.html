@@ -11,7 +11,7 @@
   <!-- Header -->
   <div class="text-center mb-12">
     <h1 class="text-4xl font-bold mb-4">{% trans "Choose Your Plan" %}</h1>
-    <p class="text-lg text-base-content/70 max-w-2xl mx-auto">
+    <p class="text-lg text-base-content max-w-2xl mx-auto">
       {% trans "CheckTick is a secure, privacy-focused survey platform designed for healthcare research, clinical audits, and quality improvement projects." %}
     </p>
   </div>
@@ -25,7 +25,7 @@
         <h2 class="card-title text-2xl mb-2">{% trans "Individual" %}</h2>
         <div class="mb-4">
           <span class="text-3xl font-bold">{% trans "Free" %}</span>
-          <p class="text-sm text-base-content/70">{% trans "Up to 3 surveys" %}</p>
+          <p class="text-sm text-base-content">{% trans "Up to 3 surveys" %}</p>
         </div>
 
         <div class="divider"></div>
@@ -77,19 +77,19 @@
             <svg class="w-5 h-5 text-base-content/30 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
-            <span class="text-base-content/50">{% trans "No collaboration" %}</span>
+            <span class="text-base-content">{% trans "No collaboration" %}</span>
           </li>
           <li class="flex items-start gap-2">
             <svg class="w-5 h-5 text-base-content/30 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
-            <span class="text-base-content/50">{% trans "No patient data collection" %}</span>
+            <span class="text-base-content">{% trans "No patient data collection" %}</span>
           </li>
           <li class="flex items-start gap-2">
             <svg class="w-5 h-5 text-base-content/30 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
-            <span class="text-base-content/50">{% trans "3 survey limit enforced" %}</span>
+            <span class="text-base-content">{% trans "3 survey limit enforced" %}</span>
           </li>
         </ul>
 
@@ -114,9 +114,9 @@
         <h2 class="card-title text-2xl mb-2">{% trans "Individual Pro" %}</h2>
         <div class="mb-4">
           <span class="text-3xl font-bold">£6</span>
-          <span class="text-base-content/70">/{% trans "month" %}</span>
-          <p class="text-sm text-base-content/70">{% trans "Unlimited surveys" %}</p>
-          <p class="text-xs text-base-content/50">{% trans "inc. VAT" %}</p>
+          <span class="text-base-content">/{% trans "month" %}</span>
+          <p class="text-sm text-base-content">{% trans "Unlimited surveys" %}</p>
+          <p class="text-xs text-base-content">{% trans "inc. VAT" %}</p>
         </div>
 
         <div class="divider"></div>
@@ -156,13 +156,13 @@
             <svg class="w-5 h-5 text-base-content/30 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
-            <span class="text-base-content/50">{% trans "No team collaboration" %}</span>
+            <span class="text-base-content">{% trans "No team collaboration" %}</span>
           </li>
           <li class="flex items-start gap-2">
             <svg class="w-5 h-5 text-base-content/30 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
-            <span class="text-base-content/50">{% trans "No custom branding" %}</span>
+            <span class="text-base-content">{% trans "No custom branding" %}</span>
           </li>
         </ul>
 
@@ -196,7 +196,7 @@
 
         {# Team Size Selector #}
         <div class="form-control mb-4">
-          <label class="label">
+          <label for="team-size-selector" class="label">
             <span class="label-text font-semibold">{% trans "Select team size:" %}</span>
           </label>
           <select id="team-size-selector" class="select select-bordered w-full">
@@ -214,9 +214,9 @@
 
         <div class="mb-4">
           <span class="text-3xl font-bold" id="team-price-display">£30</span>
-          <span class="text-base-content/70">/{% trans "month" %}</span>
-          <p class="text-sm text-base-content/70" id="team-members-display">{% trans "Up to" %} 5 {% trans "team members" %}</p>
-          <p class="text-xs text-base-content/50">{% trans "inc. VAT" %}</p>
+          <span class="text-base-content">/{% trans "month" %}</span>
+          <p class="text-sm text-base-content" id="team-members-display">{% trans "Up to" %} 5 {% trans "team members" %}</p>
+          <p class="text-xs text-base-content">{% trans "inc. VAT" %}</p>
         </div>
 
         <div class="divider"></div>
@@ -280,7 +280,7 @@
         <h2 class="card-title text-2xl mb-2">{% trans "Organisation" %}</h2>
         <div class="mb-4">
           <span class="text-3xl font-bold">{% trans "Custom" %}</span>
-          <p class="text-sm text-base-content/70">{% trans "Per-user pricing" %}</p>
+          <p class="text-sm text-base-content">{% trans "Per-user pricing" %}</p>
         </div>
 
         <div class="divider"></div>
@@ -341,7 +341,7 @@
         <h2 class="card-title text-2xl mb-2">{% trans "Enterprise" %}</h2>
         <div class="mb-4">
           <span class="text-3xl font-bold">{% trans "Self-Hosted" %}</span>
-          <p class="text-sm text-base-content/70">{% trans "Your infrastructure" %}</p>
+          <p class="text-sm text-base-content">{% trans "Your infrastructure" %}</p>
         </div>
 
         <div class="divider"></div>
@@ -603,28 +603,28 @@
       <div class="card bg-base-100 shadow">
         <div class="card-body">
           <h3 class="font-semibold text-lg">{% trans "Can I upgrade later?" %}</h3>
-          <p class="text-base-content/70">{% trans "Yes! You can upgrade from Individual to Individual Pro, or convert to an Organisation account at any time. Your existing surveys will be migrated automatically." %}</p>
+          <p class="text-base-content">{% trans "Yes! You can upgrade from Individual to Individual Pro, or convert to an Organisation account at any time. Your existing surveys will be migrated automatically." %}</p>
         </div>
       </div>
 
       <div class="card bg-base-100 shadow">
         <div class="card-body">
           <h3 class="font-semibold text-lg">{% trans "Do you support NHS terminology and datasets?" %}</h3>
-          <p class="text-base-content/70">{% trans "Yes! CheckTick includes built-in support for NHS Data Dictionary datasets, including ethnicity codes, sex, gender identity, and other standardized healthcare terminology. You can also create custom datasets for your specific needs." %}</p>
+          <p class="text-base-content">{% trans "Yes! CheckTick includes built-in support for NHS Data Dictionary datasets, including ethnicity codes, sex, gender identity, and other standardized healthcare terminology. You can also create custom datasets for your specific needs." %}</p>
         </div>
       </div>
 
       <div class="card bg-base-100 shadow">
         <div class="card-body">
           <h3 class="font-semibold text-lg">{% trans "What's the difference between Individual and Individual Pro?" %}</h3>
-          <p class="text-base-content/70">{% trans "Individual (free) accounts can have up to 3 active surveys. Individual Pro removes this limit and adds patient data collection with encryption. For team collaboration with multiple users, choose from our Team plans (5-20 members) or Organisation tier for larger teams with advanced features." %}</p>
+          <p class="text-base-content">{% trans "Individual (free) accounts can have up to 3 active surveys. Individual Pro removes this limit and adds patient data collection with encryption. For team collaboration with multiple users, choose from our Team plans (5-20 members) or Organisation tier for larger teams with advanced features." %}</p>
         </div>
       </div>
 
       <div class="card bg-base-100 shadow">
         <div class="card-body">
           <h3 class="font-semibold text-lg">{% trans "Is my data secure and safe?" %}</h3>
-          <p class="text-base-content/70">{% trans "Yes. CheckTick uses end-to-end encryption to protect patient and survey data. All sensitive information is encrypted before storage, and only you can decrypt it. The platform is designed specifically for healthcare research with privacy and security as core principles." %}</p>
+          <p class="text-base-content">{% trans "Yes. CheckTick uses end-to-end encryption to protect patient and survey data. All sensitive information is encrypted before storage, and only you can decrypt it. The platform is designed specifically for healthcare research with privacy and security as core principles." %}</p>
         </div>
       </div>
     </div>
@@ -633,7 +633,7 @@
   <!-- CTA Section -->
   <div class="text-center bg-base-200 rounded-box p-8">
     <h2 class="text-3xl font-bold mb-4">{% trans "Ready to get started?" %}</h2>
-    <p class="text-lg text-base-content/70 mb-6 max-w-2xl mx-auto">
+    <p class="text-lg text-base-content mb-6 max-w-2xl mx-auto">
       {% trans "Create your free account today and start building secure, privacy-focused surveys in minutes." %}
     </p>
     <div class="flex gap-4 justify-center flex-wrap">

@@ -28,11 +28,11 @@
 
   <div class="mt-4">
     <div class="space-y-3">
-      <div class="alert shadow-sm bg-primary text-primary-content">
+      <div class="alert shadow-sm bg-base-100 border-l-4 border-primary">
         <div>
-          {% include 'components/icons/repeat.html' with classes='w-5 h-5 text-primary-content' %}
+          {% include 'components/icons/repeat.html' with classes='w-5 h-5 text-primary' %}
         </div>
-        <div class="text-sm">
+        <div class="text-sm text-base-content">
           {% trans 'Tip: Select groups by clicking their row or checkbox, then click ‘Create repeat’ to set a name. Selected rows are highlighted and show a small repeat icon.' %}
         </div>
       </div>
@@ -53,9 +53,9 @@
                   {% endif %}
                   <div class="q-number badge badge-primary badge-sm shrink-0">{{ forloop.counter }}</div>
                   <div class="flex-1 min-w-0">
-                    <a class="font-medium link link-accent truncate block" href="/surveys/{{ survey.slug }}/builder/groups/{{ g.id }}/">{{ g.name }}</a>
+                    <a class="font-medium link underline hover:text-primary truncate block" href="/surveys/{{ survey.slug }}/builder/groups/{{ g.id }}/">{{ g.name }}</a>
                     {% if g.description %}
-                      <div class="text-sm opacity-70 truncate hidden sm:block">{{ g.description }}</div>
+                      <div class="text-sm text-base-content/70 truncate hidden sm:block">{{ g.description }}</div>
                     {% endif %}
                   </div>
                   <span class="sel-repeat-icon hidden tooltip" data-tip="{% trans 'Selected for repeat' %}">{% include 'components/icons/repeat.html' with classes='w-4 h-4 opacity-70' %}</span>

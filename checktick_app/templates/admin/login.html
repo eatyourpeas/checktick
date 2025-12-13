@@ -35,7 +35,7 @@
           {% url 'admin_password_reset' as password_reset_url %}
           {% if password_reset_url %}
             <p class="text-right">
-              <a class="link link-primary" href="{{ password_reset_url }}">{% trans 'Forgotten your password or username?' %}</a>
+              <a class="link underline" href="{{ password_reset_url }}">{% trans 'Forgotten your password or username?' %}</a>
             </p>
           {% endif %}
           <div class="form-control mt-6">

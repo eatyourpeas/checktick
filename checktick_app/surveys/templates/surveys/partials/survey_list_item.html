@@ -8,7 +8,7 @@
       </div>
       <div class="min-w-0 w-full">
         <div class="flex items-center gap-2 min-w-0 flex-wrap">
-          <a href="/surveys/{{ s.slug }}/dashboard/" class="font-medium leading-tight truncate link link-accent">{{ s.name }}</a>
+          <a href="/surveys/{{ s.slug }}/dashboard/" class="font-medium leading-tight truncate link text-base-content underline hover:text-primary">{{ s.name }}</a>
 
           {# Role badge - show user's access level #}
           {% if item.role == 'owner' %}
@@ -81,7 +81,7 @@
           {% endif %}
         </div>
         {% if s.description %}
-          <div class="text-sm opacity-70 truncate">{{ s.description }}</div>
+          <div class="text-sm text-base-content/70 truncate">{{ s.description }}</div>
         {% endif %}
       </div>
     </div>

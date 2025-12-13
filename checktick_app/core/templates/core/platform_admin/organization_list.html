@@ -78,7 +78,7 @@
           {% for org in orgs %}
           <tr class="hover">
             <td>
-              <a href="{% url 'core:platform_admin_org_detail' org_id=org.id %}" class="font-medium link link-primary">
+              <a href="{% url 'core:platform_admin_org_detail' org_id=org.id %}" class="font-medium link underline">
                 {{ org.name }}
               </a>
             </td>

@@ -336,7 +336,7 @@
           {% for item in grouped %}
             <div>
               <h3 class="font-semibold">
-                <a class="link link-primary" href="{% url 'surveys:survey_users' item.survey.slug %}">{{ item.survey.name }}</a>
+                <a class="link underline" href="{% url 'surveys:survey_users' item.survey.slug %}">{{ item.survey.name }}</a>
                 <span class="badge badge-ghost">{% blocktrans count counter=item.members|length %}{{ counter }} member{% plural %}{{ counter }} members{% endblocktrans %}</span>
               </h3>
               <ul class="list-disc pl-5">

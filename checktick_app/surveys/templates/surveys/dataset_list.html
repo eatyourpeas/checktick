@@ -104,7 +104,7 @@
             {% for dataset in page_obj %}
             <tr>
               <td>
-                <a href="{% url 'surveys:dataset_detail' dataset_id=dataset.id %}" class="link link-accent font-medium">
+                <a href="{% url 'surveys:dataset_detail' dataset_id=dataset.id %}" class="link underline font-medium">
                   {{ dataset.name }}
                 </a>
                 {% if dataset.organization %}

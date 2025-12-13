@@ -12,8 +12,8 @@ Note: These tests require playwright to be installed:
     playwright install chromium
 """
 
-import pytest
 from django.contrib.auth.models import User
+import pytest
 
 from checktick_app.surveys.models import Organization, Survey, SurveyQuestion
 
@@ -47,10 +47,10 @@ def axe():
 
 # Known accessibility issues that need to be fixed
 # Each issue should have a tracking reference or comment
+# When issues are fixed, remove them from this dict
 KNOWN_ISSUES = {
-    # Color contrast issues with text-secondary on light backgrounds
-    # TODO: Adjust tailwind theme to ensure WCAG AA contrast ratios
-    "color-contrast": "Known issue: text-secondary color needs adjustment for AA compliance",
+    # Add known issues here as they're discovered
+    # Example: "rule-id": "Description of why this is accepted/tracked",
 }
 
 
@@ -154,9 +154,14 @@ class TestPublicPageAccessibility:
         assert_no_violations(results, "signup page")
 
     def test_docs_page_accessibility(self, page, axe, live_server):
-        """Test that the documentation page meets WCAG 2.1 AA standards."""
+        """Test that the documentation index page meets WCAG 2.1 AA standards."""
         results = run_axe_test(page, axe, f"{live_server.url}/docs/")
-        assert_no_violations(results, "docs page")
+        assert_no_violations(results, "docs index page")
+
+    def test_docs_content_page_accessibility(self, page, axe, live_server):
+        """Test that a documentation content page meets WCAG 2.1 AA standards."""
+        results = run_axe_test(page, axe, f"{live_server.url}/docs/getting-started/")
+        assert_no_violations(results, "docs content page")
 
 
 # =============================================================================
@@ -293,3 +298,59 @@ class TestAuthenticatedPageAccessibility:
             page, axe, f"{live_server.url}/surveys/{survey.slug}/dashboard/"
         )
         assert_no_violations(results, "survey dashboard")
+
+    def test_profile_page_accessibility(self, page, axe, live_server, user_with_survey):
+        """Test that user profile page meets WCAG 2.1 AA standards."""
+        user, _ = user_with_survey
+        login_user(page, live_server, user.username, TEST_PASSWORD)
+        results = run_axe_test(page, axe, f"{live_server.url}/profile")
+        assert_no_violations(results, "profile page")
+
+    def test_question_builder_accessibility(
+        self, page, axe, live_server, user_with_survey
+    ):
+        """Test that question builder (groups) page meets WCAG 2.1 AA standards."""
+        user, survey = user_with_survey
+        login_user(page, live_server, user.username, TEST_PASSWORD)
+        results = run_axe_test(
+            page, axe, f"{live_server.url}/surveys/{survey.slug}/groups/"
+        )
+        assert_no_violations(results, "question builder")
+
+
+@pytest.mark.django_db(transaction=True)
+class TestPublicMarketingPages:
+    """Test accessibility of public marketing/info pages."""
+
+    def test_pricing_page_accessibility(self, page, axe, live_server):
+        """Test that pricing page meets WCAG 2.1 AA standards."""
+        results = run_axe_test(page, axe, f"{live_server.url}/pricing")
+        assert_no_violations(results, "pricing page")
+
+
+# =============================================================================
+# Platform Admin Tests (Requires superuser)
+# =============================================================================
+
+
+@pytest.fixture
+def superuser(db):
+    """Create a superuser for admin tests."""
+    return User.objects.create_superuser(
+        username="admin",
+        email="admin@example.com",
+        password=TEST_PASSWORD,
+    )
+
+
+@pytest.mark.django_db(transaction=True)
+class TestPlatformAdminAccessibility:
+    """Test accessibility of platform admin pages."""
+
+    def test_platform_admin_dashboard_accessibility(
+        self, page, axe, live_server, superuser
+    ):
+        """Test that platform admin dashboard meets WCAG 2.1 AA standards."""
+        login_user(page, live_server, superuser.username, TEST_PASSWORD)
+        results = run_axe_test(page, axe, f"{live_server.url}/platform-admin/")
+        assert_no_violations(results, "platform admin dashboard")
