@@ -657,8 +657,8 @@ def send_subscription_created_email(
     Returns:
         True if email sent successfully, False otherwise
     """
-    import uuid
     from datetime import datetime
+    import uuid
 
     logger.info(
         f"Attempting to send subscription created email to {user.email} (username: {user.username}, tier: {tier}, cycle: {billing_cycle})"
@@ -887,7 +887,7 @@ def send_subscription_expired_email(
             "",
             "If you have any questions, please don't hesitate to contact us.",
             "",
-            f"Best regards,",
+            "Best regards,",
             f"The {branding['title']} Team",
         ]
     )
@@ -976,7 +976,7 @@ def send_payment_failed_email(
             "",
             "If you have any questions or need assistance, please contact us.",
             "",
-            f"Best regards,",
+            "Best regards,",
             f"The {branding['title']} Team",
         ]
     )

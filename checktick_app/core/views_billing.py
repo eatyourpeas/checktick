@@ -1,8 +1,8 @@
 """Billing views for subscription management and payment webhooks."""
 
+from functools import wraps
 import json
 import logging
-from functools import wraps
 
 from django.conf import settings
 from django.contrib import messages
@@ -217,7 +217,6 @@ def checkout_success(request: HttpRequest) -> HttpResponse:
     show a success message and refresh the user's tier info.
     """
     from checktick_app.surveys.models import Team, TeamMembership
-    from checktick_app.surveys.permissions import is_org_admin
 
     tier = request.GET.get("tier", "pro")
 

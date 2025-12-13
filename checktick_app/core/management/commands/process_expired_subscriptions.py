@@ -16,17 +16,14 @@ Usage:
     python manage.py process_expired_subscriptions --grace-days=10
 """
 
-import logging
 from datetime import timedelta
+import logging
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from checktick_app.core.email_utils import (
-    send_subscription_cancelled_email,
-    send_subscription_expired_email,
-)
+from checktick_app.core.email_utils import send_subscription_expired_email
 from checktick_app.core.models import UserProfile
 from checktick_app.surveys.models import Survey
 
@@ -185,7 +182,7 @@ class Command(BaseCommand):
                         )
 
                     self.stdout.write(
-                        self.style.SUCCESS(f"    ✓ Downgraded to FREE tier")
+                        self.style.SUCCESS("    ✓ Downgraded to FREE tier")
                     )
                 else:
                     logger.error(f"Failed to downgrade {user.username}: {message}")
@@ -295,7 +292,7 @@ class Command(BaseCommand):
                         )
 
                     self.stdout.write(
-                        self.style.SUCCESS(f"    ✓ Downgraded to FREE tier")
+                        self.style.SUCCESS("    ✓ Downgraded to FREE tier")
                     )
                 else:
                     logger.error(f"Failed to downgrade {user.username}: {message}")
