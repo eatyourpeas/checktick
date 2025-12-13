@@ -262,7 +262,7 @@ npm run build:css
 ```
 
 **Build details:**
- 
+
 - Input: `checktick_app/static/css/daisyui_themes.css`
 - Output: `checktick_app/static/build/styles.css` (minified)
 - Build time: ~250ms

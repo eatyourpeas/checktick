@@ -86,7 +86,7 @@ The Survey Map uses a git-graph style to display your survey with square connect
 - **Circles** represent questions (accent color for regular, primary for those with conditions)
 - **Vertical lines** show the default question flow
 - **Colored dashed lines** indicate conditional branches:
-  - Green for "Jump to" 
+  - Green for "Jump to"
   - Amber for "Skip"
   - Red for "End Survey"
 - **Condition labels** appear on branch lines showing the trigger (e.g., "> 17")
