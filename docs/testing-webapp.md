@@ -932,3 +932,41 @@ For comprehensive examples, see:
 - `checktick_app/surveys/tests/test_groups_reorder.py` - HTMX interactions and reordering
 - `checktick_app/surveys/tests/test_anonymous_access.py` - Anonymous user handling
 - `/test_followup_import.py` - Bulk markdown import with follow-ups and required fields (10 tests)
+- `tests/test_accessibility.py` - Playwright + axe-core WCAG 2.1 AA accessibility tests
+
+## Accessibility Testing
+
+CheckTick includes automated accessibility testing using Playwright and axe-core. These tests verify WCAG 2.1 AA compliance across key pages.
+
+### Running Accessibility Tests
+
+```bash
+# Run all accessibility tests
+docker compose exec web pytest tests/test_accessibility.py -v
+
+# Run specific test class
+docker compose exec web pytest tests/test_accessibility.py::TestSurveyFormAccessibility -v
+```
+
+### Test Coverage
+
+| Test Class | Pages Tested |
+|------------|--------------|
+| `TestPublicPageAccessibility` | Home, login, signup, docs |
+| `TestSurveyFormAccessibility` | Survey forms with various question types |
+| `TestAuthenticatedPageAccessibility` | Survey list, dashboard, builder, settings |
+| `TestSurveyPreviewAccessibility` | Survey preview mode |
+
+### Writing New Accessibility Tests
+
+```python
+from tests.test_accessibility import AccessibilityTestCase
+
+@pytest.mark.django_db(transaction=True)
+class TestMyPageAccessibility(AccessibilityTestCase):
+    def test_my_page_accessibility(self):
+        results = self.run_axe_test(f"{self.live_server_url}/my-page/", "my page")
+        self.assert_no_violations(results, "my page")
+```
+
+For more details, see the [Accessibility documentation](accessibility.md).

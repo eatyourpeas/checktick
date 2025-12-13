@@ -413,7 +413,9 @@ def signup(request):
 
     # Get selected tier before form validation (not a form field, just POST data)
     # nosemgrep: python.django.security.django-using-request-post-after-is-valid
-    selected_tier = request.POST.get("tier", "free").lower() if request.method == "POST" else "free"
+    selected_tier = (
+        request.POST.get("tier", "free").lower() if request.method == "POST" else "free"
+    )
 
     if request.method == "POST":
         form = SignupForm(request.POST)

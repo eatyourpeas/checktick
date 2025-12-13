@@ -130,9 +130,34 @@ Screen readers will announce:
 
 ## Testing Accessibility
 
-### Automated Testing
+### Automated Testing with pytest-playwright
 
-Run accessibility audits using:
+CheckTick includes automated accessibility tests using Playwright and axe-core:
+
+```bash
+# Run all accessibility tests
+docker compose exec web pytest tests/test_accessibility.py -v
+
+# Run specific test class
+docker compose exec web pytest tests/test_accessibility.py::TestSurveyFormAccessibility -v
+
+# Run with visible browser (useful for debugging)
+docker compose exec web pytest tests/test_accessibility.py -v --headed
+```
+
+The tests verify WCAG 2.1 AA compliance across:
+- Public pages (home, login, signup, docs)
+- Survey forms (the primary respondent experience)
+- Authenticated pages (dashboard, builder, settings)
+- Survey preview mode
+
+### Dashboard Accessibility Test Button
+
+Survey creators can test their custom styles using the built-in accessibility test button on the survey dashboard (Survey style section). This runs axe-core against the survey preview and displays any violations.
+
+### Command Line Testing
+
+Run accessibility audits using axe-core CLI:
 
 ```bash
 # Install axe-core CLI
