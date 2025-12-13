@@ -153,9 +153,7 @@ class TestCSVExportIntegration(TestCase):
         TEST_PASSWORD = "testpass123"  # noqa: S105
         User = get_user_model()
         owner = User.objects.create_user(username="owner", password=TEST_PASSWORD)
-        other_user = User.objects.create_user(
-            username="other_user", password=TEST_PASSWORD
-        )
+        _ = User.objects.create_user(username="other_user", password=TEST_PASSWORD)
         survey = Survey.objects.create(
             name="Test Survey",
             slug="test-export-perm",
@@ -206,9 +204,7 @@ class TestDashboardIntegration(TestCase):
 
         TEST_PASSWORD = "x"  # noqa: S105
         User = get_user_model()
-        user = User.objects.create_user(
-            username="dashuser", password=TEST_PASSWORD
-        )
+        user = User.objects.create_user(username="dashuser", password=TEST_PASSWORD)
         survey = Survey.objects.create(
             name="Test Survey",
             slug="test-dash-auth",
@@ -231,12 +227,8 @@ class TestDashboardIntegration(TestCase):
 
         TEST_PASSWORD = "testpass123"  # noqa: S105
         User = get_user_model()
-        owner = User.objects.create_user(
-            username="dashowner", password=TEST_PASSWORD
-        )
-        other_user = User.objects.create_user(
-            username="dashother", password=TEST_PASSWORD
-        )
+        owner = User.objects.create_user(username="dashowner", password=TEST_PASSWORD)
+        _ = User.objects.create_user(username="dashother", password=TEST_PASSWORD)
         survey = Survey.objects.create(
             name="Test Survey",
             slug="test-dash-perm",
@@ -259,9 +251,7 @@ class TestDashboardIntegration(TestCase):
 
         TEST_PASSWORD = "testpass123"  # noqa: S105
         User = get_user_model()
-        owner = User.objects.create_user(
-            username="dashowner2", password=TEST_PASSWORD
-        )
+        owner = User.objects.create_user(username="dashowner2", password=TEST_PASSWORD)
         survey = Survey.objects.create(
             name="Test Survey",
             slug="test-dash-owner",
@@ -284,12 +274,8 @@ class TestDashboardIntegration(TestCase):
 
         TEST_PASSWORD = "testpass123"  # noqa: S105
         User = get_user_model()
-        owner = User.objects.create_user(
-            username="dashowner3", password=TEST_PASSWORD
-        )
-        viewer = User.objects.create_user(
-            username="dashviewer", password=TEST_PASSWORD
-        )
+        owner = User.objects.create_user(username="dashowner3", password=TEST_PASSWORD)
+        viewer = User.objects.create_user(username="dashviewer", password=TEST_PASSWORD)
         survey = Survey.objects.create(
             name="Test Survey",
             slug="test-dash-viewer",
