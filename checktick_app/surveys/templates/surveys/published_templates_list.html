@@ -159,7 +159,7 @@
             {% for template in page_obj %}
             <tr>
               <td>
-                <a href="{% url 'surveys:published_template_detail' template_id=template.id %}" class="link link-accent font-medium">
+                <a href="{% url 'surveys:published_template_detail' template_id=template.id %}" class="link underline font-medium">
                   {{ template.name }}
                 </a>
                 <div class="text-xs text-base-content/60 mt-1">

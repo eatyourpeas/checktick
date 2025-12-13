@@ -81,7 +81,7 @@
                                 <span class="text-base-content/70 text-sm font-normal">{{ request.user.email }}</span>
                             </h2>
                             <p class="text-sm text-base-content/60 mt-1">
-                                {% trans "Survey" %}: <a href="{% url 'surveys:dashboard' slug=request.survey.slug %}" class="link link-primary">{{ request.survey.name }}</a>
+                                {% trans "Survey" %}: <a href="{% url 'surveys:dashboard' slug=request.survey.slug %}" class="link underline">{{ request.survey.name }}</a>
                                 {% if request.survey.organization %}
                                     <span class="text-base-content/40">•</span>
                                     <span class="badge badge-ghost badge-sm">{{ request.survey.organization.name }}</span>

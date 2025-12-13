@@ -142,7 +142,7 @@
               <tr>
                 <td>{{ question.question_text|truncatewords:10 }}</td>
                 <td>
-                  <a href="{% url 'surveys:groups' slug=question.question_group.survey.slug %}" class="link link-accent">
+                  <a href="{% url 'surveys:groups' slug=question.question_group.survey.slug %}" class="link underline">
                     {{ question.question_group.survey.name }}
                   </a>
                 </td>

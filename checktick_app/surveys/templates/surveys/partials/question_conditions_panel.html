@@ -110,7 +110,7 @@
                       <span class="badge badge-sm badge-outline self-start sm:self-center">Order {{ cond.order }}</span>
                     </div>
                     <details class="mt-2" data-condition-editor>
-                      <summary class="link link-primary text-sm">Edit condition</summary>
+                      <summary class="link underline text-sm">Edit condition</summary>
                       <div class="mt-2 space-y-3">
                         <form method="post" hx-post="/surveys/{{ q.survey.slug }}/builder/questions/{{ q.id }}/conditions/{{ cond.id }}/update" hx-target="closest li[data-qid]" hx-swap="outerHTML" data-condition-form data-condition-mode="edit">
                           {% csrf_token %}

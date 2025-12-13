@@ -45,7 +45,8 @@ Your documentation content starts here...
 - `data-governance` - Data governance guides
 - `api` - API & development docs
 - `testing` - Testing guides
-- `internationalization` - i18n documentation
+- `internationalisation` - i18n documentation
+- `accessibility-and-inclusion` - Accessibility and inclusion documentation
 - `getting-involved` - Contributing guides
 - `None` - Hide from menu (accessible via URL only)
 
@@ -281,9 +282,12 @@ Documentation
 ├── 🧪 Testing
 │   ├── Testing Api
 │   └── Testing Webapp
-├── 🌍 Internationalization
+├── 🌍 Internationalisation
 │   ├── I18n
 │   └── I18n Progress
+├── ♿ Accessibility and Inclusion
+│   ├── Accessibility
+│   └── Survey Translation
 └── 📄 Other
     └── Releases
 ```

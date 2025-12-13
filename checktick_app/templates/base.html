@@ -63,8 +63,8 @@
     <div class="navbar bg-base-100 shadow">
       <div class="navbar-start">
         <div class="dropdown">
-          <div tabindex="0" role="button" class="btn btn-ghost lg:hidden">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div tabindex="0" role="button" class="btn btn-ghost lg:hidden" aria-label="{% trans 'Open menu' %}">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" />
             </svg>
           </div>
@@ -216,9 +216,9 @@
       {% endif %}
       {% block content %}{% endblock %}
     </main>
-    <footer class="mt-10 border-t border-base-300 bg-base-100/60">
+    <footer class="mt-10 border-t border-base-300 bg-base-200">
       <div class="container mx-auto px-4 py-6">
-        <div class="text-xs opacity-60 text-center md:text-left flex flex-wrap items-center justify-center md:justify-start gap-x-3 gap-y-2">
+        <div class="text-xs text-base-content/80 text-center md:text-left flex flex-wrap items-center justify-center md:justify-start gap-x-3 gap-y-2">
           <span>© {% now 'Y' %} {{ brand.title }}</span>
           <span class="hidden md:inline">•</span>
           <span>{% trans "Built by" %}</span>
@@ -237,6 +237,8 @@
           <a href="https://github.com/eatyourpeas?tab=packages&repo_name=checktick" target="_blank" rel="noopener" class="underline">{% trans "Releases" %}</a>
           <span class="hidden md:inline">•</span>
           <a href="{% url 'core:docs_page' slug='contributing' %}" class="underline">{% trans "Contributing" %}</a>
+          <span class="hidden md:inline">•</span>
+          <a href="{% url 'core:docs_page' slug='accessibility' %}" class="underline">{% trans "Accessibility" %}</a>
           <span class="hidden md:inline">•</span>
           <a href="{% url 'core:docs_page' slug='terms-of-service' %}" class="underline">{% trans "Terms" %}</a>
           <span class="hidden md:inline">•</span>

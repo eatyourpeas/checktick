@@ -74,4 +74,4 @@ python manage.py compilemessages
 
 Currently, 222 strings are marked for translation across the application. English source strings are complete. Other language translations need to be provided by translators.
 
-See `docs/i18n.md` for detailed internationalization documentation.
+See `docs/i18n.md` for detailed internationalisation documentation.

@@ -6,7 +6,25 @@ on:
     branches: [main]
 
 jobs:
+  # Check which files changed to conditionally run accessibility tests
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      templates: ${{ steps.filter.outputs.templates }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            templates:
+              - 'checktick_app/**/templates/**'
+              - 'checktick_app/static/css/**'
+              - 'checktick_app/static/js/**'
+              - 'tests/test_accessibility.py'
+
   build:
+    needs: changes
     runs-on: ubuntu-latest
     env:
       DEBUG: "True"
@@ -66,15 +84,34 @@ jobs:
       - name: Run migrations
         run: |
           poetry run python manage.py migrate --noinput
-      - name: Run tests
+      - name: Run tests (excluding accessibility)
         run: |
-          poetry run pytest -n auto -q --junitxml=pytest-report.xml
+          poetry run pytest -n auto -q --junitxml=pytest-report.xml --ignore=tests/test_accessibility.py
+      - name: Install Playwright browsers
+        if: needs.changes.outputs.templates == 'true'
+        run: poetry run playwright install chromium --with-deps
+      - name: Setup Node.js for CSS build
+        if: needs.changes.outputs.templates == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install npm dependencies and build CSS
+        if: needs.changes.outputs.templates == 'true'
+        run: |
+          npm install
+          npm run build:css
+      - name: Run accessibility tests
+        if: needs.changes.outputs.templates == 'true'
+        run: |
+          poetry run pytest tests/test_accessibility.py -v -n auto --junitxml=pytest-a11y-report.xml
       - name: Upload test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pytest-report
-          path: pytest-report.xml
+          path: |
+            pytest-report.xml
+            pytest-a11y-report.xml
       - name: Collect service logs (on failure)
         if: failure()
         run: |

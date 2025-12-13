@@ -772,7 +772,7 @@ Yes:
 CheckTick supports 13 languages:
 - English, Arabic, Chinese, Welsh, German, Spanish, French, Hindi, Italian, Polish, Portuguese, Urdu
 
-See [Internationalization Guide](i18n.md)
+See [Internationalisation Guide](i18n.md)
 
 ---
 

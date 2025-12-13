@@ -15,7 +15,7 @@
 
   <div class="stat bg-base-100 rounded-box shadow">
     <div class="stat-title">{% trans "Pending Setup" %}</div>
-    <div class="stat-value text-warning">{{ org_stats.pending }}</div>
+    <div class="stat-value">{{ org_stats.pending }}</div>
     <div class="stat-desc">{% trans "Awaiting owner activation" %}</div>
   </div>
 
@@ -57,7 +57,7 @@
             {% for org in recent_orgs %}
             <tr>
               <td>
-                <a href="{% url 'core:platform_admin_org_detail' org_id=org.id %}" class="link link-primary">
+                <a href="{% url 'core:platform_admin_org_detail' org_id=org.id %}" class="link underline">
                   {{ org.name }}
                 </a>
               </td>
@@ -89,9 +89,9 @@
   </div>
 
   <!-- Needs Attention -->
-  <div class="card bg-base-100 shadow">
+  <div class="card bg-base-100 shadow border-l-4 border-warning">
     <div class="card-body">
-      <h2 class="card-title text-warning">{% trans "Needs Attention" %}</h2>
+      <h2 class="card-title text-base-content">{% trans "Needs Attention" %}</h2>
 
       <div class="overflow-x-auto">
         <table class="table table-sm">
