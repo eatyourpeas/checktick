@@ -455,7 +455,11 @@ class TestCheckoutWorkflow:
 
         # Should redirect to GoCardless
         assert response.status_code == 302
-        assert "gocardless.com" in response.url
+        # nosec: Test assertion validates redirect to GoCardless domain
+        from urllib.parse import urlparse
+
+        parsed_url = urlparse(response.url)
+        assert parsed_url.netloc.endswith("gocardless.com")
 
         # Verify redirect flow was created with correct params
         mock_payment_client.create_redirect_flow.assert_called_once()

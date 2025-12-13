@@ -196,6 +196,5 @@ The {brand_title} Team
     email.send()
 
     logger.info(
-        f"Sent organisation checkout email to {organisation.billing_contact_email} "
-        f"for organisation {organisation.id}"
+        f"Sent organisation checkout email for organisation_id={organisation.id}"
     )
