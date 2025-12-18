@@ -7,6 +7,7 @@ priority: 2
 This guide covers the technical implementation of CheckTick's theming system for developers. For user-facing theme configuration, see [Branding and Theme Settings](branding-and-theme-settings.md). For platform deployment configuration, see [Self-Hosting: Platform Theme Configuration](self-hosting-themes.md).
 
 **Note:** Platform-level branding configuration (logos, themes, fonts) is available to:
+
 - Enterprise tier users on hosted CheckTick (via `/branding/` web UI)
 - Superusers on self-hosted deployments (via web UI or `manage.py configure_branding` CLI)
 
@@ -63,8 +64,8 @@ Themes are applied via the `data-theme` attribute on `<html>` or `<body>`:
 
 CheckTick uses a **logical naming system** to separate user preferences from actual daisyUI presets:
 
-- **checktick-light** (logical name) → maps to selected light preset (default: "corporate")
-- **checktick-dark** (logical name) → maps to selected dark preset (default: "business")
+- **checktick-light** (logical name) → maps to selected light preset (default: "pastel")
+- **checktick-dark** (logical name) → maps to selected dark preset (default: "dim")
 - JavaScript automatically applies the correct daisyUI preset based on configuration
 
 **Why?** This allows changing platform default themes without breaking user preferences. A user who selected "light mode" will automatically get the new light preset if the platform admin changes it.
@@ -284,8 +285,8 @@ scheme = get_theme_color_scheme("corporate")  # "light"
 
 # Generate theme CSS
 light_css, dark_css = generate_theme_css_for_brand(
-    preset_light="corporate",
-    preset_dark="business",
+    preset_light="pastel",
+    preset_dark="dim",
     custom_light_css="--color-primary: oklch(65% 0.21 25);",
     custom_dark_css="--color-primary: oklch(45% 0.18 25);"
 )

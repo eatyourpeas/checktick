@@ -1152,7 +1152,7 @@ python manage.py makemigrations
 python manage.py migrate
 
 # Configure branding (self-hosted)
-python manage.py configure_branding --theme-light=corporate --theme-dark=business --logo=path/to/logo.png
+python manage.py configure_branding --theme-light=pastel --theme-dark=dim --logo=path/to/logo.png
 
 # Or use Django admin at /admin/core/sitebranding/
 ```

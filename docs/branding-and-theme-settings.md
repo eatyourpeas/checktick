@@ -10,75 +10,42 @@ This guide explains CheckTick's 3-tier theme system and how to customize the app
 
 CheckTick uses a **cascading theme system** with three levels:
 
-
-
-```- BRAND_TITLE (str) — Default site title. Example: "CheckTick"
-
-┌─────────────────────────────────────┐- BRAND_ICON_URL (str) — URL or static path to the site icon shown in the navbar and as favicon if no uploaded icon.
-
-│  1. Platform Theme                  │  ← Superuser sets (affects all users)- BRAND_ICON_URL_DARK (str) — Optional dark-mode icon URL. Shown when dark theme is active.
-
-│     (Deployment default)            │- BRAND_ICON_ALT (str) — Alt text for the brand icon. Defaults to BRAND_TITLE.
-
-└─────────────────────────────────────┘- BRAND_ICON_TITLE (str) — Title/tooltip for the brand icon. Defaults to BRAND_TITLE.
-
-              ↓ Overrides- BRAND_ICON_SIZE_CLASS (str) — Tailwind size classes for the icon. Example: "w-8 h-8".
-
-┌─────────────────────────────────────┐- BRAND_ICON_SIZE (int or str) — Numeric size that maps to `w-{n} h-{n}`. Example: 6, 8. Ignored if BRAND_ICON_SIZE_CLASS is set.
-
-│  2. Organization Theme              │  ← Org owner sets (affects org members)
-
-│     (Per-organization)              │## Theme settings (environment variables)
-
+```
+┌─────────────────────────────────────┐
+│  1. Platform Theme                  │  ← Superuser sets (affects all users)
+│     (Deployment default)            │
 └─────────────────────────────────────┘
+              ↓ Overrides
+┌─────────────────────────────────────┐
+│  2. Organization Theme              │  ← Org owner sets (affects org members)
+│     (Per-organization)              │
+└─────────────────────────────────────┘
+              ↓ Overrides
+┌─────────────────────────────────────┐
+│  3. Survey Theme                    │  ← Survey creator sets (affects survey pages)
+│     (Per-survey)                    │
+└─────────────────────────────────────┘
+```
 
-              ↓ Overrides- BRAND_THEME (str) — Default logical theme name. Values: "checktick-light" or "checktick-dark". Default: "checktick-light".
+**How it works:**
 
-┌─────────────────────────────────────┐- BRAND_THEME_PRESET_LIGHT (str) — daisyUI preset for light mode. Default: "corporate". Available: light, cupcake, bumblebee, emerald, corporate, retro, cyberpunk, valentine, garden, lofi, pastel, fantasy, nord, cmyk, autumn, acid, lemonade, winter, sunset.
-
-│  3. Survey Theme                    │  ← Survey creator sets (affects survey pages)- BRAND_THEME_PRESET_DARK (str) — daisyUI preset for dark mode. Default: "business". Available: dark, synthwave, halloween, forest, aqua, black, luxury, dracula, business, night, coffee, dim.
-
-│     (Per-survey)                    │- BRAND_FONT_HEADING (str) — CSS font stack for headings.
-
-└─────────────────────────────────────┘- BRAND_FONT_BODY (str) — CSS font stack for body.
-
-```- BRAND_FONT_CSS_URL (str) — Optional font CSS href (e.g., Google Fonts).
-
-- BRAND_THEME_CSS_LIGHT (str) — Custom DaisyUI variable overrides for light theme (advanced).
-
-**How it works:**- BRAND_THEME_CSS_DARK (str) — Custom DaisyUI variable overrides for dark theme (advanced).
-
-
-
-- Each level can override the level above it## Organization-level theming (SiteBranding model)
-
+- Each level can override the level above it
 - Changes at one level don't affect other levels
+- Users see the theme from the most specific level that applies to them
 
-- Users see the theme from the most specific level that applies to themOrganization admins can override environment defaults via the Profile page. Settings are stored in the `SiteBranding` database model:
+## Permissions
 
+Different users can control different levels:
 
-
-## Permissions- **default_theme** — Logical theme name (checktick-light or checktick-dark)
-
-- **theme_preset_light** — daisyUI preset for light mode (20 options)
-
-Different users can control different levels:- **theme_preset_dark** — daisyUI preset for dark mode (12 options)
-
-- **icon_file** / **icon_url** — Light mode icon (uploaded file takes precedence over URL)
-
-| Level | Who Can Configure | Where | Affects |- **icon_file_dark** / **icon_url_dark** — Dark mode icon
-
-|-------|------------------|-------|---------|- **font_heading** / **font_body** / **font_css_url** — Font configuration
-
-| **Platform** | Superusers only | Django Admin or environment variables | All users (default) |- **theme_light_css** / **theme_dark_css** — Custom CSS from daisyUI Theme Generator (optional, overrides presets)
-
+| Level | Who Can Configure | Where | Affects |
+|-------|------------------|-------|---------|
+| **Platform** | Superusers only | Django Admin or environment variables | All users (default) |
 | **Organization** | Organization owners | Profile page | All organization members |
-
 | **Survey** | Survey creators | Survey dashboard | Survey pages only |
 
 ## Platform Branding Configuration (Enterprise Tier)
 
-**New in CheckTick:** Enterprise tier users and self-hosted superusers can now configure platform-level branding through a web interface.
+Enterprise tier users and self-hosted superusers can configure platform-level branding through a web interface.
 
 ### Who Can Access
 
@@ -94,8 +61,8 @@ Different users can control different levels:- **theme_preset_dark** — daisyUI
 3. Or go directly to `/branding/`
 4. Configure the following:
    - **Default Theme**: checktick-light or checktick-dark
-   - **Light Mode Preset**: Choose from 20+ daisyUI themes (nord, cupcake, etc.)
-   - **Dark Mode Preset**: Choose from 12+ dark daisyUI themes (business, dracula, etc.)
+   - **Light Mode Preset**: Choose from 20+ daisyUI themes (pastel, nord, cupcake, etc.)
+   - **Dark Mode Preset**: Choose from 12+ dark daisyUI themes (dim, dracula, etc.)
    - **Logo & Icons**: Upload light/dark mode logos or provide URLs
    - **Typography**: Set custom fonts for headings and body text
 5. Click "Save" to apply changes instantly
@@ -107,7 +74,7 @@ Different users can control different levels:- **theme_preset_dark** — daisyUI
 python manage.py configure_branding --show
 
 # Set theme presets
-python manage.py configure_branding --theme-light corporate --theme-dark business
+python manage.py configure_branding --theme-light pastel --theme-dark dim
 
 # Upload logo files
 python manage.py configure_branding --logo path/to/logo.png --logo-dark path/to/logo-dark.png
@@ -122,7 +89,55 @@ python manage.py configure_branding --font-heading "Inter, sans-serif" --font-bo
 python manage.py configure_branding --reset
 ```
 
-### Configuration Storage
+## Environment Variables
+
+Platform-level branding can be configured via environment variables. These are ideal for deployment configuration in `docker-compose.yml` or similar.
+
+> **Note:** On each container startup, the `sync_branding` management command syncs non-empty environment variables to the database. This ensures deployment-level configuration takes priority over any manual database changes.
+
+> **⚠️ Warning: Empty env vars override defaults!** If you set an environment variable to an empty string (e.g., `BRAND_FONT_HEADING=`), this **will override** the Python default. Either:
+> - Don't include the variable at all (let Python defaults apply)
+> - Set it to a valid value
+> - Use the docker-compose.yml fallback syntax: `${BRAND_FONT_HEADING:-}` (note the `-` which means "use empty if not set, but don't set it")
+
+### Brand Identity
+
+- `BRAND_TITLE` (str) — Default site title. Example: `"CheckTick"`
+- `BRAND_ICON_URL` (str) — URL or static path to the site icon shown in the navbar and as favicon
+- `BRAND_ICON_URL_DARK` (str) — Optional dark-mode icon URL. Shown when dark theme is active
+- `BRAND_ICON_ALT` (str) — Alt text for the brand icon. Defaults to BRAND_TITLE
+- `BRAND_ICON_TITLE` (str) — Title/tooltip for the brand icon. Defaults to BRAND_TITLE
+- `BRAND_ICON_SIZE_CLASS` (str) — Tailwind size classes for the icon. Example: `"w-8 h-8"`
+- `BRAND_ICON_SIZE` (int or str) — Numeric size that maps to `w-{n} h-{n}`. Example: `6`, `8`. Ignored if BRAND_ICON_SIZE_CLASS is set
+
+### Theme Settings
+
+- `BRAND_THEME` (str) — Default logical theme name. Values: `"checktick-light"` or `"checktick-dark"`. Default: `"checktick-light"`
+- `BRAND_THEME_PRESET_LIGHT` (str) — daisyUI preset for light mode. Default: `"pastel"`. Available: light, cupcake, bumblebee, emerald, corporate, retro, cyberpunk, valentine, garden, lofi, pastel, fantasy, nord, cmyk, autumn, acid, lemonade, winter, sunset
+- `BRAND_THEME_PRESET_DARK` (str) — daisyUI preset for dark mode. Default: `"dim"`. Available: dark, synthwave, halloween, forest, aqua, black, luxury, dracula, business, night, coffee, dim
+- `BRAND_THEME_CSS_LIGHT` (str) — Custom DaisyUI variable overrides for light theme (advanced)
+- `BRAND_THEME_CSS_DARK` (str) — Custom DaisyUI variable overrides for dark theme (advanced)
+
+### Font Settings
+
+- `BRAND_FONT_HEADING` (str) — CSS font stack for headings. Default: `'DIN 2014 Rounded', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`
+- `BRAND_FONT_BODY` (str) — CSS font stack for body text. Default: `'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif`
+- `BRAND_FONT_CSS_URL` (str) — External font CSS URL. Default: Google Fonts URL for IBM Plex Sans
+
+### Local Fonts
+
+CheckTick includes local font files for the default heading font (DIN 2014 Rounded) in `/static/fonts/`. These are loaded automatically via CSS `@font-face` declarations in `/static/fonts/din-2014-rounded.css`.
+
+Available weights: 200 (ExtraLight), 300 (Light), 400 (Regular), 600 (SemiBold), 700 (Bold), 800 (ExtraBold).
+
+The body font (IBM Plex Sans) is loaded from Google Fonts by default via `BRAND_FONT_CSS_URL`.
+
+To use different fonts:
+1. Set `BRAND_FONT_HEADING` to a different font stack
+2. Set `BRAND_FONT_BODY` to a different font stack
+3. Set `BRAND_FONT_CSS_URL` to load external fonts (or empty for system fonts only)
+
+## Configuration Storage
 
 All branding settings are stored in the `SiteBranding` database model (singleton pattern):
 
@@ -134,7 +149,21 @@ All branding settings are stored in the `SiteBranding` database model (singleton
 - **font_heading** / **font_body** / **font_css_url** — Font configuration
 - **theme_light_css** / **theme_dark_css** — Custom CSS from daisyUI Theme Generator (optional, overrides presets)
 
-**Precedence**: Database values → Environment variables → Built-in defaults
+**Precedence**: Environment variables → Database values → Built-in defaults
+
+## How Theming Works
+
+1. **Logical theme names** (checktick-light, checktick-dark) are used for:
+   - User preference storage (localStorage)
+   - Theme toggle UI
+   - Database field values
+
+2. **Actual daisyUI preset names** (pastel, dim, etc.) are applied to the DOM:
+   - `<html data-theme="pastel">` for light mode
+   - `<html data-theme="dim">` for dark mode
+   - JavaScript maps logical names to presets based on SiteBranding settings
+
+3. **Custom CSS overrides** from daisyUI Theme Generator can override preset colors while keeping the base theme structure.
 
 ## 1. Platform-Level Themes (Superusers)
 
@@ -142,115 +171,61 @@ Platform administrators set the default theme for the entire CheckTick deploymen
 
 ### Who Can Configure
 
-   - Database field values
-
 - **Superusers only** - Users with Django admin access
+- Regular users and organization owners cannot change platform defaults
 
-- Regular users and organization owners cannot change platform defaults2. **Actual daisyUI preset names** (nord, business, etc.) are applied to the DOM:
-
-   - `<html data-theme="corporate">` for light mode
-
-### Where to Configure   - `<html data-theme="business">` for dark mode
-
-   - JavaScript maps logical names to presets based on SiteBranding settings
+### Where to Configure
 
 **Django Admin** (recommended for runtime changes):
 
-3. **Custom CSS overrides** from daisyUI Theme Generator can override preset colors while keeping the base theme structure.
-
 1. Log in as superuser
-
-2. Navigate to `/admin/`## Survey style fields (per-survey)
-
+2. Navigate to `/admin/`
 3. Click "Site Branding" under Core
+4. Edit theme presets, icons, fonts, custom CSS
 
-4. Edit theme presets, icons, fonts, custom CSS- title — Optional page title override
+**Environment Variables** (recommended for deployment):
 
-- icon_url — Optional per-survey favicon/icon
+- See [Self-Hosting: Platform Theme Configuration](self-hosting-themes.md)
+- Set `BRAND_THEME_PRESET_LIGHT`, `BRAND_THEME_PRESET_DARK`, etc.
 
-**Environment Variables** (recommended for deployment):- theme_name — DaisyUI theme name for the survey pages
-
-- primary_color — Hex color (e.g., #ff3366); normalized to the correct color variables
-
-- See [Self-Hosting: Platform Theme Configuration](self-hosting-themes.md)- font_heading — CSS font stack
-
-- Set `BRAND_THEME_PRESET_LIGHT`, `BRAND_THEME_PRESET_DARK`, etc.- font_body — CSS font stack
-
-- font_css_url — Optional font CSS href
-
-### What You Can Configure- theme_css_light — Light theme DaisyUI variable overrides (from builder)
-
-- theme_css_dark — Dark theme DaisyUI variable overrides (from builder)
+### What You Can Configure
 
 - **Theme presets** - Choose from 20 light themes and 12 dark themes
-
-- **Site icons** - Upload or provide URLs for light/dark mode icons## Where to look in the code
-
+- **Site icons** - Upload or provide URLs for light/dark mode icons
 - **Fonts** - Set heading and body font stacks, external font CSS
+- **Custom CSS** (advanced) - Paste variables from daisyUI Theme Generator
 
-- **Custom CSS** (advanced) - Paste variables from daisyUI Theme Generator- **Tailwind v4 entry point**: `checktick_app/static/css/daisyui_themes.css` (CSS-based config, no JS config file)
+### Available Theme Presets
 
-- **Theme utility**: `checktick_app/core/themes.py` (preset lists, parsing functions)
-
-### Available Theme Presets- **Base templates**: `checktick_app/templates/base.html`, `base_minimal.html`, `admin/base_site.html`
-
-- **Branding context**: `checktick_app/context_processors.py` (builds the `brand` object)
-
-**20 Light Themes:**- **Profile UI**: `checktick_app/core/templates/core/profile.html` (theme preset dropdowns)
-
-corporate (default), nord, light, cupcake, bumblebee, emerald, corporate, retro, cyberpunk, valentine, garden, lofi, pastel, fantasy, cmyk, autumn, acid, lemonade, winter, sunset- **Theme switcher JS**: `checktick_app/static/js/theme-toggle.js`, `admin-theme.js`
-
-- **Survey dashboard style form**: `checktick_app/surveys/templates/surveys/dashboard.html`
+**20 Light Themes:**
+pastel (default), nord, light, cupcake, bumblebee, emerald, retro, cyberpunk, valentine, garden, lofi, corporate, fantasy, cmyk, autumn, acid, lemonade, winter, sunset
 
 **12 Dark Themes:**
+dim (default), dark, synthwave, halloween, forest, aqua, black, luxury, dracula, night, coffee, business
 
-business (default), dark, synthwave, halloween, forest, aqua, black, luxury, dracula, night, coffee, dim## Rebuilding the CSS
+## 2. Organization-Level Themes (Organization Owners)
 
+Organization owners can customize their organization's appearance, overriding platform defaults for all members.
 
+### Who Can Configure
 
-## 2. Organization-Level Themes (Organization Owners)Tailwind CSS v4 uses the `@tailwindcss/cli` package:
-
-
-
-Organization owners can customize their organization's appearance, overriding platform defaults for all members.```bash
-
-npm run build:css
-
-### Who Can Configure```
-
-
-
-- **Organization owners only** - The user who created the organizationOr in Docker:
-
+- **Organization owners only** - The user who created the organization
 - Organization members and survey creators cannot change organization themes
 
-```bash
-
-### Where to Configuredocker compose exec web npm run build:css
-
-```
+### Where to Configure
 
 1. Log in as organization owner
-
-2. Navigate to `/profile`The build process:
-
+2. Navigate to `/profile`
 3. Scroll to "Organization Theme" section
+4. Click "Edit Theme" button
 
-4. Click "Edit Theme" button- Input: `checktick_app/static/css/daisyui_themes.css`
-
-- Output: `checktick_app/static/build/styles.css` (minified)
-
-### What You Can Configure- Build time: ~250ms
-
-- All 39 daisyUI themes included (192KB minified)
+### What You Can Configure
 
 **Basic Settings:**
-
 - Light theme preset (choose from 20 options)
 - Dark theme preset (choose from 12 options)
 
 **Advanced Settings** (optional):
-
 - Custom CSS for light theme
 - Custom CSS for dark theme
 
@@ -261,7 +236,7 @@ npm run build:css
 3. Choose a dark theme from the second dropdown
 4. Click "Save"
 
-**Example:** Select "corporate" for light mode and "luxury" for dark mode to give your organization a professional look.
+**Example:** Select "pastel" for light mode and "luxury" for dark mode to give your organization a professional look.
 
 ### How to Reset to Platform Defaults
 
@@ -307,6 +282,18 @@ Survey creators can customize individual surveys with unique branding and colors
 - **Primary color** - Hex color code (e.g., `#ff3366`)
 - **Fonts** - Heading/body font stacks, external font CSS
 - **Custom CSS** (advanced) - Light/dark theme variables
+
+### Survey Style Fields
+
+- **title** — Optional page title override
+- **icon_url** — Optional per-survey favicon/icon
+- **theme_name** — DaisyUI theme name for the survey pages
+- **primary_color** — Hex color (e.g., #ff3366); normalized to the correct color variables
+- **font_heading** — CSS font stack
+- **font_body** — CSS font stack
+- **font_css_url** — Optional font CSS href
+- **theme_css_light** — Light theme DaisyUI variable overrides (from builder)
+- **theme_css_dark** — Dark theme DaisyUI variable overrides (from builder)
 
 ### When to Use Survey Themes
 
@@ -418,13 +405,13 @@ When multiple theme levels are configured, CheckTick uses this precedence:
 
 **Scenario 1: Platform + Organization**
 
-- Platform set to: corporate (light), business (dark)
-- Organization set to: corporate (light), luxury (dark)
-- **Result:** Organization members see corporate/luxury, non-members see nord/business
+- Platform set to: pastel (light), dim (dark)
+- Organization set to: coporate (light), luxury (dark)
+- **Result:** Organization members see corporate/luxury, non-members see pastel/dim
 
 **Scenario 2: All Three Levels**
 
-- Platform: corporate/business
+- Platform: pastel/dim
 - Organization: corporate/luxury
 - Survey: cupcake/forest
 - **Result:** Survey pages show cupcake/forest, other pages show corporate/luxury
@@ -433,7 +420,40 @@ When multiple theme levels are configured, CheckTick uses this precedence:
 
 - Organization previously had custom theme
 - Owner clicks "Reset to Defaults"
-- **Result:** Organization members now see platform theme (corporate/business)
+- **Result:** Organization members now see platform theme (pastel/dim)
+
+## Where to Look in the Code
+
+- **Tailwind v4 entry point**: `checktick_app/static/css/daisyui_themes.css` (CSS-based config, no JS config file)
+- **Theme utility**: `checktick_app/core/themes.py` (preset lists, parsing functions)
+- **Base templates**: `checktick_app/templates/base.html`, `base_minimal.html`, `admin/base_site.html`
+- **Branding context**: `checktick_app/context_processors.py` (builds the `brand` object)
+- **Profile UI**: `checktick_app/core/templates/core/profile.html` (theme preset dropdowns)
+- **Theme switcher JS**: `checktick_app/static/js/theme-toggle.js`, `admin-theme.js`
+- **Survey dashboard style form**: `checktick_app/surveys/templates/surveys/dashboard.html`
+- **Local fonts**: `checktick_app/static/fonts/din-2014-rounded.css`
+- **Branding sync command**: `checktick_app/core/management/commands/sync_branding.py`
+
+## Rebuilding the CSS
+
+Tailwind CSS v4 uses the `@tailwindcss/cli` package:
+
+```bash
+npm run build:css
+```
+
+Or in Docker:
+
+```bash
+docker compose exec web npm run build:css
+```
+
+The build process:
+
+- Input: `checktick_app/static/css/daisyui_themes.css`
+- Output: `checktick_app/static/build/styles.css` (minified)
+- Build time: ~250ms
+- All 39 daisyUI themes included (192KB minified)
 
 ## Troubleshooting
 
@@ -489,6 +509,16 @@ When multiple theme levels are configured, CheckTick uses this precedence:
 1. Browser allows localStorage (not in incognito/private mode)
 2. No browser extensions blocking storage
 3. Cookie/storage settings allow site data
+
+### Environment Variables Not Applied
+
+**Problem:** Set environment variables but database still has old values
+
+**Solutions:**
+
+1. Restart the container - `sync_branding` runs on startup
+2. Check that the environment variable is set (non-empty)
+3. Run manually: `python manage.py sync_branding`
 
 ## Best Practices
 

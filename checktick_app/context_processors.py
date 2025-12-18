@@ -141,26 +141,24 @@ def branding(request):
         "font_heading": getattr(
             settings,
             "BRAND_FONT_HEADING",
-            "'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji'",
+            "DIN, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
         ),
         "font_body": getattr(
             settings,
             "BRAND_FONT_BODY",
-            "Merriweather, ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif",
+            "'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
         ),
         "font_css_url": getattr(
             settings,
             "BRAND_FONT_CSS_URL",
-            "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=Merriweather:wght@300;400;700&display=swap",
+            "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap",
         ),
         # Optional CSS overrides injected into head to support DaisyUI builder pastes
         "theme_css_light": getattr(settings, "BRAND_THEME_CSS_LIGHT", ""),
         "theme_css_dark": getattr(settings, "BRAND_THEME_CSS_DARK", ""),
         # DaisyUI preset theme names
-        "theme_preset_light": getattr(
-            settings, "BRAND_THEME_PRESET_LIGHT", "corporate"
-        ),
-        "theme_preset_dark": getattr(settings, "BRAND_THEME_PRESET_DARK", "business"),
+        "theme_preset_light": getattr(settings, "BRAND_THEME_PRESET_LIGHT", "pastel"),
+        "theme_preset_dark": getattr(settings, "BRAND_THEME_PRESET_DARK", "dim"),
     }
     # Compute icon_size_class from settings
     try:

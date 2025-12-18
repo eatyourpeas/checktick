@@ -37,6 +37,15 @@ services:
       LLM_API_KEY: ${LLM_API_KEY}
       LLM_URL: ${LLM_URL}
       LLM_AUTH_TYPE: ${LLM_AUTH_TYPE:-apim}
+      # Branding Configuration
+      BRAND_TITLE: ${BRAND_TITLE:-CheckTick}
+      # Font settings - only set these if you want to override Python defaults
+      # BRAND_FONT_HEADING, BRAND_FONT_BODY, BRAND_FONT_CSS_URL default from settings.py
+      BRAND_ICON_URL: ${BRAND_ICON_URL:-}
+      BRAND_ICON_URL_DARK: ${BRAND_ICON_URL_DARK:-}
+      BRAND_THEME: ${BRAND_THEME:-checktick-light}
+      BRAND_THEME_PRESET_LIGHT: ${BRAND_THEME_PRESET_LIGHT:-pastel}
+      BRAND_THEME_PRESET_DARK: ${BRAND_THEME_PRESET_DARK:-dim}
     ports:
       - "8000:8000"
     depends_on:

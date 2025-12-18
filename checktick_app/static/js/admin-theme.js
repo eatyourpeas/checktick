@@ -12,9 +12,9 @@
     var presetsMeta = document.querySelector('meta[name="theme-presets"]');
     var presets = presetsMeta
       ? presetsMeta.content.split(",")
-      : ["corporate", "business"];
-    var LIGHT_PRESET = presets[0] || "corporate";
-    var DARK_PRESET = presets[1] || "business";
+      : ["pastel", "dim"];
+    var LIGHT_PRESET = presets[0] || "pastel";
+    var DARK_PRESET = presets[1] || "dim";
 
     function themeToPreset(t) {
       // Map logical theme names to actual daisyUI presets
