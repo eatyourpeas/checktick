@@ -142,16 +142,16 @@ CheckTick uses **daisyUI v5.4.7** with 32 built-in theme presets:
 # Default logical theme (checktick-light or checktick-dark)
 BRAND_THEME="checktick-light"
 
-# Light mode preset (default: corporate)
+# Light mode preset (default: lofi)
 # Available: light, cupcake, bumblebee, emerald, corporate, retro,
-# cyberpunk, valentine, garden, lofi, pastel, fantasy, nord,
+# cyberpunk, valentine, garden, lofi, lofi, fantasy, nord,
 # cmyk, autumn, acid, lemonade, winter, nord, sunset
-BRAND_THEME_PRESET_LIGHT="corporate"
+BRAND_THEME_PRESET_LIGHT="lofi"
 
 # Dark mode preset (default: business)
 # Available: dark, synthwave, halloween, forest, aqua, black,
 # luxury, dracula, business, night, coffee, dim
-BRAND_THEME_PRESET_DARK="business"
+BRAND_THEME_PRESET_DARK="dim"
 ```
 
 ### Font Variables

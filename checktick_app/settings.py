@@ -25,23 +25,23 @@ env = environ.Env(
     BRAND_THEME=(str, "checktick-light"),
     BRAND_THEME_PRESET_LIGHT=(
         str,
-        "corporate",
+        "lofi",
     ),  # Default daisyUI preset for checktick-light
     BRAND_THEME_PRESET_DARK=(
         str,
-        "business",
+        "dim",
     ),  # Default daisyUI preset for checktick-dark
     BRAND_FONT_HEADING=(
         str,
-        "'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji'",
+        "DIN, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
     ),
     BRAND_FONT_BODY=(
         str,
-        "Merriweather, ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif",
+        "'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
     ),
     BRAND_FONT_CSS_URL=(
         str,
-        "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=Merriweather:wght@300;400;700&display=swap",
+        "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap",
     ),
     BRAND_THEME_CSS_LIGHT=(str, ""),  # Custom CSS for light theme
     BRAND_THEME_CSS_DARK=(str, ""),  # Custom CSS for dark theme
@@ -93,9 +93,15 @@ BRAND_ICON_SIZE = env("BRAND_ICON_SIZE") or None
 BRAND_THEME = env("BRAND_THEME")
 BRAND_THEME_PRESET_LIGHT = env("BRAND_THEME_PRESET_LIGHT")
 BRAND_THEME_PRESET_DARK = env("BRAND_THEME_PRESET_DARK")
-BRAND_FONT_HEADING = env("BRAND_FONT_HEADING")
-BRAND_FONT_BODY = env("BRAND_FONT_BODY")
-BRAND_FONT_CSS_URL = env("BRAND_FONT_CSS_URL")
+# Font settings: use env var if non-empty, otherwise use hardcoded default
+_DEFAULT_FONT_HEADING = "'DIN 2014 Rounded', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
+_DEFAULT_FONT_BODY = (
+    "Merriweather, ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif"
+)
+_DEFAULT_FONT_CSS_URL = ""  # Empty means use local fonts only
+BRAND_FONT_HEADING = env("BRAND_FONT_HEADING") or _DEFAULT_FONT_HEADING
+BRAND_FONT_BODY = env("BRAND_FONT_BODY") or _DEFAULT_FONT_BODY
+BRAND_FONT_CSS_URL = env("BRAND_FONT_CSS_URL") or _DEFAULT_FONT_CSS_URL
 BRAND_THEME_CSS_LIGHT = env("BRAND_THEME_CSS_LIGHT") or None
 BRAND_THEME_CSS_DARK = env("BRAND_THEME_CSS_DARK") or None
 SITE_URL = "http://localhost:8000" if DEBUG else env("SITE_URL")

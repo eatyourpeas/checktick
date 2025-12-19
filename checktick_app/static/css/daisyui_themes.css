@@ -13,7 +13,7 @@
 
 /*
  * Custom checktick-light and checktick-dark themes are now dynamically generated
- * from environment variables (default: corporate for light, business for dark)
+ * from environment variables (default: lofi for light, dim for dark)
  * or from Brand model settings in the database.
  *
  * These theme definitions are injected via inline <style> blocks in templates.
@@ -104,6 +104,31 @@
   .checkbox-primary {
     color: var(--color-primary);
   }
+}
+
+/*
+ * Prose code block styling override for WCAG AA contrast compliance.
+ * Tailwind Typography's default colors may not meet contrast requirements
+ * with all daisyUI themes. These overrides use theme-aware CSS variables
+ * to ensure sufficient contrast in both light and dark modes.
+ * Placed outside @layer for higher specificity.
+ */
+.prose pre {
+  background-color: var(--color-base-300) !important;
+  color: var(--color-base-content) !important;
+}
+
+.prose pre code,
+.prose pre code[class*="language-"] {
+  background-color: transparent !important;
+  color: inherit !important;
+}
+
+.prose :not(pre) > code {
+  background-color: var(--color-base-200) !important;
+  color: var(--color-base-content) !important;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
 }
 
 /* stylelint-disable at-rule-no-unknown */

@@ -5,8 +5,15 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta property="og:title" content="CheckTick" />
+<meta property="og:description" content="Surveys for Healthcare in the UK." />
+<meta property="og:image" content="https://checktick.uk/static/icons/checktick.html" />
+<meta property="og:url" content="https://checktick.uk" />
+  <meta property="og:type" content="website" />
     <title>{% block title %}{{ brand.title }}{% endblock %}</title>
-  <link rel="icon" href="{% static 'icons/checktick_brand_favicon.svg' %}" type="image/svg+xml" />
+  <link rel="icon" href="{% static 'icons/CheckTick_tick.svg' %}" type="image/svg+xml" />
+    {# Local DIN font for headings #}
+    <link rel="stylesheet" href="{% static 'fonts/din.css' %}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   {% if brand.font_css_url %}<link href="{{ brand.font_css_url }}" rel="stylesheet">{% endif %}
@@ -89,28 +96,19 @@
             {% endif %}
           </ul>
         </div>
-        <a href="{% url 'core:home' %}" class="btn btn-ghost text-xl">
-          {# Light / default icon #}
-          <span class="theme-light-icon">
-            {% if brand.icon_url %}
-              <img src="{{ brand.icon_url }}" alt="{{ brand.icon_alt|default:brand.title }} icon" title="{{ brand.icon_title|default:brand.title }}" class="{{ brand.icon_size_class|default:'w-6 h-6' }}" />
-            {% else %}
-              {% include "components/icons/checktick.html" with classes=brand.icon_size_class|default:'w-6 h-6 text-base-content' aria_label=brand.icon_alt|default:brand.title title=brand.icon_title|default:brand.title %}
-            {% endif %}
-          </span>
-          {# Dark icon (optional) #}
-          <span class="theme-dark-icon">
-            {% if brand.icon_url_dark %}
-              <img src="{{ brand.icon_url_dark }}" alt="{{ brand.icon_alt|default:brand.title }} icon" title="{{ brand.icon_title|default:brand.title }}" class="{{ brand.icon_size_class|default:'w-6 h-6' }}" />
-            {% else %}
-              {% if brand.icon_url %}
-                <img src="{{ brand.icon_url }}" alt="{{ brand.icon_alt|default:brand.title }} icon" title="{{ brand.icon_title|default:brand.title }}" class="{{ brand.icon_size_class|default:'w-6 h-6' }}" />
-              {% else %}
-                {% include "components/icons/checktick.html" with classes=brand.icon_size_class|default:'w-6 h-6 text-base-content' aria_label=brand.icon_alt|default:brand.title title=brand.icon_title|default:brand.title %}
-              {% endif %}
-            {% endif %}
-          </span>
-          <span class="hidden sm:inline">{{ brand.title }}</span>
+        <a href="{% url 'core:home' %}" class="btn btn-ghost h-12 px-2" aria-label="{% trans 'Go to home page' %}">
+          {% if brand.icon_url %}
+            {# Custom brand icon - show light/dark variants #}
+            <span class="theme-light-icon">
+              <img src="{{ brand.icon_url }}" alt="{{ brand.icon_alt|default:brand.title }}" title="{{ brand.icon_title|default:brand.title }}" class="h-10 w-auto" />
+            </span>
+            <span class="theme-dark-icon">
+              <img src="{{ brand.icon_url_dark|default:brand.icon_url }}" alt="{{ brand.icon_alt|default:brand.title }}" title="{{ brand.icon_title|default:brand.title }}" class="h-10 w-auto" />
+            </span>
+          {% else %}
+            {# Default: CheckTick logo (icon + text combined) #}
+            {% include "components/icons/checktick_long.html" with classes='h-10 w-auto text-accent' aria_label=brand.title title=brand.title %}
+          {% endif %}
         </a>
       </div>
       <div class="navbar-center hidden lg:flex">
@@ -266,7 +264,7 @@
       </div>
     </footer>
     <script src="{% static 'js/htmx.min.js' %}"
-            integrity="sha384-/TgkGk7p307TH7EXJDuUlgG3Ce1UVolAOFopFekQkkXihi5u/6OCvVKyz1W+idaz"
+            integrity="sha384-LvL6Vcojcqp2iIBXpGiD8EjaxVMhlKxfJCX1ZWJtWPWF5ki0j7nfzzog6M0nzjZM"
             crossorigin="anonymous"></script>
     <script src="{% static 'js/theme-toggle.js' %}"></script>
     {# Global toast root for lightweight notifications #}

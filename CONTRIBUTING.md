@@ -234,7 +234,7 @@ docker-compose -f docker-compose.prod-test.yml logs -f web-prod
 ### Testing Checklist
 
 - [ ] All 32 daisyUI theme presets in CSS (20 light + 12 dark)
-- [ ] Default themes: corporate (light), business (dark)
+- [ ] Default themes: lofi (light), dim (dark)
 - [ ] `data-theme` attribute on `<html>` element
 - [ ] Theme toggle button switches themes
 - [ ] Custom CSS overrides from SiteBranding appear
