@@ -57,7 +57,7 @@ class Command(BaseCommand):
 
         # Sync theme settings - always sync from settings
         env_theme = getattr(settings, "BRAND_THEME", "checktick-light")
-        env_preset_light = getattr(settings, "BRAND_THEME_PRESET_LIGHT", "pastel")
+        env_preset_light = getattr(settings, "BRAND_THEME_PRESET_LIGHT", "lofi")
         env_preset_dark = getattr(settings, "BRAND_THEME_PRESET_DARK", "dim")
 
         if env_theme != sb.default_theme:

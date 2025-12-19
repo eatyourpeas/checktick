@@ -12,8 +12,8 @@
     var presetsMeta = document.querySelector('meta[name="theme-presets"]');
     var presets = presetsMeta
       ? presetsMeta.content.split(",")
-      : ["pastel", "dim"];
-    var LIGHT_PRESET = presets[0] || "pastel";
+      : ["lofi", "dim"];
+    var LIGHT_PRESET = presets[0] || "lofi";
     var DARK_PRESET = presets[1] || "dim";
 
     function themeToPreset(t) {

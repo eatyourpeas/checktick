@@ -157,7 +157,7 @@ def branding(request):
         "theme_css_light": getattr(settings, "BRAND_THEME_CSS_LIGHT", ""),
         "theme_css_dark": getattr(settings, "BRAND_THEME_CSS_DARK", ""),
         # DaisyUI preset theme names
-        "theme_preset_light": getattr(settings, "BRAND_THEME_PRESET_LIGHT", "pastel"),
+        "theme_preset_light": getattr(settings, "BRAND_THEME_PRESET_LIGHT", "lofi"),
         "theme_preset_dark": getattr(settings, "BRAND_THEME_PRESET_DARK", "dim"),
     }
     # Compute icon_size_class from settings

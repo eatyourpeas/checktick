@@ -51,7 +51,7 @@ CheckTick uses a **3-tier theme cascade** with the following precedence (highest
 
 The system uses `generate_theme_css_for_brand()` function (in `checktick_app/core/themes.py`) to:
 
-1. Take DaisyUI preset names (e.g., "pastel", "dim")
+1. Take DaisyUI preset names (e.g., "lofi", "dim")
 2. Generate CSS variables for runtime theme switching
 3. Allow custom CSS overrides from DaisyUI Theme Generator
 
@@ -186,7 +186,7 @@ These settings are customization-focused and benefit from UI-based management. T
 ```bash
 # CLI configuration for initial setup or automation
 python manage.py configure_branding \
-  --theme-light=pastel \
+  --theme-light=lofi \
   --theme-dark=dim \
   --logo=path/to/logo.png \
   --logo-dark=path/to/logo-dark.png

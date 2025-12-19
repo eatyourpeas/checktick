@@ -61,7 +61,7 @@ Enterprise tier users and self-hosted superusers can configure platform-level br
 3. Or go directly to `/branding/`
 4. Configure the following:
    - **Default Theme**: checktick-light or checktick-dark
-   - **Light Mode Preset**: Choose from 20+ daisyUI themes (pastel, nord, cupcake, etc.)
+   - **Light Mode Preset**: Choose from 20+ daisyUI themes (lofi, nord, cupcake, etc.)
    - **Dark Mode Preset**: Choose from 12+ dark daisyUI themes (dim, dracula, etc.)
    - **Logo & Icons**: Upload light/dark mode logos or provide URLs
    - **Typography**: Set custom fonts for headings and body text
@@ -74,7 +74,7 @@ Enterprise tier users and self-hosted superusers can configure platform-level br
 python manage.py configure_branding --show
 
 # Set theme presets
-python manage.py configure_branding --theme-light pastel --theme-dark dim
+python manage.py configure_branding --theme-light lofi --theme-dark dim
 
 # Upload logo files
 python manage.py configure_branding --logo path/to/logo.png --logo-dark path/to/logo-dark.png
@@ -113,7 +113,7 @@ Platform-level branding can be configured via environment variables. These are i
 ### Theme Settings
 
 - `BRAND_THEME` (str) — Default logical theme name. Values: `"checktick-light"` or `"checktick-dark"`. Default: `"checktick-light"`
-- `BRAND_THEME_PRESET_LIGHT` (str) — daisyUI preset for light mode. Default: `"pastel"`. Available: light, cupcake, bumblebee, emerald, corporate, retro, cyberpunk, valentine, garden, lofi, pastel, fantasy, nord, cmyk, autumn, acid, lemonade, winter, sunset
+- `BRAND_THEME_PRESET_LIGHT` (str) — daisyUI preset for light mode. Default: `"lofi"`. Available: light, cupcake, bumblebee, emerald, corporate, retro, cyberpunk, valentine, garden, lofi, pastel, fantasy, nord, cmyk, autumn, acid, lemonade, winter, sunset
 - `BRAND_THEME_PRESET_DARK` (str) — daisyUI preset for dark mode. Default: `"dim"`. Available: dark, synthwave, halloween, forest, aqua, black, luxury, dracula, business, night, coffee, dim
 - `BRAND_THEME_CSS_LIGHT` (str) — Custom DaisyUI variable overrides for light theme (advanced)
 - `BRAND_THEME_CSS_DARK` (str) — Custom DaisyUI variable overrides for dark theme (advanced)
@@ -411,7 +411,7 @@ When multiple theme levels are configured, CheckTick uses this precedence:
 
 **Scenario 2: All Three Levels**
 
-- Platform: pastel/dim
+- Platform: lofi/dim
 - Organization: corporate/luxury
 - Survey: cupcake/forest
 - **Result:** Survey pages show cupcake/forest, other pages show corporate/luxury
@@ -420,7 +420,7 @@ When multiple theme levels are configured, CheckTick uses this precedence:
 
 - Organization previously had custom theme
 - Owner clicks "Reset to Defaults"
-- **Result:** Organization members now see platform theme (pastel/dim)
+- **Result:** Organization members now see platform theme (lofi/dim)
 
 ## Where to Look in the Code
 

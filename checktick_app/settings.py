@@ -25,7 +25,7 @@ env = environ.Env(
     BRAND_THEME=(str, "checktick-light"),
     BRAND_THEME_PRESET_LIGHT=(
         str,
-        "pastel",
+        "lofi",
     ),  # Default daisyUI preset for checktick-light
     BRAND_THEME_PRESET_DARK=(
         str,

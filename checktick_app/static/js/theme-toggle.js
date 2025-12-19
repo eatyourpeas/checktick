@@ -10,8 +10,8 @@
   const presetsMeta = document.querySelector('meta[name="theme-presets"]');
   const presets = presetsMeta
     ? presetsMeta.content.split(",")
-    : ["pastel", "dim"];
-  const LIGHT_PRESET = presets[0] || "pastel";
+    : ["lofi", "dim"];
+  const LIGHT_PRESET = presets[0] || "lofi";
   const DARK_PRESET = presets[1] || "dim";
 
   function normalize(pref) {
