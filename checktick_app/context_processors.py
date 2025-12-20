@@ -141,7 +141,7 @@ def branding(request):
         "font_heading": getattr(
             settings,
             "BRAND_FONT_HEADING",
-            "DIN, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
+            "'DIN Round Pro', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
         ),
         "font_body": getattr(
             settings,
