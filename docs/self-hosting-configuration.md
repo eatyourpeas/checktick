@@ -187,6 +187,35 @@ CHECKTICK_WARN_BEFORE_DELETION_DAYS=30,7,1
 
 See the [Data Governance Overview](data-governance-overview.md) for details on how these settings affect survey lifecycle and data retention.
 
+#### Hosting Provider API (Infrastructure Logs)
+
+**Optional** - Enable infrastructure log viewing in Platform Admin Logs dashboard for compliance reviews:
+
+```bash
+# API authentication token (read-only recommended)
+HOSTING_API_TOKEN=your-api-token
+
+# Base URL for your hosting provider's API
+# Northflank: https://api.northflank.com/v1
+# Railway: https://backboard.railway.app/graphql
+# Render: https://api.render.com/v1
+HOSTING_API_BASE_URL=https://api.northflank.com/v1
+
+# Project/service identifiers from your hosting provider
+HOSTING_PROJECT_ID=your-project-id
+HOSTING_SERVICE_ID=your-service-id
+```
+
+When configured, platform superusers can view container/infrastructure logs directly in the Platform Admin Logs dashboard (`/platform-admin/logs/`). This is essential for:
+
+- **DPST Compliance**: Quarterly log reviews with CTO and DPO
+- **Incident Investigation**: Correlating application events with infrastructure issues
+- **Security Monitoring**: Reviewing container-level security events
+
+**Important:** Use a read-only API token. Do not use deploy tokens or tokens with write permissions.
+
+See [Audit Logging and Notifications](audit-logging-and-notifications.md) for details on the Platform Admin Logs dashboard.
+
 ## Email Providers
 
 ### Gmail

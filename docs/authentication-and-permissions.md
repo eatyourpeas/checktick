@@ -310,6 +310,25 @@ This protects against:
 
 Survey creators and organization admins retain full control over survey access and membership management, but cannot perform destructive account-level operations.
 
+### Platform Admin Functions
+
+Platform superusers have access to additional administrative interfaces for compliance and monitoring:
+
+| Interface | URL | Purpose |
+|-----------|-----|---------|
+| Django Admin | `/admin/` | User/organization management |
+| Platform Admin | `/platform-admin/` | Platform analytics and oversight |
+| **Platform Logs** | `/platform-admin/logs/` | Audit and infrastructure log review |
+
+The **Platform Logs** dashboard is essential for DPST compliance, enabling:
+
+- Quarterly log reviews with the Data Protection Officer (DPO)
+- Security incident investigation and forensics
+- Correlation of application events with infrastructure logs
+- Monitoring of authentication patterns and admin actions
+
+All Platform Admin access is logged in the audit trail. See [Audit Logging and Notifications](audit-logging-and-notifications.md) for dashboard details.
+
 ### Using the API with curl (JWT)
 
 1. Obtain a token pair (access and refresh):

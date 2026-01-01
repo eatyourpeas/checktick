@@ -445,6 +445,53 @@ Maintain an emergency contact list:
 4. **Multiple backup locations** geographically distributed
 5. **Redundant personnel** (no single points of failure)
 
+## Quarterly Compliance Reviews
+
+Regular log reviews are essential for DPST compliance and early detection of security issues.
+
+### Review Schedule
+
+| Review | Frequency | Participants | Focus Areas |
+|--------|-----------|--------------|-------------|
+| Log Review | Quarterly | CTO, DPO | Security events, access patterns |
+| Access Audit | Quarterly | CTO, DPO | User permissions, admin actions |
+| Disaster Recovery Test | Annually | IT Team | Backup restoration, failover |
+
+### Quarterly Log Review Process
+
+1. **Preparation** (1 week before)
+   - Export log summaries from Platform Admin Logs dashboard
+   - Identify any CRITICAL events requiring discussion
+   - Prepare trend analysis from previous quarter
+
+2. **Review Session** (CTO + DPO)
+   - Access Platform Admin Logs at `/platform-admin/logs/`
+   - Review Application Logs: Focus on CRITICAL and WARNING events
+   - Review Infrastructure Logs: Focus on ERROR events and anomalies
+   - Document findings and action items
+
+3. **Post-Review Actions**
+   - Update security policies if needed
+   - Address any identified vulnerabilities
+   - File documentation for DPST evidence
+   - Schedule follow-up for action items
+
+### Using Platform Admin Logs Dashboard
+
+The Platform Admin Logs dashboard (`/platform-admin/logs/`) provides:
+
+- **Application Logs Tab**: Structured audit events (logins, admin actions, data access)
+- **Infrastructure Logs Tab**: Container/pod logs from hosting provider
+- **Filtering**: By severity level and pagination for large datasets
+- **Statistics**: Quick overview cards showing event counts
+
+This interface consolidates logs that would otherwise require:
+- Direct database queries for audit logs
+- Hosting provider dashboard access for infrastructure logs
+- Manual correlation between application and infrastructure events
+
+See [Audit Logging and Notifications](audit-logging-and-notifications.md) for detailed dashboard documentation.
+
 ## Related Documentation
 
 - [Encryption for Users](/docs/encryption-for-users/) - End-user guide
