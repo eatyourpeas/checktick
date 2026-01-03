@@ -320,11 +320,13 @@ The custodian component is critical and must be backed up securely:
 - Access logging
 
 **Backup Storage:**
+
 - Different physical location
 - Same security requirements
 - At least 50 miles from primary (disaster protection)
 
 **Format:**
+
 - Paper printout in sealed envelope
 - USB drive (encrypted, in safe)
 - Never in email, cloud storage, or databases
@@ -332,16 +334,19 @@ The custodian component is critical and must be backed up securely:
 ### Testing Backups
 
 **Monthly:**
+
 - Verify backup files exist and are readable
 - Check backup job logs for errors
 - Confirm retention policy is enforced
 
 **Quarterly:**
+
 - Test restore procedure in isolated environment
 - Verify Vault backup can be unsealed
 - Document any issues found
 
 **Annually:**
+
 - Full disaster recovery drill
 - Restore from backup to new infrastructure
 - Measure Recovery Time Objective (RTO)

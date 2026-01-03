@@ -479,3 +479,13 @@ Core permission checks in `checktick_app/surveys/permissions.py`:
 - Use the helpers in `surveys/permissions.py` from any new views.
 - When adding API endpoints, prefer DRF permission classes that delegate to these helpers and always scope querysets by the current user.
 - Return 403 (not 404) for authorization failures to avoid leaking resource existence to authenticated users; for anonymous API users, DRF may return 401 for unsafe methods.
+
+## Standards Compliance Mapping
+
+| Requirement | Implementation |
+| :--- | :--- |
+| **Identity Federation** | OIDC integration for Microsoft Entra ID and Google Workspace. |
+| **MFA Support** | Supported via federated providers and mandatory TOTP for local admin accounts. |
+| **Password Strength** | Enforced via Django Auth Validators (Min 12 chars, blocklists). |
+| **Brute Force Protection** | `django-axes` account lockout (5 attempts / 1-hour cooldown). |
+| **Session Security** | Secure, HttpOnly, and SameSite cookies enforced; HSTS active. |

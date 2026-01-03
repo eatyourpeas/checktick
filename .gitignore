@@ -18,6 +18,10 @@ staticfiles/
 media/
 db.sqlite3
 
+# Compliance - personal data (training certificates contain PII)
+docs/compliance/training-certificates/
+compliance/training-certificates/
+
 # Node
 node_modules/
 package-lock.json

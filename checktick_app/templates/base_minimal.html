@@ -55,8 +55,8 @@
       <div class="container mx-auto px-4 py-6">
         <div class="text-xs text-base-content/80 text-center md:text-left flex flex-wrap items-center justify-center md:justify-start gap-x-3 gap-y-2">
           <span>&copy; {{ current_year }} {{ brand.title }}</span>
-          <a href="{% url 'privacy_policy' %}" class="link link-hover">Privacy Policy</a>
-          <a href="{% url 'terms_of_service' %}" class="link link-hover">Terms of Service</a>
+          <a href="{% url 'core:docs_page' slug='privacy-notice' %}" class="link link-hover">Privacy Policy</a>
+          <a href="{% url 'core:docs_page' slug='terms-of-service' %}" class="link link-hover">Terms of Service</a>
         </div>
       </div>
     </footer>
