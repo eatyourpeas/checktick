@@ -9,17 +9,17 @@ These tests ensure:
 5. Freeze permissions are enforced correctly
 """
 
-import uuid
 from datetime import timedelta
+import uuid
 
-import pytest
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+import pytest
 
 from checktick_app.surveys.models import (
     DataSubjectRequest,
-    OrganizationMembership,
     Organization,
+    OrganizationMembership,
     ResponseFreezeLog,
     Survey,
     SurveyResponse,
@@ -246,7 +246,7 @@ class TestResponseFreeze:
         )
 
         # Create two responses
-        response1 = SurveyResponse.objects.create(
+        _ = SurveyResponse.objects.create(
             survey=authenticated_survey,
             submitted_by=respondent,
             answers={str(question.id): "normal response"},

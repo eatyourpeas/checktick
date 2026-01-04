@@ -9,14 +9,14 @@ The implementation uses a generic interface that can be adapted for different
 hosting providers by setting appropriate environment variables.
 """
 
-import logging
 from dataclasses import dataclass
 from datetime import datetime
+import logging
 from typing import Optional
 
-import requests
 from django.conf import settings
 from django.utils import timezone
+import requests
 
 logger = logging.getLogger(__name__)
 

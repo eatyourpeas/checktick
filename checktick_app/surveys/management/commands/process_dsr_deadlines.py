@@ -19,7 +19,7 @@ from django.core.management.base import BaseCommand
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from checktick_app.surveys.models import DataSubjectRequest, ResponseFreezeLog
+from checktick_app.surveys.models import DataSubjectRequest
 
 
 class Command(BaseCommand):
@@ -137,7 +137,7 @@ class Command(BaseCommand):
                 if verbose:
                     self.stdout.write(
                         self.style.WARNING(
-                            f"    ⚠ Response frozen by platform due to deadline breach"
+                            "    ⚠ Response frozen by platform due to deadline breach"
                         )
                     )
 
@@ -270,7 +270,7 @@ Please log in to CheckTick to review and resolve this request.
         survey = dsr.response.survey
         owner = survey.owner
 
-        subject = f"[URGENT] Data Subject Request Deadline Exceeded - Response Frozen"
+        subject = "[URGENT] Data Subject Request Deadline Exceeded - Response Frozen"
 
         context = {
             "survey_name": survey.name,
