@@ -5,7 +5,7 @@ category: dspt-4-managing-access
 
 # Information Asset Register (IAR)
 
-**Owner:** [CTO Name] (SIRO)
+**Owner:** {{ cto_name }} (SIRO)
 **Last Review:** Jan 2026
 
 | Asset ID | Asset Name | Description | Data Type | Location | Owner |

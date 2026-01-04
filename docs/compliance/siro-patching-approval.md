@@ -6,7 +6,7 @@ category: dspt-8-unsupported-systems
 # SIRO Approved Patching Approach (v1.2)
 
 **Last Approved:** January 2026
-**Approver:** [CTO Name] (SIRO)
+**Approver:** {{ cto_name }} (SIRO)
 
 ## 1. Risk Categorization
 
@@ -53,4 +53,4 @@ The SIRO has approved the silencing of specific CVEs (e.g., `GHSA-79v4-65xg-pq4g
 * **Mitigation:** We monitor the `ggshield` upstream repository. Once they update their internal pins, these ignores will be removed.
 * **Clinical Impact:** Zero. This code does not touch patient data or production logic.
 
-**Signed:**[CTO Name] (SIRO) **Date:** 02/01/2026
+**Signed:**{{ cto_name }} (SIRO) **Date:** 02/01/2026

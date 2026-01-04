@@ -8,7 +8,7 @@ category: dspt-1-confidential-data
 **Version:** 1.0
 **Board Approved:** [Date]
 **Review Date:** [Date + 1 Year]
-**Policy Lead:** [Name 1] (SIRO)
+**Policy Lead:** {{ siro_name }} (SIRO)
 
 ## 1. Purpose
 

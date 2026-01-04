@@ -7,7 +7,7 @@ category: dspt-5-process-reviews
 
 **Product:** {{ platform_name }} Survey Platform
 **Date:** 03/01/2026
-**Assessor:** [SIRO Name] (CTO)
+**Assessor:** {{ siro_name }} (CTO)
 
 ## Principle 1: Protect your ecosystem
 

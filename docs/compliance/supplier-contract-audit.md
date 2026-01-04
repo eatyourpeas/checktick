@@ -6,7 +6,7 @@ category: dspt-10-suppliers
 # Supplier Data Processing Contract Audit
 
 **Date of Audit:** 03/01/2026
-**Auditor:** [Name 1] (SIRO)
+**Auditor:** {{ siro_name }} (SIRO)
 **Scope:** All third-party suppliers identified in the Supplier Register that handle Personal Identifiable Information (PII).
 
 ## 1. Audit Summary

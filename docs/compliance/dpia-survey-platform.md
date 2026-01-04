@@ -7,7 +7,7 @@ category: dspt-1-confidential-data
 
 **Project:** {{ platform_name }} Health Survey Platform
 **Date:** 29/12/2025
-**Lead:** [SIRO Name]
+**Lead:** {{ siro_name }}
 
 ### 1. Description of Processing
 

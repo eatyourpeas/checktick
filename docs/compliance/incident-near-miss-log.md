@@ -5,7 +5,7 @@ category: dspt-6-incidents
 
 # Incident & Near-Miss Log (2025-2026)
 
-**Owner:** [Name 1] (SIRO)
+**Owner:** {{ siro_name }} (SIRO)
 **Review Frequency:** Quarterly
 
 ---
@@ -34,6 +34,6 @@ category: dspt-6-incidents
 
 ## 3. Quarterly SIRO Sign-off
 
-* **Q3 2025:** No incidents. 1 Near-Miss reviewed. (Signed: [SIRO Name])
-* **Q4 2025:** No incidents. No near-misses. (Signed: [SIRO Name])
+* **Q3 2025:** No incidents. 1 Near-Miss reviewed. (Signed: {{ siro_name }})
+* **Q4 2025:** No incidents. No near-misses. (Signed: {{ siro_name }})
 * **Q1 2026:** (Pending Review)

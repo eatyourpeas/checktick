@@ -36,7 +36,7 @@ As {{ platform_name }} utilizes cloud-managed boundaries, the following controls
 ## 5. Inbound Connection Verification (Default Deny)
 
 **Last Verified:** 03/01/2026
-**Verified By:** [SIRO Name] (CTO)
+**Verified By:** {{ siro_name }} (CTO)
 
 The following inbound protocol checks have been performed on the production boundary:
 
@@ -57,8 +57,8 @@ The following rules represent the only permitted exceptions to our 'Deny-All' bo
 
 | Rule ID | Port | Protocol | Source | Destination | Business Justification | Approved By |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| FW-01 | 443 | TCP (HTTPS) | Any (Public) | Load Balancer | Primary application ingress for users. | [SIRO Name] (CTO) |
-| FW-02 | 80 | TCP (HTTP) | Any (Public) | Load Balancer | Redirect only; to force upgrade to TLS. | [SIRO Name] (CTO) |
+| FW-01 | 443 | TCP (HTTPS) | Any (Public) | Load Balancer | Primary application ingress for users. | {{ siro_name }} (CTO) |
+| FW-02 | 80 | TCP (HTTP) | Any (Public) | Load Balancer | Redirect only; to force upgrade to TLS. | {{ siro_name }} (CTO) |
 
 **Note on Internal Traffic:** All other service communication (e.g., App to Database) occurs over a private, non-routable service mesh and does not require boundary firewall exceptions.
 

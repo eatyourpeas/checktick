@@ -6,8 +6,8 @@ category: dspt-9-it-protection
 # Secure Development & Patching Policy (SDLC)
 
 **Version:** 1.0
-**Owner:** [SIRO Name] (CTO)
-**Approval:** [CTO Name] (SIRO)
+**Owner:** {{ siro_name }} (CTO)
+**Approval:** {{ cto_name }} (SIRO)
 **Effective Date:** 29/12/2025
 
 ## 1. Purpose

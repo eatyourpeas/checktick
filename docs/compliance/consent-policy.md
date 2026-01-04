@@ -6,7 +6,7 @@ category: dspt-1-confidential-data
 # Lawful Basis & Consent Statement
 
 **Date:** 29/11/2025
-**Reviewer:** [SIRO Name]
+**Reviewer:** {{ siro_name }}
 
 ## 1. Our Role
 

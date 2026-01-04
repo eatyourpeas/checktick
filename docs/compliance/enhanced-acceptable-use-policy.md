@@ -5,7 +5,7 @@ category: dspt-2-staff-responsibilities
 
 # Enhanced Acceptable Use Policy (System Administrators)
 
-**Personnel:** [SIRO Name], [CTO Name]
+**Personnel:** {{ siro_name }}, {{ cto_name }}
 
 As a System Administrator for {{ platform_name }}, I acknowledge that I have 'Privileged Access' to environments containing sensitive health data. I agree to the following enhanced standards:
 
@@ -18,5 +18,5 @@ As a System Administrator for {{ platform_name }}, I acknowledge that I have 'Pr
 
 **Signed:**
 
-* [SIRO Name] - 29/12/2025
-* [CTO Name] - 29/12/2025
+* {{ siro_name }} - 29/12/2025
+* {{ cto_name }} - 29/12/2025

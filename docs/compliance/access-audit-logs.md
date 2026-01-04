@@ -9,14 +9,14 @@ category: dspt-4-managing-access
 
 ## Audit Record: 29/12/2025
 
-**Performed by:** [CTO Name] (SIRO)
+**Performed by:** {{ cto_name }} (SIRO)
 
 | System | Account Found | Role | Status | Verified? |
 | :--- | :--- | :--- | :--- | :--- |
-| **Northflank** | [CTO Name] | Admin/SIRO | Active | ✅ |
-| **Northflank** | [SIRO Name] | Admin/CTO | Active | ✅ |
-| **GitHub** | [CTO Name] | Owner | Active | ✅ |
-| **GitHub** | [SIRO Name] | Owner | Active | ✅ |
+| **Northflank** | {{ cto_name }} | Admin/SIRO | Active | ✅ |
+| **Northflank** | {{ siro_name }} | Admin/CTO | Active | ✅ |
+| **GitHub** | {{ cto_name }} | Owner | Active | ✅ |
+| **GitHub** | {{ siro_name }} | Owner | Active | ✅ |
 | **PostgreSQL** | `ct_prod_admin` | DB Admin | Active | ✅ (Rotated) |
 
 ### Audit Findings:

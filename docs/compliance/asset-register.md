@@ -41,9 +41,9 @@ category: dspt-4-managing-access
 
 ## 4. SIRO Estate Compliance Statement
 
-> "I, [CTO Name] (SIRO), confirm that as of January 2026, **100% of {{ platform_name }}’s server estate** and **100% of our desktop estate** are running on versions of operating systems currently supported by their respective vendors.
+> "I, {{ cto_name }} (SIRO), confirm that as of January 2026, **100% of {{ platform_name }}’s server estate** and **100% of our desktop estate** are running on versions of operating systems currently supported by their respective vendors.
 >
 > We maintain a 'Zero-Legacy' architecture; all infrastructure is deployed via modern OCI containers, and founder hardware is kept current via automated macOS security updates. This register is reviewed every 6 months to ensure we remain compliant with NHS DSPT Standard 8."
 >
-> **Signed:** [CTO Name] (SIRO)
+> **Signed:** {{ cto_name }} (SIRO)
 > **Date:** 02/01/2026

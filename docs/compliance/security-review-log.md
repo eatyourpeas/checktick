@@ -7,8 +7,8 @@ category: dspt-5-process-reviews
 
 | Date | Reviewer | Item Audited | Action Taken | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| 2025-10-01 | [SIRO Name] | Production Ingress Rules | Verified FW-01 (443) only. | Clean |
-| 2026-01-03 | [SIRO Name] | Production Ingress Rules | Confirmed no temp rules from Dec deployment. | Clean |
+| 2025-10-01 | {{ siro_name }} | Production Ingress Rules | Verified FW-01 (443) only. | Clean |
+| 2026-01-03 | {{ siro_name }} | Production Ingress Rules | Confirmed no temp rules from Dec deployment. | Clean |
 | | | | | |
 
 ## Audit Procedure:

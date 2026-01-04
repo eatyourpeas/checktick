@@ -7,7 +7,7 @@ category: dspt-7-continuity
 
 **Exercise Date:** November 14, 2025
 **Review Date:** December 20, 2025
-**Participants:** [CTO Name] (SIRO), [SIRO Name] (CTO)
+**Participants:** {{ cto_name }} (SIRO), {{ siro_name }} (CTO)
 
 ## Issue and Action Tracking
 
@@ -22,4 +22,4 @@ category: dspt-7-continuity
 
 We confirm that the actions identified during the November 2025 Business Continuity Exercise have been implemented within the defined timescales to ensure the resilience of the {{ platform_name }} service.
 
-**Signed:** [CTO Name], SIRO)  **Date:** 28/12/2025
+**Signed:** {{ cto_name }}, SIRO)  **Date:** 28/12/2025

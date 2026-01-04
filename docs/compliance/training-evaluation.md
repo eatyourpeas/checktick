@@ -5,7 +5,7 @@ category: dspt-3-training
 
 # Training Evaluation Report: 2025
 
-**Reviewer:** [Name 1] (SIRO) | **Date:** [Insert Date]
+**Reviewer:** {{ siro_name }} (SIRO) | **Date:** [Insert Date]
 
 ## 1. Evaluation of Knowledge & Behaviour
 
@@ -31,5 +31,5 @@ We conducted a simulated 'Incident Response Walkthrough' on [Date].
 
 | Finding | Action Taken | Owner |
 | :--- | :--- | :--- |
-| Staff identified a need for more detail on 'Escrow Key' recovery. | Added a technical deep-dive to the internal Docs UI. | [Name 2] |
-| Current NHS L1 training is sufficient for general awareness. | Maintain annual schedule; no change needed. | [Name 1] |
+| Staff identified a need for more detail on 'Escrow Key' recovery. | Added a technical deep-dive to the internal Docs UI. | {{ cto_name }} |
+| Current NHS L1 training is sufficient for general awareness. | Maintain annual schedule; no change needed. | {{ siro_name }} |

@@ -7,7 +7,7 @@ category: dspt-5-process-reviews
 
 **Standard:** DSPT Section 9.4
 **Review Cycle:** Annual (January)
-**Responsible:** CTO ([SIRO Name])
+**Responsible:** CTO ({{ siro_name }})
 
 ## 1. Scope of Validation
 

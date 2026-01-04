@@ -7,7 +7,7 @@ category: dspt-7-continuity
 
 **Test Date:** [Insert Date]
 **Scenario:** Simulated "Vault Data Corruption" and "Complete Infrastructure Loss."
-**Participants:** [Name 1], [Name 2]
+**Participants:** {{ siro_name }}, {{ cto_name }}
 
 ## 1. Test Objectives
 

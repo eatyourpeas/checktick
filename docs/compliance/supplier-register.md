@@ -6,7 +6,7 @@ category: dspt-10-suppliers
 # Supplier & Sub-Processor Register
 
 **Version:** 1.2
-**Owner:** [Name 1] (SIRO)
+**Owner:** {{ siro_name }} (SIRO)
 **Last Reviewed:** 03/01/2026
 **Review Status:** COMPLIANT (Meets DSPT 2024-26 Requirements)
 
@@ -39,5 +39,5 @@ The following services are identified as "Critical" to the operation of the {{ p
 
 | Date | Author | Description of Change |
 | :--- | :--- | :--- |
-| 15/07/2024 | [SIRO Name] | Initial register creation for DSPT. |
-| 03/01/2026 | [CTO Name] | Annual review; confirmed UK data residency for Northflank. |
+| 15/07/2024 | {{ siro_name }} | Initial register creation for DSPT. |
+| 03/01/2026 | {{ cto_name }} | Annual review; confirmed UK data residency for Northflank. |

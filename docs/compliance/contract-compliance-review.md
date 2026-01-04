@@ -6,7 +6,7 @@ category: dspt-5-process-reviews
 # GDPR Article 28 Contract Review Log
 
 **Date of Review:** 03/01/2026
-**Reviewer:** [Name 1] (SIRO)
+**Reviewer:** {{ siro_name }} (SIRO)
 
 | Supplier | DPA Status | Article 28 Compliant? | Mechanism |
 | :--- | :--- | :--- | :--- |

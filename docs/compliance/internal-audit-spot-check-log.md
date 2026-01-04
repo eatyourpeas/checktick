@@ -6,7 +6,7 @@ category: dspt-5-process-reviews
 # Internal Audit & Spot Check Log
 
 **Date of Audit:** [Insert Date]
-**Auditors:** [Name 1] (SIRO) & [Name 2] (CTO)
+**Auditors:** {{ siro_name }} (SIRO) & {{ cto_name }} (CTO)
 
 ## 1. Audit Scope
 
@@ -25,9 +25,9 @@ To verify that {{ platform_name }} is operating in accordance with the board-app
 ## 3. Actions Arising
 
 * **Observation:** One Python library was flagged by Dependabot during the audit.
-* **Action:** [Name 2] to patch to version X.X.X by end of week.
-* **Owner:** [Name 2]
+* **Action:** {{ cto_name }} to patch to version X.X.X by end of week.
+* **Owner:** {{ cto_name }}
 * **Deadline:** [Insert Date]
 
 ---
-**Approved By:** [Name 1], SIRO
+**Approved By:** {{ siro_name }}, SIRO

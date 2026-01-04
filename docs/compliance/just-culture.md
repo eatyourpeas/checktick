@@ -5,7 +5,7 @@ category: dspt-2-staff-responsibilities
 
 # Statement on Just Culture & Open Reporting
 
-**Owner:** [CTO Name] (SIRO)
+**Owner:** {{ cto_name }} (SIRO)
 
 ## 1. The 'Just Culture' Philosophy
 

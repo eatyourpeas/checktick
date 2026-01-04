@@ -6,7 +6,7 @@ category: dspt-1-confidential-data
 # Data Rights Request Tracker (SAR & Objection Log)
 
 **Policy:** All requests must be responded to within 30 days.
-**Responsible Officer:** [Name 1] (DPO)
+**Responsible Officer:** {{ siro_name }} (DPO)
 
 | Date Received | Requester Type | Request Type | Category | Status | Date Completed | Actions Taken |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |

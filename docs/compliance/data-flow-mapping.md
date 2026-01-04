@@ -51,7 +51,7 @@ Automated backups are performed daily. All backup data is stored within the UK g
 
 * **Initial Review:** 29th December 2025
 * **Last Approval Date:** 29th December 2025
-* **Approved By:** [SIRO Name], SIRO
+* **Approved By:** {{ siro_name }}, SIRO
 * **Review Cycle:** Annual (or upon major architectural change)
 
 ## 5. API Data Flows & Security

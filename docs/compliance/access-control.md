@@ -6,9 +6,9 @@ category: dspt-4-managing-access
 # Access Control Policy (Internal & Application)
 
 **Version:** 1.0
-**Owner:** [Name 2] (CTO)
+**Owner:** {{ cto_name }} (CTO)
 **Last Reviewed:** [Insert Date post-July 2024]
-**Approval:** [Name 1] (SIRO)
+**Approval:** {{ siro_name }} (SIRO)
 
 ## 1. Purpose
 
@@ -98,8 +98,8 @@ Privileged access to {{ platform_name }} infrastructure is only permitted from t
 
 | Device ID | Assigned To | OS | Encryption Status | Verified Date |
 | :--- | :--- | :--- | :--- | :--- |
-| **CT-DEV-01** | [SIRO Name] | macOS | FileVault | 29/12/2025 |
-| **CT-DEV-02** | [CTO Name] | Windows | BitLocker | 29/12/2025 |
+| **CT-DEV-01** | {{ siro_name }} | macOS | FileVault | 29/12/2025 |
+| **CT-DEV-02** | {{ cto_name }} | Windows | BitLocker | 29/12/2025 |
 
 ### 9.1 Device Security Requirements
 

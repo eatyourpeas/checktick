@@ -26,5 +26,5 @@ The Board has formally approved the following process should unsupported softwar
 
 "I have been briefed on the software asset register and the current vulnerability landscape. I am satisfied that there are no unsupported systems in use and that our automated monitoring (GitHub Actions/CodeQL) provides sufficient oversight of our technical debt."
 
-**Signed:** [CTO Name], SIRO
+**Signed:** {{ cto_name }}, SIRO
 **Date:** 02/01/2026

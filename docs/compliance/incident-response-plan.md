@@ -7,7 +7,7 @@ category: dspt-6-incidents
 
 **Version:** 1.0
 **Last Reviewed:** [Insert Date post-July 1, 2025]
-**SIRO:** [Name 1] | **Cyber Lead:** [Name 2]
+**SIRO:** {{ siro_name }} | **Cyber Lead:** {{ cto_name }}
 
 ## 1. Definition of an Incident
 
@@ -19,15 +19,15 @@ An incident is any event that threatens the confidentiality, integrity, or avail
 
 ## 2. Immediate Response Steps (The "4-Hour" Window)
 
-1. **Identify & Contain:** [Name 2] isolates the affected system (e.g., revoking API keys, shutting down a Northflank service, or remote-wiping a laptop).
+1. **Identify & Contain:** {{ cto_name }} isolates the affected system (e.g., revoking API keys, shutting down a Northflank service, or remote-wiping a laptop).
 2. **Assess:** Determine what data was involved. Is it "Special Category" (health) data?
-3. **Notify SIRO:** [Name 2] briefs [Name 1] on the technical scope.
+3. **Notify SIRO:** {{ cto_name }} briefs {{ siro_name }} on the technical scope.
 
 ## 3. Notification Requirements
 
 ### 3.1 To the ICO
 
-If the breach is likely to result in a risk to the rights and freedoms of individuals, [Name 1] must report it to the **ICO** within **72 hours** of becoming aware.
+If the breach is likely to result in a risk to the rights and freedoms of individuals, {{ siro_name }} must report it to the **ICO** within **72 hours** of becoming aware.
 
 ### 3.2 To the Data Controller (Our Customers)
 

@@ -6,8 +6,8 @@ category: dspt-6-incidents
 # Incident Reporting & Escalation Procedure
 
 **Version:** 2.0 (DSPT Compliant)
-**Owner:** SIRO ([Name 1])
-**Technical Lead:** CTO ([Name 2])
+**Owner:** SIRO ({{ siro_name }})
+**Technical Lead:** CTO ({{ cto_name }})
 
 ## 1. Internal Reporting & Triage
 

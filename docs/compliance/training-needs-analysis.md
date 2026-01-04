@@ -5,7 +5,7 @@ category: dspt-3-training
 
 # Training Needs Analysis (TNA) & Communication Plan
 
-**Approved By:** [CTO Name] (SIRO) | **Last Reviewed:** 29/12/2025
+**Approved By:** {{ cto_name }} (SIRO) | **Last Reviewed:** 29/12/2025
 
 ## 1. Audience Analysis & Training Requirements
 

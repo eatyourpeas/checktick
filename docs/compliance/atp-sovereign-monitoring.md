@@ -24,4 +24,4 @@ category: dspt-9-it-protection
 
 ## 3. SIRO Review
 
-The SIRO ([CTO Name]) has reviewed this stack and confirms it meets the requirement for active threat management while maintaining {{ platform_name }}'s commitment to UK data sovereignty.
+The SIRO ({{ cto_name }}) has reviewed this stack and confirms it meets the requirement for active threat management while maintaining {{ platform_name }}'s commitment to UK data sovereignty.

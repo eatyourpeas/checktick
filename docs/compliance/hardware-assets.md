@@ -22,9 +22,9 @@ category: dspt-4-managing-access
 
 | Asset ID | Device Type | Owner | Serial Number | Encryption | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **CT-LAP-01** | MacBook Pro 14" | [SIRO Name] | [Serial Redacted] | FileVault | Active |
-| **CT-LAP-02** | Lenovo ThinkPad | [CTO Name] | [Serial No] | FileVault | Active |
-| **CT-DESK-01** | Mac Studio | [SIRO Name] | [Serial No] | FileVault | Active |
+| **CT-LAP-01** | MacBook Pro 14" | {{ siro_name }} | [Serial Redacted] | FileVault | Active |
+| **CT-LAP-02** | Lenovo ThinkPad | {{ cto_name }} | [Serial No] | FileVault | Active |
+| **CT-DESK-01** | Mac Studio | {{ siro_name }} | [Serial No] | FileVault | Active |
 
 ## 3. Removable Media (Backup Drives)
 

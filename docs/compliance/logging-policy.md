@@ -5,7 +5,7 @@ category: dspt-9-it-protection
 
 # Logging & Audit Policy
 
-**Policy Owner:** [Name 2] (CTO) | **Review Date:** [Insert Date]
+**Policy Owner:** {{ cto_name }} (CTO) | **Review Date:** [Insert Date]
 
 ## 1. Scope
 

@@ -1297,6 +1297,40 @@ def compliance_page(request, slug: str):
             pass
     content = content.replace("{{ platform_name }}", platform_name)
 
+    # Interpolate governance roles from settings
+    content = content.replace(
+        "{{ dpo_name }}", getattr(settings, "DPO_NAME", "[DPO Name]")
+    )
+    content = content.replace(
+        "{{ dpo_email }}", getattr(settings, "DPO_EMAIL", "dpo@example.com")
+    )
+    content = content.replace(
+        "{{ siro_name }}", getattr(settings, "SIRO_NAME", "[SIRO Name]")
+    )
+    content = content.replace(
+        "{{ siro_email }}", getattr(settings, "SIRO_EMAIL", "siro@example.com")
+    )
+    content = content.replace(
+        "{{ caldicott_name }}",
+        getattr(settings, "CALDICOTT_NAME", "[Caldicott Guardian]"),
+    )
+    content = content.replace(
+        "{{ caldicott_email }}",
+        getattr(settings, "CALDICOTT_EMAIL", "caldicott@example.com"),
+    )
+    content = content.replace(
+        "{{ ig_lead_name }}", getattr(settings, "IG_LEAD_NAME", "[IG Lead]")
+    )
+    content = content.replace(
+        "{{ ig_lead_email }}", getattr(settings, "IG_LEAD_EMAIL", "ig@example.com")
+    )
+    content = content.replace(
+        "{{ cto_name }}", getattr(settings, "CTO_NAME", "[CTO Name]")
+    )
+    content = content.replace(
+        "{{ cto_email }}", getattr(settings, "CTO_EMAIL", "cto@example.com")
+    )
+
     html = mdlib.markdown(
         content,
         extensions=["fenced_code", "tables", "toc"],

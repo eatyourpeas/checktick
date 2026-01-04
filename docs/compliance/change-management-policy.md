@@ -17,7 +17,7 @@ This policy applies to all changes to the {{ platform_name }} production environ
     * Unit/Integration tests.
     * Static Analysis (SAST) via CodeQL.
     * Dependency scanning via `pip-audit`.
-4. **Approval:** The CTO ([SIRO Name]) or SIRO ([CTO Name]) must review the code and manually approve the PR.
+4. **Approval:** The CTO ({{ siro_name }}) or SIRO ({{ cto_name }}) must review the code and manually approve the PR.
 5. **Deployment:** Once merged, the Northflank pipeline automatically builds and deploys the change to the production environment.
 
 ## 3. Emergency Changes

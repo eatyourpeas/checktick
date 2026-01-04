@@ -9,8 +9,8 @@ category: dspt-3-training
 
 | Staff Name | Role | Course Name | Completion Date | Certificate Ref |
 | :--- | :--- | :--- | :--- | :--- |
-| [Name 1] | SIRO / DPO | NHS Data Security & Protection (Level 1) | [Date] | [Ref #] |
-| [Name 2] | CTO | NHS Data Security & Protection (Level 1) | [Date] | [Ref #] |
+| {{ siro_name }} | SIRO / DPO | NHS Data Security & Protection (Level 1) | [Date] | [Ref #] |
+| {{ cto_name }} | CTO | NHS Data Security & Protection (Level 1) | [Date] | [Ref #] |
 
 ## Internal Training Topics Covered (2025):
 
@@ -22,7 +22,7 @@ In addition to the NHS module, we held an internal briefing on:
 
 # Role: Senior Information Risk Owner (SIRO)
 
-**Appointed Individual:** [Name 1]
+**Appointed Individual:** {{ siro_name }}
 **Accountable To:** The Board (Founding Partners)
 
 ## Primary Responsibilities:
@@ -46,8 +46,8 @@ In addition to the NHS module, we held an internal briefing on:
 
 | Name | Role | NHS Data Security L1 | Secure Development | Last Review |
 | :--- | :--- | :--- | :--- | :--- |
-| [Name 1] | SIRO / DPO | ✅ [Date] | ✅ [Date] | [Current Month] |
-| [Name 2] | CTO / Cyber Lead| ✅ [Date] | ✅ [Date] | [Current Month] |
+| {{ siro_name }} | SIRO / DPO | ✅ [Date] | ✅ [Date] | [Current Month] |
+| {{ cto_name }} | CTO / Cyber Lead| ✅ [Date] | ✅ [Date] | [Current Month] |
 
 ## 2. Activity Schedule
 

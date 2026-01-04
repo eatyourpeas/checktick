@@ -10,7 +10,7 @@ priority: 1
 **Version:** 2025.1
 **Board Approval Date:** 29/12/2025
 **Review Cycle:** Annual
-**Approval Officers:** [Name 1] (SIRO/DPO), [Name 2] (CTO)
+**Approval Officers:** {{ siro_name }} (SIRO/DPO), {{ cto_name }} (CTO)
 
 ## 1. Governance & Data Protection
 

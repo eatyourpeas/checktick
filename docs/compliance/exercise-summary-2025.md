@@ -6,7 +6,7 @@ category: dspt-7-continuity
 # Cyber Security Tabletop Exercise: Post-Action Report
 
 **Date:** [Insert Date] 2025
-**Participants:** [Name 1] (SIRO), [Name 2] (CTO)
+**Participants:** {{ siro_name }} (SIRO), {{ cto_name }} (CTO)
 **Scenario Source:** Based on NCSC Threat Intelligence (Supply Chain Vulnerabilities)
 
 ## Scenario Overview
@@ -27,4 +27,4 @@ A simulated 'Critical' vulnerability was identified in our production environmen
 | Initial alert was too technical. | Created a 'non-technical' summary template for Clinical Leads. | Complete |
 | 72-hour ICO window understood. | Re-confirmed DSPT reporting tool login credentials. | Complete |
 
-**Signed:** [CTO Name] (SIRO)  **Date:** 28/12/2025
+**Signed:** {{ cto_name }} (SIRO)  **Date:** 28/12/2025

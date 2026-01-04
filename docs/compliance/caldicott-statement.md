@@ -5,7 +5,7 @@ category: dspt-1-confidential-data
 
 # Caldicott Guardian Statement: {{ platform_name }}
 
-**Caldicott Guardian:** [SIRO Name]
+**Caldicott Guardian:** {{ caldicott_name }}
 **Position:** Director
 **Appointed:** 8/7/2022
 **Last Review Date:** 29/11/2025
@@ -43,5 +43,5 @@ Within our 2-person organisational structure, the Caldicott Guardian acts as the
 All decisions made by the Caldicott Guardian regarding the access or disclosure of personal data are documented in our internal compliance logs, noting the justification and the specific Caldicott Principle applied.
 
 ---
-**Approved By:** [SIRO Name]
+**Approved By:** {{ siro_name }}
 **Date:** 29/11/2025

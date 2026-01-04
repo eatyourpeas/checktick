@@ -106,6 +106,20 @@ BRAND_THEME_CSS_LIGHT = env("BRAND_THEME_CSS_LIGHT") or None
 BRAND_THEME_CSS_DARK = env("BRAND_THEME_CSS_DARK") or None
 SITE_URL = "http://localhost:8000" if DEBUG else env("SITE_URL")
 
+# Governance roles for DSPT compliance documentation
+# These are interpolated into compliance docs
+DPO_NAME = env("DPO", default="[DPO Name]")
+DPO_EMAIL = env("DPO_EMAIL", default="dpo@example.com")
+SIRO_NAME = env("SIRO", default="[SIRO Name]")
+SIRO_EMAIL = env("SIRO_EMAIL", default="siro@example.com")
+CALDICOTT_NAME = env("CALDICOTT", default="[Caldicott Guardian]")
+CALDICOTT_EMAIL = env("CALDICOTT_EMAIL", default="caldicott@example.com")
+IG_LEAD_NAME = env("IG_LEAD", default="[IG Lead]")
+IG_LEAD_EMAIL = env("IG_LEAD_EMAIL", default="ig@example.com")
+# CTO defaults to DPO if not set separately
+CTO_NAME = env("CTO", default=None) or DPO_NAME
+CTO_EMAIL = env("CTO_EMAIL", default=None) or DPO_EMAIL
+
 # Payment Processing Configuration
 # Use sandbox in DEBUG mode, production otherwise
 PAYMENT_API_KEY = (

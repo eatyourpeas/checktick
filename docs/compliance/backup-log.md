@@ -22,8 +22,8 @@ The DSPT requires at least one successful restoration test per year.
 
 | Test Date | Performed By | Type of Test | Result | Recovery Time | Notes |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| [Insert Date] | [Name 2] | Full DB Restore | **Success** | 12 Minutes | Restored to a temporary "staging" instance to verify data integrity. |
-| [Planned June 2026] | [Name 2] | Point-in-time | Pending | - | Annual scheduled verification. |
+| [Insert Date] | {{ cto_name }} | Full DB Restore | **Success** | 12 Minutes | Restored to a temporary "staging" instance to verify data integrity. |
+| [Planned June 2026] | {{ cto_name }} | Point-in-time | Pending | - | Annual scheduled verification. |
 
 ## 3. Disaster Recovery Procedure (Step-by-Step)
 
@@ -37,5 +37,5 @@ In the event of a catastrophic failure:
 6. **Go Live:** Re-enable Ingress and notify users if downtime exceeded 15 mins.
 
 ---
-**Approved By:** [SIRO Name]
+**Approved By:** {{ siro_name }}
 **Date of Last Test:** 29/11/2025

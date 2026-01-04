@@ -5,7 +5,7 @@ category: dspt-1-confidential-data
 
 # Data Quality & Integrity Statement
 
-**Owner:** [Name 2] (CTO/Cyber Lead)
+**Owner:** {{ cto_name }} (CTO/Cyber Lead)
 **Scope:** Standard 1.6 (Data Quality) & 1.7 (Data Validation)
 
 ## 1. Quality at Entry (Validation)

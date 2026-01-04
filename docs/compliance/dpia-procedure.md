@@ -1,12 +1,12 @@
 ---
-title: "Procedure: Data Protection Impact Assessment"
+title: "Data Protection Impact Assessment (DPIA) - Procedure"
 category: dspt-1-confidential-data
 ---
 
-# Procedure: Data Protection Impact Assessment (DPIA)
+# Data Protection Impact Assessment (DPIA) - Procedure
 
 **Version:** 1.0
-**Owner:** [Name 1] (DPO)
+**Owner:** {{ siro_name }} (DPO)
 
 ## 1. When to Conduct a DPIA
 
@@ -21,7 +21,7 @@ A DPIA is mandatory at {{ platform_name }} for any project or feature that:
 
 1. **Screening:** Use the ICO Screening Checklist to determine if a full DPIA is required.
 2. **Description:** Document the nature, scope, context, and purpose of the processing.
-3. **Consultation:** Consult with [Name 2] (CTO) on technical risks and, where appropriate, data subjects or clinical partners.
+3. **Consultation:** Consult with {{ cto_name }} (CTO) on technical risks and, where appropriate, data subjects or clinical partners.
 4. **Necessity & Proportionality:** Verify that the processing is necessary for the goal and that no less intrusive method exists.
 5. **Risk Identification:** Identify risks to individuals, including the likelihood and severity of impact.
 6. **Mitigation:** Identify measures to reduce risk (e.g., encryption, data minimization).

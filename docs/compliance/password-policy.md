@@ -5,7 +5,7 @@ category: dspt-4-managing-access
 
 # Staff Password Policy
 
-**Last Reviewed:** 29/12/2025 | **Owner:** SIRO [CTO Name]
+**Last Reviewed:** 29/12/2025 | **Owner:** SIRO {{ cto_name }}
 
 ## 1. Choosing Passwords
 

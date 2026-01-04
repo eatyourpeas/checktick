@@ -5,8 +5,8 @@ category: dspt-7-continuity
 
 # Business Impact Analysis (BIA)
 
-**Policy Lead:** [CTO Name] (SIRO)
-**Technical Lead:** [SIRO Name] (CTO)
+**Policy Lead:** {{ cto_name }} (SIRO)
+**Technical Lead:** {{ siro_name }} (CTO)
 **Scope:** {{ platform_name }} Managed SaaS Platform
 
 ## 1. Service Prioritization

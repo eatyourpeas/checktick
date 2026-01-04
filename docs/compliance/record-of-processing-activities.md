@@ -7,7 +7,7 @@ category: dspt-1-confidential-data
 
 **Date of Last Review:** [Insert Date]
 **Data Controller:** {{ platform_name }} Ltd
-**Data Protection Officer:** [Name of DPO or Service]
+**Data Protection Officer:** {{ dpo_name }}
 
 | Data Subject Category | Data Categories Held | Purpose of Processing | Legal Basis (UK GDPR) | Retention Period |
 | :--- | :--- | :--- | :--- | :--- |

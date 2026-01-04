@@ -6,7 +6,7 @@ category: dspt-1-confidential-data
 # Procedure: Handling Individual Rights Requests
 
 **Version:** 1.0
-**Owner:** DPO ([CTO Name])
+**Owner:** DPO ({{ cto_name }})
 
 ## 1. Scope
 

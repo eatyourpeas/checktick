@@ -12,8 +12,8 @@ category: dspt-6-incidents
 
 | Name | Role | Mobile Number | Secondary Email |
 | :--- | :--- | :--- | :--- |
-| [Name 1] | SIRO (Board) | [Phone Number] | [Private Email] |
-| [Name 2] | CTO (Technical) | [Phone Number] | [Private Email] |
+| {{ siro_name }} | SIRO (Board) | [Phone Number] | [Private Email] |
+| {{ cto_name }} | CTO (Technical) | [Phone Number] | [Private Email] |
 
 ## 2. External Technical Support
 

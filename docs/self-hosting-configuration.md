@@ -187,6 +187,45 @@ CHECKTICK_WARN_BEFORE_DELETION_DAYS=30,7,1
 
 See the [Data Governance Overview](data-governance-overview.md) for details on how these settings affect survey lifecycle and data retention.
 
+#### Governance Roles (DSPT Compliance)
+
+**Optional** - Configure named individuals for DSPT compliance documentation. These values are interpolated into the `/compliance/` documentation pages.
+
+```bash
+# Data Protection Officer
+DPO="Dr Jane Smith"
+DPO_EMAIL="dpo@yourdomain.com"
+
+# Senior Information Risk Owner
+SIRO="Dr John Doe"
+SIRO_EMAIL="siro@yourdomain.com"
+
+# Caldicott Guardian
+CALDICOTT="Dr John Doe"
+CALDICOTT_EMAIL="caldicott@yourdomain.com"
+
+# Information Governance Lead
+IG_LEAD="Dr John Doe"
+IG_LEAD_EMAIL="ig@yourdomain.com"
+
+# Chief Technology Officer (optional - defaults to DPO if not set)
+CTO="Dr Jane Smith"
+CTO_EMAIL="cto@yourdomain.com"
+```
+
+**Defaults:**
+- If not provided, placeholder text like `[DPO Name]` will appear in documentation
+- `CTO` and `CTO_EMAIL` default to the `DPO` values if not separately configured
+- This allows small teams where one person holds multiple roles to configure fewer variables
+
+**Usage:** These variables appear in the DSPT compliance documentation at `/compliance/`. They are used for:
+- Policy ownership statements
+- Approval signatures
+- Contact information in procedures
+- Audit trail documentation
+
+**Note:** It is standard NHS practice to publish the names of governance role holders (DPO, Caldicott Guardian, SIRO) in public documentation. Ensure named individuals have consented to being listed.
+
 #### Hosting Provider API (Infrastructure Logs)
 
 **Optional** - Enable infrastructure log viewing in Platform Admin Logs dashboard for compliance reviews:
