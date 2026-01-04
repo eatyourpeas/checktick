@@ -1279,10 +1279,19 @@ def compliance_page(request, slug: str):
     content = file_path.read_text(encoding="utf-8")
     lines = content.split("\n")
 
-    # Strip YAML frontmatter
+    # Extract title from YAML frontmatter and strip it
+    doc_title = slug.replace("-", " ").title()  # fallback
     if lines and lines[0].strip() == "---":
         for i, line in enumerate(lines[1:], 1):
             if line.strip() == "---":
+                # Parse frontmatter for title
+                frontmatter = "\n".join(lines[1:i])
+                for fm_line in frontmatter.split("\n"):
+                    if fm_line.startswith("title:"):
+                        doc_title = (
+                            fm_line.split(":", 1)[1].strip().strip('"').strip("'")
+                        )
+                        break
                 content = "\n".join(lines[i + 1 :])
                 break
 
@@ -1351,6 +1360,7 @@ def compliance_page(request, slug: str):
         {
             "html": html,
             "active_slug": slug,
+            "doc_title": doc_title,
             "pages": _nav_pages(include_dspt=True),
         },
     )

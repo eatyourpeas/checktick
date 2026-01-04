@@ -1,6 +1,6 @@
 ---
 title: "Information Asset Register"
-category: dspt-4-managing-access
+category: dspt-1-confidential-data
 ---
 
 # Information Asset Register (IAR)

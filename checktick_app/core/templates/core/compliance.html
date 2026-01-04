@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}Compliance · {{ block.super }}{% endblock %}
+{% block title %}{{ doc_title }} · Compliance · {{ block.super }}{% endblock %}
 {% block content %}
 <div class="grid grid-cols-12 gap-6">
   <aside class="col-span-12 lg:col-span-3 print:hidden">
@@ -91,7 +91,12 @@
       hour: '2-digit', minute: '2-digit'
     });
     document.getElementById('print-timestamp').textContent = 'Generated: ' + timestamp;
+    // Set document title for PDF filename
+    var originalTitle = document.title;
+    document.title = '{{ doc_title|escapejs }}';
     window.print();
+    // Restore original title after print dialog
+    setTimeout(function() { document.title = originalTitle; }, 100);
   });
 </script>
 {% endblock %}
