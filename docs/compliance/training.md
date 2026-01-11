@@ -10,6 +10,9 @@ category: dspt-3-training
 | Staff Name | Role | Course Name | Completion Date | Certificate Ref |
 | :--- | :--- | :--- | :--- | :--- |
 | {{ siro_name }} | SIRO / DPO | NHS Data Security & Protection (Level 1) | [Date] | [Ref #] |
+| {{ siro_name }} | SIRO / DPO | GDPR Training | 9/1/2025 | [Ref #] |
+| {{ siro_name }} | SIRO / DPO | Information Governance | 21/12/2025 | [Ref #] |
+| {{ siro_name }} | SIRO / DPO | Information Security, Data Protection, Freedom of Information | 24/7/2024 | [Ref #] |
 | {{ cto_name }} | CTO | NHS Data Security & Protection (Level 1) | [Date] | [Ref #] |
 
 ## Internal Training Topics Covered (2025):
