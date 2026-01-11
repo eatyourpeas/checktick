@@ -36,7 +36,7 @@ jobs:
                   # Install both main and dev groups at once
                   poetry install --no-root --with dev
                   # Run a single audit against the entire environment
-                  poetry run pip-audit --desc on -i .pip-audit-ignore
+                  poetry run pip-audit --desc on --ignore-file .pip-audit-ignore
 
     codeql:
         name: CodeQL Analysis
