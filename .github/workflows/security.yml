@@ -31,18 +31,12 @@ jobs:
                   pip install poetry==2.2.1
                   poetry self add poetry-plugin-export
 
-            - name: Install dependencies and run pip-audit
+            - name: Install ALL dependencies and run pip-audit
               run: |
-                  poetry install --no-root
-                  # Ignore CVEs blocked by ggshield dependency pins (see docs/security-overview.md): listed in .pip-audit-ignore
-                  poetry run pip-audit --desc on -i .pip-audit-ignore
-              continue-on-error: false
-
-            - name: Audit dev dependencies
-              run: |
+                  # Install both main and dev groups at once
                   poetry install --no-root --with dev
+                  # Run a single audit against the entire environment
                   poetry run pip-audit --desc on -i .pip-audit-ignore
-              continue-on-error: true
 
     codeql:
         name: CodeQL Analysis
