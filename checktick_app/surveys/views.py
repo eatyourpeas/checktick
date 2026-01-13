@@ -2225,14 +2225,23 @@ def update_survey_title(request: HttpRequest, slug: str) -> JsonResponse:
 
         data = json.loads(request.body)
         new_title = data.get("title", "").strip()
+        new_description = data.get("description", None)
+        if new_description is not None:
+            new_description = new_description.strip()
 
         if not new_title:
             return JsonResponse({"success": False, "error": "Title cannot be empty"})
 
         survey.name = new_title
-        survey.save(update_fields=["name"])
+        if new_description is not None:
+            survey.description = new_description
+            survey.save(update_fields=["name", "description"])
+        else:
+            survey.save(update_fields=["name"])
 
-        return JsonResponse({"success": True})
+        return JsonResponse(
+            {"success": True, "title": survey.name, "description": survey.description}
+        )
     except PermissionDenied as e:
         return JsonResponse({"success": False, "error": str(e)}, status=403)
     except Exception as e:
