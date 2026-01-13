@@ -477,10 +477,18 @@ document.addEventListener('DOMContentLoaded', function() {
   const editTitleBtn = document.getElementById('edit-title-btn');
   const titleModal = document.getElementById('edit_title_modal');
   const cancelEditTitleBtn = document.getElementById('cancel_edit_title_btn');
+  const surveyTitleInput = document.getElementById('survey_title_input');
+  const surveyDescriptionInput = document.getElementById('survey_description_input');
+  const saveTitleBtn = document.getElementById('save_title_btn');
+
+
+  // Store the latest values in JS variables
+  let currentSurveyTitle = '{{ survey.name|escapejs }}';
+  let currentSurveyDescription = `{{ survey.description|default_if_none:""|escapejs }}`;
 
   editTitleBtn.addEventListener('click', function() {
-    const currentTitle = '{{ survey.name|escapejs }}';
-    document.getElementById('survey_title_input').value = currentTitle;
+    surveyTitleInput.value = currentSurveyTitle;
+    surveyDescriptionInput.value = currentSurveyDescription;
     titleModal.showModal();
   });
 
@@ -488,36 +496,43 @@ document.addEventListener('DOMContentLoaded', function() {
     titleModal.close();
   });
 
-  document.getElementById('save_title_btn').addEventListener('click', function() {
-    const newTitle = document.getElementById('survey_title_input').value.trim();
+  saveTitleBtn.addEventListener('click', function() {
+    const newTitle = surveyTitleInput.value.trim();
+    const newDescription = surveyDescriptionInput.value.trim();
 
     if (!newTitle) {
       alert('{% trans "Please enter a title" %}');
       return;
     }
 
-    // Save the title
+    // Save the title and description
     fetch('/surveys/{{ survey.slug }}/update-title/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-CSRFToken': '{{ csrf_token }}'
       },
-      body: JSON.stringify({ title: newTitle })
+      body: JSON.stringify({ title: newTitle, description: newDescription })
     })
     .then(response => response.json())
     .then(data => {
       if (data.success) {
         // Update the title in the page
-        document.getElementById('survey-title-display').textContent = newTitle;
-        document.title = '{% trans "Dashboard" %} - ' + newTitle;
+        document.getElementById('survey-title-display').textContent = data.title;
+        document.title = '{% trans "Dashboard" %} - ' + data.title;
+        // Optionally update description display if present
+        const descEl = document.getElementById('survey-description-display');
+        if (descEl) descEl.textContent = data.description;
+        // Update the JS variables so the modal shows the latest value next time
+        currentSurveyTitle = data.title;
+        currentSurveyDescription = data.description || '';
         titleModal.close();
       } else {
-        alert(data.error || '{% trans "Failed to update title" %}');
+        alert(data.error || '{% trans "Failed to update title or description" %}');
       }
     })
     .catch(error => {
-      alert('{% trans "Error updating title" %}');
+      alert('{% trans "Error updating title or description" %}');
       console.error('Error:', error);
     });
   });
@@ -739,13 +754,20 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Edit Title Modal -->
 <dialog id="edit_title_modal" class="modal">
   <div class="modal-box">
-    <h3 class="text-lg font-bold">{% trans "Edit Survey Title" %}</h3>
+    <h3 class="text-lg font-bold">{% trans "Edit Survey Title & Description" %}</h3>
 
     <div class="form-control w-full mt-4">
-      <label class="label">
+      <label class="label" for="survey_title_input">
         <span class="label-text">{% trans "Survey Title" %}</span>
       </label>
       <input type="text" id="survey_title_input" class="input input-bordered w-full" maxlength="200" />
+    </div>
+
+    <div class="form-control w-full mt-4">
+      <label class="label" for="survey_description_input">
+        <span class="label-text">{% trans "Description" %}</span>
+      </label>
+      <textarea id="survey_description_input" class="textarea textarea-bordered w-full" maxlength="1000" rows="3"></textarea>
     </div>
 
     <div class="modal-action">
