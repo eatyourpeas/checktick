@@ -17,7 +17,7 @@ env:
   SORTABLEJS_VERSION: "1.15.6"
   SWAGGER_UI_VERSION: "5.17.14"
   REDOC_VERSION: "2.1.5"
-  AXE_CORE_VERSION: "4.11.0"
+  AXE_CORE_VERSION: "4.11.1"
 
 jobs:
   check-libraries:
@@ -229,51 +229,75 @@ jobs:
             **HTMX** (base.html): `sha384-${{ steps.check-htmx.outputs.new_hash }}`
             **SortableJS** (detail.html, builder.html, groups.html, group_builder.html): `sha384-${{ steps.check-sortablejs.outputs.new_hash }}`
 
-      - name: Create Issue for version upgrades
+      - name: Create per-dependency version issues
         if: steps.check-versions.outputs.htmx_update_available == 'true' || steps.check-versions.outputs.sortablejs_update_available == 'true' || steps.check-versions.outputs.axecore_update_available == 'true'
-        uses: peter-evans/create-issue-from-file@v5
+        uses: actions/github-script@v6
         with:
-          title: "CDN Library Version Updates Available"
-          content-filepath: /dev/stdin
-          labels: dependencies, security
+          script: |
+            const deps = [];
+            if (process.env.HTMX_UPDATE_AVAILABLE === 'true') {
+              deps.push({
+                name: 'HTMX',
+                current: process.env.HTMX_CURRENT,
+                latest: process.env.HTMX_LATEST,
+                changelog: 'https://github.com/bigskysoftware/htmx/releases'
+              });
+            }
+            if (process.env.SORTABLEJS_UPDATE_AVAILABLE === 'true') {
+              deps.push({
+                name: 'SortableJS',
+                current: process.env.SORTABLEJS_CURRENT,
+                latest: process.env.SORTABLEJS_LATEST,
+                changelog: 'https://github.com/SortableJS/Sortable/releases'
+              });
+            }
+            if (process.env.AXE_UPDATE_AVAILABLE === 'true') {
+              deps.push({
+                name: 'axe-core',
+                current: process.env.AXE_CURRENT,
+                latest: process.env.AXE_LATEST,
+                changelog: 'https://github.com/dequelabs/axe-core/releases'
+              });
+            }
+
+            const openIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              per_page: 100
+            });
+
+            for (const d of deps) {
+              const title = `${d.name} ${d.current} -> ${d.latest}: Dependency update`;
+              const exists = openIssues.data.some(i => i.title === title);
+              if (exists) {
+                console.log(`Issue already exists for ${title}`);
+                continue;
+              }
+
+              const body = `## ${d.name} Version Update\n\n` +
+                `- **Current version:** ${d.current}\n` +
+                `- **Latest version:** ${d.latest}\n\n` +
+                `**Changelog:** ${d.changelog}\n\n` +
+                `Please review the upgrade and update the pinned version in .github/workflows/update-cdn-libraries.yml and run the workflow to refresh the files.`;
+
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['dependencies', 'security']
+              });
+              console.log(`Created issue: ${title}`);
+            }
         env:
+          HTMX_UPDATE_AVAILABLE: ${{ steps.check-versions.outputs.htmx_update_available }}
+          HTMX_CURRENT: ${{ env.HTMX_VERSION }}
+          HTMX_LATEST: ${{ steps.check-versions.outputs.htmx_latest }}
+          SORTABLEJS_UPDATE_AVAILABLE: ${{ steps.check-versions.outputs.sortablejs_update_available }}
+          SORTABLEJS_CURRENT: ${{ env.SORTABLEJS_VERSION }}
+          SORTABLEJS_LATEST: ${{ steps.check-versions.outputs.sortablejs_latest }}
+          AXE_UPDATE_AVAILABLE: ${{ steps.check-versions.outputs.axecore_update_available }}
+          AXE_CURRENT: ${{ env.AXE_CORE_VERSION }}
+          AXE_LATEST: ${{ steps.check-versions.outputs.axecore_latest }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
-
-      - name: Create version update issue content
-        if: steps.check-versions.outputs.htmx_update_available == 'true' || steps.check-versions.outputs.sortablejs_update_available == 'true' || steps.check-versions.outputs.axecore_update_available == 'true'
-        run: |
-          cat << 'EOF' > /tmp/issue-body.md
-          ## CDN Library Version Updates Available
-
-          New versions of self-hosted CDN libraries are available. Consider upgrading:
-
-          ### Available Updates
-
-          | Library | Current | Latest | Changelog |
-          |---------|---------|--------|-----------|
-          ${{ steps.check-versions.outputs.htmx_update_available == 'true' && format('| HTMX | {0} | {1} | [Changelog](https://github.com/bigskysoftware/htmx/releases) |', env.HTMX_VERSION, steps.check-versions.outputs.htmx_latest) || '' }}
-          ${{ steps.check-versions.outputs.sortablejs_update_available == 'true' && format('| SortableJS | {0} | {1} | [Changelog](https://github.com/SortableJS/Sortable/releases) |', env.SORTABLEJS_VERSION, steps.check-versions.outputs.sortablejs_latest) || '' }}
-          ${{ steps.check-versions.outputs.axecore_update_available == 'true' && format('| axe-core | {0} | {1} | [Changelog](https://github.com/dequelabs/axe-core/releases) |', env.AXE_CORE_VERSION, steps.check-versions.outputs.axecore_latest) || '' }}
-
-          ### To Upgrade
-
-          1. Update the version in `.github/workflows/update-cdn-libraries.yml`
-          2. Run the workflow manually to download new versions
-          3. Update SRI hashes in templates
-          4. Test all affected functionality
-
-          ### Security Notes
-          - Review the changelog for security fixes
-          - Check for breaking changes before upgrading
-          - Test in development before deploying
-          EOF
-
-      - name: Create version update issue
-        if: steps.check-versions.outputs.htmx_update_available == 'true' || steps.check-versions.outputs.sortablejs_update_available == 'true' || steps.check-versions.outputs.axecore_update_available == 'true'
-        uses: peter-evans/create-issue-from-file@v5
-        with:
-          title: "CDN Library Version Updates Available"
-          content-filepath: /tmp/issue-body.md
-          labels: dependencies,security
-        continue-on-error: true
