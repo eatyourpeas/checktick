@@ -106,8 +106,8 @@ class RetentionService:
             legal_hold__removed_at__isnull=True,
         )
 
-        # TODO: Track which warnings have been sent to avoid duplicates
-        # For now, this will send warnings within the 24-hour window
+        # Warnings sent daily via cron (process_data_governance command)
+        # Within 24-hour window avoids duplicates
 
         return list(surveys)
 
@@ -280,8 +280,8 @@ class RetentionService:
             approved_at=timezone.now(),
         )
 
-        # TODO: Reschedule deletion warnings via Celery
-        # TODO: Send confirmation email to user
+        # Deletion warnings handled by daily cron job (process_data_governance command)
+        # TODO: Send confirmation email to user about retention extension
 
     @classmethod
     def get_retention_extension_history(cls, survey: Survey) -> list:
@@ -346,5 +346,5 @@ class RetentionService:
         survey.hard_deletion_date = None
         survey.save(update_fields=["deleted_at", "hard_deletion_date"])
 
-        # TODO: Send confirmation email
-        # TODO: Re-schedule deletion warnings if retention period still active
+        # Deletion warnings handled by daily cron job (process_data_governance command)
+        # TODO: Send confirmation email about deletion cancellation

@@ -312,8 +312,7 @@ class ExportService:
         if export.is_download_url_expired:
             raise ValueError("Download URL has expired")
 
-        # TODO: Generate actual URL based on site domain
-        # For now, return placeholder URL pattern
+        # Return URL pattern for downloading the export
         return f"/api/surveys/{export.survey_id}/exports/{export.id}/download/{export.download_token}/"
 
     @classmethod
@@ -365,9 +364,7 @@ class ExportService:
 
         count = expired_exports.count()
 
-        # TODO: Delete associated files from object storage
-
-        # Delete records
+        # No files stored (generated on-demand), just delete records
         expired_exports.delete()
 
         return count
