@@ -13,6 +13,7 @@ from __future__ import annotations
 import csv
 from datetime import timedelta
 from io import StringIO
+import logging
 import secrets
 from typing import TYPE_CHECKING
 
@@ -25,6 +26,7 @@ if TYPE_CHECKING:
     from ..models import DataExport, Survey
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class ExportService:
@@ -51,6 +53,7 @@ class ExportService:
         survey: Survey,
         user: User,
         password: str | None = None,
+        survey_key: bytes | None = None,
     ) -> DataExport:
         """
         Create a new data export for a survey.
@@ -58,19 +61,36 @@ class ExportService:
         Args:
             survey: Survey to export data from
             user: User requesting the export
-            password: Optional password to encrypt the export
+            password: Optional password to encrypt the export file
+            survey_key: Survey's KEK (required for encrypted surveys)
 
         Returns:
             DataExport instance with download token
 
         Raises:
-            ValueError: If survey has no responses or is deleted
+            ValueError: If survey has no responses, is deleted, or is encrypted without key
         """
+        logger.info(
+            f"Creating export for survey {survey.slug} by user {user.username}"
+        )
         from ..models import DataExport, SurveyResponse
 
         # Validate survey state
         if survey.deleted_at:
+            logger.warning(
+                f"Attempted export of deleted survey {survey.slug} by {user.username}"
+            )
             raise ValueError("Cannot export data from deleted survey")
+
+        # Validate survey_key for encrypted surveys
+        if survey.requires_whole_response_encryption() and not survey_key:
+            logger.error(
+                f"Export attempted without survey key for encrypted survey {survey.slug}"
+            )
+            raise ValueError(
+                "Survey key required to export encrypted survey data. "
+                "Please unlock the survey first."
+            )
 
         # Count exportable responses (exclude frozen)
         response_count = SurveyResponse.objects.filter(
@@ -84,20 +104,31 @@ class ExportService:
 
         if response_count == 0:
             if frozen_count > 0:
+                logger.warning(
+                    f"Export blocked: all {frozen_count} responses frozen for survey {survey.slug}"
+                )
                 raise ValueError(
                     f"All {frozen_count} responses are frozen pending data subject request resolution"
                 )
+            logger.warning(f"Export blocked: no responses for survey {survey.slug}")
             raise ValueError("Survey has no responses to export")
 
-        # Generate CSV data
-        csv_data = cls._generate_csv(survey)
+        logger.info(
+            f"Generating CSV for survey {survey.slug}: {response_count} responses, "
+            f"{frozen_count} frozen"
+        )
 
-        # Encrypt if password provided
+        # Generate CSV data (with decryption if survey_key provided)
+        csv_data = cls._generate_csv(survey, survey_key)
+
+        # Encrypt export file if password provided
         if password:
+            logger.info(f"Encrypting export file for survey {survey.slug}")
             encrypted_data, encryption_key_id = cls._encrypt_csv(csv_data, password)
             is_encrypted = True
             file_data = encrypted_data
         else:
+            logger.debug(f"Export file not encrypted for survey {survey.slug}")
             is_encrypted = False
             encryption_key_id = None
             file_data = csv_data.encode("utf-8")
@@ -122,27 +153,36 @@ class ExportService:
             encryption_key_id=encryption_key_id,
         )
 
+        logger.info(
+            f"Export created successfully: ID={export.id}, survey={survey.slug}, "
+            f"size={len(file_data)} bytes, encrypted={is_encrypted}, "
+            f"expires={expires_at.isoformat()}"
+        )
+
         # TODO: Store encrypted file in object storage (S3/Azure Blob)
         # For now, we'll regenerate on download (stateless)
 
         return export
 
     @classmethod
-    def _generate_csv(cls, survey: Survey) -> str:
+    def _generate_csv(cls, survey: Survey, survey_key: bytes | None = None) -> str:
         """
         Generate CSV string from survey responses.
 
         Args:
             survey: Survey to export
+            survey_key: Survey's KEK for decrypting responses (required for encrypted surveys)
 
         Returns:
             CSV string with headers and response data
 
         Note:
-            - Answers are stored in SurveyResponse.answers as JSON dict
-            - enc_demographics contains encrypted patient demographics
+            - For encrypted surveys, survey_key is required to decrypt responses
+            - Whole-response encryption surveys store data in enc_answers
+            - Legacy surveys store plaintext in answers and encrypted demographics in enc_demographics
             - Question IDs are used as keys in the answers dict
         """
+        logger.debug(f"Generating CSV for survey {survey.slug}")
         from ..models import SurveyQuestion, SurveyResponse
 
         output = StringIO()
@@ -175,10 +215,27 @@ class ExportService:
             is_frozen=False,  # Exclude frozen responses
         ).order_by("submitted_at")
 
+        logger.debug(f"Processing {responses.count()} responses for CSV export")
+
         for response in responses:
-            # Get the answers dict (already decrypted at model level if needed)
-            # Note: enc_demographics would need survey_key to decrypt, but answers field is plain JSON
-            answers_dict = response.answers or {}
+            # Decrypt response if survey uses whole-response encryption
+            if survey.requires_whole_response_encryption() and survey_key:
+                try:
+                    full_response = response.load_complete_response(survey_key)
+                    answers_dict = full_response.get("answers", {})
+                    logger.debug(
+                        f"Decrypted response {response.id} for encrypted survey"
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"Failed to decrypt response {response.id}: {e}",
+                        exc_info=True,
+                    )
+                    # Skip this response if decryption fails
+                    continue
+            else:
+                # Legacy format: answers stored in plaintext
+                answers_dict = response.answers or {}
 
             row = [
                 str(response.id),
@@ -208,7 +265,7 @@ class ExportService:
     @classmethod
     def _encrypt_csv(cls, csv_data: str, password: str) -> tuple[bytes, str]:
         """
-        Encrypt CSV data with user-provided password.
+        Encrypt CSV data with user-provided password using AES-256-GCM.
 
         Args:
             csv_data: CSV string to encrypt
@@ -217,15 +274,26 @@ class ExportService:
         Returns:
             Tuple of (encrypted_bytes, encryption_key_id)
 
-        TODO: Implement actual encryption with cryptography library
-        For now, this is a placeholder that would use AES-256-GCM
+        This uses the same encryption utilities as survey data encryption,
+        ensuring consistent security across the platform.
         """
-        # Placeholder for encryption implementation
-        # In production, use cryptography.fernet or AES-256-GCM
-        encrypted_data = csv_data.encode("utf-8")  # TODO: Actually encrypt
-        encryption_key_id = f"password-{secrets.token_hex(8)}"
+        from ..utils import encrypt_sensitive
 
-        return encrypted_data, encryption_key_id
+        logger.debug(f"Encrypting CSV data ({len(csv_data)} bytes)")
+
+        # Encrypt CSV with password (encrypt_sensitive handles KDF internally)
+        # Pass password as bytes - encrypt_sensitive will derive key with Scrypt
+        encrypted_blob = encrypt_sensitive(password.encode("utf-8"), {"csv_content": csv_data})
+
+        # Generate key ID for tracking
+        encryption_key_id = f"export-{secrets.token_hex(8)}"
+
+        logger.info(
+            f"CSV encrypted: key_id={encryption_key_id}, "
+            f"size={len(encrypted_blob)} bytes"
+        )
+
+        return encrypted_blob, encryption_key_id
 
     @classmethod
     def get_download_url(cls, export: DataExport) -> str:

@@ -1,11 +1,11 @@
 """
 Tests for data governance views: exports, dashboard integration, and download security.
 
-NOTE: Some tests are skipped due to ExportService bugs that need fixing:
-- ExportService._generate_csv() uses non-existent fields: question.label, question.field_name
-- Should use question.text instead
-- This blocks tests that require actual CSV generation
-TODO: Fix ExportService before enabling full test coverage
+These tests verify the complete data governance workflow including:
+- Export creation and download functionality
+- Encryption handling for patient data surveys
+- Permission enforcement for export operations
+- Retention period tracking and display
 """
 
 from django.contrib.auth import get_user_model

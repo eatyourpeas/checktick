@@ -7,11 +7,13 @@ Features:
 - Handle automatic soft deletion after retention period
 - Handle automatic hard deletion after grace period
 - Respect legal holds (prevent deletion)
+- Secure cryptographic key erasure for hard deletion
 """
 
 from __future__ import annotations
 
 from datetime import timedelta
+import logging
 from typing import TYPE_CHECKING
 
 from django.conf import settings
@@ -23,6 +25,7 @@ if TYPE_CHECKING:
     from ..models import Survey
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class RetentionService:
