@@ -448,13 +448,30 @@ CONTENT_SECURITY_POLICY["DIRECTIVES"]["frame-ancestors"] = tuple(
     x for x in CONTENT_SECURITY_POLICY["DIRECTIVES"]["frame-ancestors"] if x is not None
 )
 
-# CORS minimal
-CORS_ALLOWED_ORIGINS = []
+# CORS configuration - allow badge validators and other trusted origins
+# Parse comma-separated list from environment, or use default
+_cors_origins = env.str("CORS_ALLOWED_ORIGINS", default="")
+if _cors_origins:
+    CORS_ALLOWED_ORIGINS = [
+        origin.strip() for origin in _cors_origins.split(",") if origin.strip()
+    ]
+else:
+    # Default: badge validators only
+    CORS_ALLOWED_ORIGINS = ["https://img.shields.io"]
+# Add localhost/127.0.0.1 only in DEBUG mode for development
+if DEBUG:
+    CORS_ALLOWED_ORIGINS.extend(
+        [
+            "http://localhost:8000",
+            "http://127.0.0.1:8000",
+        ]
+    )
+CORS_URLS_REGEX = r"^/api/schema$"  # Only allow CORS on the schema endpoint
 
 # Axes configuration for brute-force protection
 AXES_FAILURE_LIMIT = 5
 AXES_COOLOFF_TIME = 1  # hour
-AXES_LOCKOUT_PARAMETERS = ["username"]
+AXES_LOCKOUT_PARAMETERS = ["username", "ip_address"]  # Lock by username AND IP
 # Disable axes for OIDC callbacks to avoid interference
 AXES_NEVER_LOCKOUT_WHITELIST = True
 AXES_IP_WHITELIST = ["127.0.0.1", "localhost"]
