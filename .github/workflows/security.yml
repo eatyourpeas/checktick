@@ -38,6 +38,7 @@ jobs:
             - name: Install dependencies and run pip-audit
               run: |
                   poetry install --no-root --with dev
+                  poetry run pip install --upgrade pip>=26.0
                   poetry export -f requirements.txt --with dev --output requirements.txt
                   poetry run pip-audit -r requirements.txt --desc on
 
