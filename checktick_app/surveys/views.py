@@ -2493,8 +2493,8 @@ def survey_publish_settings(request: HttpRequest, slug: str) -> HttpResponse:
         # Parse dates
         from django.utils.dateparse import parse_datetime
 
-        start_at = parse_datetime(start_at_str) if start_at_str else None
-        end_at = parse_datetime(end_at_str) if end_at_str else None
+        start_at = timezone.make_aware(parse_datetime(start_at_str)) if start_at_str and parse_datetime(start_at_str) else None
+        end_at = timezone.make_aware(parse_datetime(end_at_str)) if end_at_str and parse_datetime(end_at_str) else None
 
         if max_responses:
             try:
@@ -3359,9 +3359,11 @@ def survey_publish_update(request: HttpRequest, slug: str) -> HttpResponse:
     from django.utils.dateparse import parse_datetime
 
     if start_at:
-        start_at = parse_datetime(start_at)
+        parsed = parse_datetime(start_at)
+        start_at = timezone.make_aware(parsed) if parsed else None
     if end_at:
-        end_at = parse_datetime(end_at)
+        parsed = parse_datetime(end_at)
+        end_at = timezone.make_aware(parsed) if parsed else None
     if max_responses:
         try:
             max_responses = int(max_responses)
@@ -3749,8 +3751,8 @@ def _apply_pending_publish_settings(survey: Survey, pending: dict) -> None:
     survey.visibility = pending.get("visibility", survey.visibility)
     start_at_str = pending.get("start_at")
     end_at_str = pending.get("end_at")
-    survey.start_at = parse_datetime(start_at_str) if start_at_str else None
-    survey.end_at = parse_datetime(end_at_str) if end_at_str else None
+    survey.start_at = timezone.make_aware(parse_datetime(start_at_str)) if start_at_str and parse_datetime(start_at_str) else None
+    survey.end_at = timezone.make_aware(parse_datetime(end_at_str)) if end_at_str and parse_datetime(end_at_str) else None
     survey.max_responses = pending.get("max_responses")
     survey.captcha_required = pending.get("captcha_required", False)
     survey.no_patient_data_ack = pending.get("no_patient_data_ack", False)
