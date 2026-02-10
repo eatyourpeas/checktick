@@ -2310,6 +2310,7 @@ def survey_invites_pending(request: HttpRequest, slug: str) -> HttpResponse:
 
 @login_required
 @require_http_methods(["POST"])
+@ratelimit(key="user", rate="30/h", block=True)
 def survey_invite_resend(
     request: HttpRequest, slug: str, token_id: int
 ) -> HttpResponse:
@@ -2493,8 +2494,16 @@ def survey_publish_settings(request: HttpRequest, slug: str) -> HttpResponse:
         # Parse dates
         from django.utils.dateparse import parse_datetime
 
-        start_at = timezone.make_aware(parse_datetime(start_at_str)) if start_at_str and parse_datetime(start_at_str) else None
-        end_at = timezone.make_aware(parse_datetime(end_at_str)) if end_at_str and parse_datetime(end_at_str) else None
+        start_at = (
+            timezone.make_aware(parse_datetime(start_at_str))
+            if start_at_str and parse_datetime(start_at_str)
+            else None
+        )
+        end_at = (
+            timezone.make_aware(parse_datetime(end_at_str))
+            if end_at_str and parse_datetime(end_at_str)
+            else None
+        )
 
         if max_responses:
             try:
@@ -2521,6 +2530,18 @@ def survey_publish_settings(request: HttpRequest, slug: str) -> HttpResponse:
                 return render(
                     request, "surveys/publish_settings.html", {"survey": survey}
                 )
+
+        # Warn if publishing token-based survey without emails
+        if (
+            action == "publish"
+            and visibility == Survey.Visibility.TOKEN
+            and not invite_emails
+            and survey.status != Survey.Status.PUBLISHED
+        ):
+            messages.warning(
+                request,
+                "Publishing without email invites. You'll need to generate tokens manually to share with participants.",
+            )
 
         # Handle different actions
         if action == "close":
@@ -2719,6 +2740,14 @@ def survey_publish_settings(request: HttpRequest, slug: str) -> HttpResponse:
                     )
                 else:
                     messages.success(request, "Survey has been published successfully!")
+
+            # If token-based survey with no emails, redirect to tokens page to create tokens
+            if visibility == Survey.Visibility.TOKEN and not invite_emails:
+                messages.info(
+                    request,
+                    "Your survey is published! Now generate invite tokens to share with participants.",
+                )
+                return redirect("surveys:tokens", slug=slug)
 
             return redirect("surveys:dashboard", slug=slug)
 
@@ -3202,6 +3231,7 @@ def _send_invites_background(
 
 @login_required
 @require_http_methods(["POST"])
+@ratelimit(key="user", rate="20/h", block=True)
 def send_invites_async(request: HttpRequest, slug: str) -> JsonResponse:
     """Start async email sending for survey invitations."""
     import threading
@@ -3751,8 +3781,16 @@ def _apply_pending_publish_settings(survey: Survey, pending: dict) -> None:
     survey.visibility = pending.get("visibility", survey.visibility)
     start_at_str = pending.get("start_at")
     end_at_str = pending.get("end_at")
-    survey.start_at = timezone.make_aware(parse_datetime(start_at_str)) if start_at_str and parse_datetime(start_at_str) else None
-    survey.end_at = timezone.make_aware(parse_datetime(end_at_str)) if end_at_str and parse_datetime(end_at_str) else None
+    survey.start_at = (
+        timezone.make_aware(parse_datetime(start_at_str))
+        if start_at_str and parse_datetime(start_at_str)
+        else None
+    )
+    survey.end_at = (
+        timezone.make_aware(parse_datetime(end_at_str))
+        if end_at_str and parse_datetime(end_at_str)
+        else None
+    )
     survey.max_responses = pending.get("max_responses")
     survey.captcha_required = pending.get("captcha_required", False)
     survey.no_patient_data_ack = pending.get("no_patient_data_ack", False)
@@ -4189,6 +4227,7 @@ def survey_preview_thank_you(request: HttpRequest, slug: str) -> HttpResponse:
 
 @login_required
 @require_http_methods(["GET", "POST"])
+@ratelimit(key="user", rate="60/h", block=True, method="POST")
 def survey_tokens(request: HttpRequest, slug: str) -> HttpResponse:
     survey = get_object_or_404(Survey, slug=slug)
     require_can_edit(request.user, survey)
