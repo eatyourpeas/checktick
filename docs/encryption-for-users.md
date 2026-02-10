@@ -15,8 +15,8 @@ CheckTick protects your sensitive survey data with encryption. This guide explai
 | **Free** | **All surveys encrypted** (no patient data templates) | Password OR Recovery Phrase OR **Verified Identity Recovery** |
 | **Individual** | Password + Recovery Phrase + **Platform Key Escrow** | Password OR Recovery Phrase OR **Verified Identity Recovery** |
 | **Pro** | Enhanced encryption + Vault backup | Password OR Recovery Phrase OR **Verified Identity Recovery** |
-| **Team Small/Medium/Large** | Team-shared keys + Organization master key | Team admin OR Organization admin OR Platform recovery |
-| **Organization** | Hierarchical encryption + Admin recovery | Organization admin OR **Platform recovery** |
+| **Team Small/Medium/Large** | Team-shared keys + Organisation master key | Team admin OR Organisation admin OR Platform recovery |
+| **Organisation** | Hierarchical encryption + Admin recovery | Organisation admin OR **Platform recovery** |
 | **Enterprise** | Custom encryption + Dedicated Vault | Custom recovery procedures + Platform recovery |
 
 ## The Important Promise
@@ -64,7 +64,7 @@ To collect patient-identifiable data using the patient data templates, upgrade t
 When you're ready to collect patient data or need more features:
 - **Pro (£5/mo)**: Unlimited surveys, encrypted patient data, collaboration
 - **Team (from £25/mo)**: Team collaboration, SSO, admin recovery
-- **Organization**: Custom pricing, hierarchical management
+- **Organisation**: Custom pricing, hierarchical management
 
 ---
 
@@ -212,8 +212,8 @@ Everything in Individual tier, plus:
 ### How It Works
 
 Teams can operate in two modes:
-1. **Standalone Teams** - Independent teams not part of an organization
-2. **Organization Teams** - Teams that belong to a parent organization
+1. **Standalone Teams** - Independent teams not part of an organisation
+2. **Organisation Teams** - Teams that belong to a parent organisation
 
 #### Standalone Team Key Management
 
@@ -231,19 +231,19 @@ Teams can operate in two modes:
 - No passwords or recovery phrases to remember!
 - Team admin can grant/revoke access
 
-#### Organization Team Key Management
+#### Organisation Team Key Management
 
-**When your team belongs to an organization:**
+**When your team belongs to an organisation:**
 
-1. Organization owner sets up organization master key
-2. Team keys are derived from organization key
+1. Organisation owner sets up organisation master key
+2. Team keys are derived from organisation key
 3. All team surveys encrypted with team key
-4. Both team admin and organization admin can manage access
+4. Both team admin and organisation admin can manage access
 
 **For team members:**
 
 - Same SSO experience as standalone teams
-- Additional recovery path through organization admin
+- Additional recovery path through organisation admin
 - Hierarchical key management provides extra redundancy
 
 #### SSO and Patient Data Surveys
@@ -286,27 +286,27 @@ This provides complete protection - you can't accidentally expose clinical conte
 - Used if team admin is also unavailable
 - All actions logged in immutable audit trail
 
-#### Recovery Options for Organization Teams
+#### Recovery Options for Organisation Teams
 
-**If a team member loses access (organization team):**
+**If a team member loses access (organisation team):**
 
 **Option 1: Team Admin Recovery** (Instant)
 
 - Team admin can recover member's survey immediately
-- No identity verification needed (within same organization)
+- No identity verification needed (within same organisation)
 - Logged for compliance
 
-**Option 2: Organization Admin Recovery** (Instant)
+**Option 2: Organisation Admin Recovery** (Instant)
 
-- Organization owner can recover any team survey
+- Organisation owner can recover any team survey
 - Used when team admin is unavailable
 - Logged for compliance
 
-**Option 3: Platform Recovery** (Rare - used if organization dissolves)
+**Option 3: Platform Recovery** (Rare - used if organisation dissolves)
 
 - Same process as Individual tier
 - Identity verification + dual auth + time delay
-- Used only if organization no longer exists
+- Used only if organisation no longer exists
 
 ### Best Practices for Teams
 
@@ -326,11 +326,11 @@ This provides complete protection - you can't accidentally expose clinical conte
 
 ---
 
-## Organization Tier
+## Organisation Tier
 
 ### What You Get
-- **Hierarchical Encryption**: Platform → Organization → Team → Survey
-- **Centralized Key Management**: Organization owner controls master key
+- **Hierarchical Encryption**: Platform → Organisation → Team → Survey
+- **Centralized Key Management**: Organisation owner controls master key
 - **Flexible Recovery**: Multiple recovery paths for different scenarios
 - **Advanced Audit**: Dashboard showing all key operations
 - **Compliance Tools**: GDPR/HIPAA/NHS DSPT reports
@@ -339,7 +339,7 @@ This provides complete protection - you can't accidentally expose clinical conte
 
 ```
 Platform Master Key
-├─ Your Organization Master Key
+├─ Your Organisation Master Key
    ├─ Team A Key → Team A Surveys
    ├─ Team B Key → Team B Surveys
    └─ Direct Org Surveys
@@ -347,16 +347,16 @@ Platform Master Key
 
 #### Key Management Hierarchy
 
-**Organization Owner:**
-- Sets organization-wide encryption passphrase
-- Can recover any survey in organization
+**Organisation Owner:**
+- Sets organisation-wide encryption passphrase
+- Can recover any survey in organisation
 - Manages team access
 - Reviews audit logs
 
 **Team Admins:**
 - Can recover surveys within their team
 - Cannot access other teams' surveys
-- Report to organization owner
+- Report to organisation owner
 
 **Team Members:**
 - Automatic unlock via SSO
@@ -365,7 +365,7 @@ Platform Master Key
 
 ### Recovery Dashboard
 
-Organization owners have access to a recovery management dashboard:
+Organisation owners have access to a recovery management dashboard:
 
 **Features:**
 - 📊 View pending recovery requests
@@ -399,7 +399,7 @@ Organization owners have access to a recovery management dashboard:
 
 ### What You Get
 - **Dedicated Vault Instance**: Your own HashiCorp Vault cluster
-- **Custom Recovery Procedures**: Tailored to your organization's policies
+- **Custom Recovery Procedures**: Tailored to your organisation's policies
 - **Advanced Security**: Custom time delays, multi-party authorization
 - **Compliance Integration**: Direct integration with your SIEM
 - **White-glove Support**: Dedicated account manager
@@ -442,7 +442,7 @@ Work with CheckTick to design:
 3. **Time Delay**: 24-48 hour waiting period after approval
 4. **User Notification**: Email alerts at every stage
 5. **Audit Trail**: Immutable logs stored in Vault + SIEM
-6. **Recovery Dashboard**: All recoveries visible to organization admins
+6. **Recovery Dashboard**: All recoveries visible to organisation admins
 7. **Rate Monitoring**: Alerts if recovery requests spike (potential attack)
 8. **Offline Key Component**: Custodian key not stored in database
 
@@ -519,7 +519,7 @@ A: Account passwords protect access to CheckTick, but encryption protects the da
 
 **Q: Is encryption hard to use?**
 
-A: No! For most users (Teams/Organizations with SSO), it's automatic. For individual users, it's just:
+A: No! For most users (Teams/Organisations with SSO), it's automatic. For individual users, it's just:
 1. Choose a password when creating your first survey
 2. Write down your 12-word recovery phrase
 3. Done!
@@ -559,7 +559,7 @@ A: With platform recovery, you can't lose access permanently (as long as you can
 **Q: Can CheckTick admins access my data without my knowledge?**
 
 A: No. Recovery requires:
-- Your request (or your organization admin's request)
+- Your request (or your organisation admin's request)
 - Identity verification
 - Dual authorization
 - Time delay
@@ -579,18 +579,18 @@ A: If someone has your recovery phrase, they can access your surveys. This is wh
 
 A: No! Platform recovery is **more secure** than users writing passwords on sticky notes or reusing weak passwords because they're afraid of forgetting them. The verification + dual auth + time delay + audit trail make it robust.
 
-### Team/Organization Questions
+### Team/Organisation Questions
 
-**Q: Can my organization admin access my surveys without asking?**
+**Q: Can my organisation admin access my surveys without asking?**
 
-A: For organization users:
+A: For organisation users:
 - **Team surveys**: Yes, team admin has access (this is by design for collaboration)
 - **Personal surveys within org**: Only through recovery process (requires your request or verification you're unavailable)
 - All admin access is logged for audit
 
-**Q: What if my organization admin loses their password?**
+**Q: What if my organisation admin loses their password?**
 
-A: Organization admins can use platform recovery (same process as individual users). This is why the custodian component is stored offline - as a last resort for organization-level key recovery.
+A: Organisation admins can use platform recovery (same process as individual users). This is why the custodian component is stored offline - as a last resort for organisation-level key recovery.
 
 ### Technical Questions
 
@@ -614,7 +614,7 @@ A:
 
 A: Vault is industry-leading secrets management software used by:
 - Fortune 500 companies
-- Major healthcare organizations
+- Major healthcare organisations
 - Government agencies
 - Financial institutions
 
@@ -624,7 +624,7 @@ It provides hardened, audited, compliant key storage.
 
 A:
 - **Individual users**: Via support request
-- **Organization admins**: Via recovery dashboard
+- **Organisation admins**: Via recovery dashboard
 - **Enterprise**: Direct SIEM integration
 
 ---
@@ -648,7 +648,7 @@ A:
    - User notifications
    - Recovery dashboard
 
-4. **SSO users have the easiest experience** (Teams/Organizations):
+4. **SSO users have the easiest experience** (Teams/Organisations):
    - Automatic unlock
    - No passwords to remember
    - Admin recovery if needed
@@ -679,14 +679,14 @@ A:
 - Need admin recovery
 - Collaborative surveys
 
-**Choose Organization if:**
+**Choose Organisation if:**
 - Multiple teams
 - Need centralized management
 - Want recovery dashboard
 - Compliance requirements
 
 **Choose Enterprise if:**
-- Large organization
+- Large organisation
 - Custom security requirements
 - Need dedicated Vault
 - Want white-glove support
