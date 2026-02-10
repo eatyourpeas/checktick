@@ -30,6 +30,7 @@ CheckTick implements **ethical key recovery**: if you lose both your password AN
 ## Free Tier
 
 ### What You Get
+
 - Create up to 3 **encrypted surveys**
 - **All surveys are automatically encrypted** before publishing
 - Collect general survey responses securely
@@ -38,6 +39,7 @@ CheckTick implements **ethical key recovery**: if you lose both your password AN
 - Password + Recovery Phrase protection
 
 ### When to Use
+
 - Testing CheckTick features
 - Non-sensitive surveys and feedback forms
 - Learning how the platform works
@@ -54,6 +56,7 @@ CheckTick implements **ethical key recovery**: if you lose both your password AN
 This ensures all data collected through CheckTick is secure, regardless of subscription tier.
 
 ### Limitations
+
 ⚠️ **Patient data collection templates are not available** on the Free tier
 
 The **Patient Details (encrypted)** template is a paid feature designed for NHS number, clinical data, and patient identifiers. While ALL surveys are encrypted on the Free tier, specialized patient data templates require a paid subscription.
@@ -61,7 +64,9 @@ The **Patient Details (encrypted)** template is a paid feature designed for NHS 
 To collect patient-identifiable data using the patient data templates, upgrade to Pro (£5/month) or higher.
 
 ### Upgrade Path
+
 When you're ready to collect patient data or need more features:
+
 - **Pro (£5/mo)**: Unlimited surveys, encrypted patient data, collaboration
 - **Team (from £25/mo)**: Team collaboration, SSO, admin recovery
 - **Organisation**: Custom pricing, hierarchical management
@@ -71,6 +76,7 @@ When you're ready to collect patient data or need more features:
 ## Individual Tier
 
 ### What You Get
+
 - **Password Protection**: Unlock surveys with your password
 - **Recovery Phrase**: 12-word backup phrase for account recovery
 - **Platform Key Escrow**: Secure backup stored in HashiCorp Vault
@@ -87,6 +93,7 @@ When you're ready to collect patient data or need more features:
 4. Done! Your survey is encrypted
 
 **Behind the scenes:**
+
 - Your survey key is encrypted with your password
 - The same key is encrypted with your recovery phrase
 - A secure backup is encrypted with a platform key and stored in Vault
@@ -95,11 +102,13 @@ When you're ready to collect patient data or need more features:
 #### Daily Use
 
 **To unlock your survey:**
+
 - Navigate to your survey
 - Enter your password (quickest method)
 - Survey stays unlocked for 30 minutes
 
 **If you forget your password:**
+
 - Use your 12-word recovery phrase instead
 - Survey unlocked, set a new password
 
@@ -110,36 +119,43 @@ When you're ready to collect patient data or need more features:
 Don't panic! CheckTick can help you recover access through a secure verification process:
 
 #### Step 1: Request Recovery
+
 - Contact support: support@checktick.uk
 - Explain that you've lost access to your survey
 - Provide your account email and survey details
 
 #### Step 2: Identity Verification (24-48 hours)
+
 You'll need to verify your identity:
+
 - **Upload photo ID** (driving license, passport, etc.)
 - **Video verification call** (15 minutes with CheckTick admin)
 - **Security questions** from your account setup
 - **Optional**: Employment verification (if work-related survey)
 
 #### Step 3: Dual Authorization (Security)
+
 - **Primary admin** reviews your verification
 - **Secondary admin** independently approves the request
 - Both admins document the reason for recovery
 - All actions are logged in an immutable audit trail
 
 #### Step 4: Time Delay (24-48 hours)
+
 - After approval, there's a mandatory waiting period
 - You'll receive an email when the time delay starts
 - This gives you time to object if the request wasn't from you
 - Also prevents rushed or impulsive recovery actions
 
 #### Step 5: Recovery Completion
+
 - Platform admin retrieves the offline custodian key component
 - Your survey key is recovered from Vault
 - You regain access to your survey
 - You're prompted to set a new password + recovery phrase
 
 #### Step 6: Notification & Audit
+
 - You receive email confirmation of the recovery
 - All actions are logged (who, what, when, why)
 - Audit trail is immutable and can't be deleted
@@ -147,17 +163,20 @@ You'll need to verify your identity:
 ### Security Guarantees
 
 ✅ **Your data is protected:**
+
 - Admins can't access your data without going through formal recovery
 - Every recovery action is logged and auditable
 - You're notified by email if your account is recovered
 - Time delays prevent hasty or unauthorized access
 
 ✅ **Multiple recovery paths:**
+
 1. **Password** (fastest - instant access)
 2. **Recovery phrase** (backup - instant access)
 3. **Platform recovery** (last resort - requires verification + 48-96 hours)
 
 ✅ **Zero-knowledge encryption:**
+
 - CheckTick never sees your password or recovery phrase
 - Your data is encrypted before it reaches our servers
 - We can only help with recovery, not bypass your encryption
@@ -165,12 +184,14 @@ You'll need to verify your identity:
 ### Best Practices
 
 **Do:**
+
 - ✅ Store your recovery phrase in a password manager (1Password, Bitwarden, etc.)
 - ✅ Write it down and keep in a safe place
 - ✅ Use a strong, unique password
 - ✅ Keep your email address up to date (for recovery notifications)
 
 **Don't:**
+
 - ❌ Store your password and recovery phrase in the same place
 - ❌ Share your recovery phrase with anyone
 - ❌ Use the same password as other accounts
@@ -181,7 +202,9 @@ You'll need to verify your identity:
 ## Pro Tier
 
 ### What You Get
+
 Everything in Individual tier, plus:
+
 - **Enhanced Vault Backup**: Redundant storage across multiple Vault nodes
 - **Priority Recovery**: Faster identity verification (12-24 hours)
 - **Extended Audit Logs**: 2-year retention instead of 1 year
@@ -204,6 +227,7 @@ Everything in Individual tier, plus:
 ## Team Tiers (Small, Medium, Large)
 
 ### What You Get
+
 - **Team-Shared Encryption Keys**: All team members use the same survey key
 - **Admin Recovery**: Team admin can recover member surveys
 - **Platform Recovery**: Backup if team admin also loses access
@@ -212,6 +236,7 @@ Everything in Individual tier, plus:
 ### How It Works
 
 Teams can operate in two modes:
+
 1. **Standalone Teams** - Independent teams not part of an organisation
 2. **Organisation Teams** - Teams that belong to a parent organisation
 
@@ -329,6 +354,7 @@ This provides complete protection - you can't accidentally expose clinical conte
 ## Organisation Tier
 
 ### What You Get
+
 - **Hierarchical Encryption**: Platform → Organisation → Team → Survey
 - **Centralized Key Management**: Organisation owner controls master key
 - **Flexible Recovery**: Multiple recovery paths for different scenarios
@@ -348,17 +374,20 @@ Platform Master Key
 #### Key Management Hierarchy
 
 **Organisation Owner:**
+
 - Sets organisation-wide encryption passphrase
 - Can recover any survey in organisation
 - Manages team access
 - Reviews audit logs
 
 **Team Admins:**
+
 - Can recover surveys within their team
 - Cannot access other teams' surveys
 - Report to organisation owner
 
 **Team Members:**
+
 - Automatic unlock via SSO
 - Request admin recovery if needed
 - Focus on data collection, not key management
@@ -368,6 +397,7 @@ Platform Master Key
 Organisation owners have access to a recovery management dashboard:
 
 **Features:**
+
 - 📊 View pending recovery requests
 - 🔍 Review identity verification submissions
 - ✅ Approve/reject recovery requests
@@ -398,6 +428,7 @@ Organisation owners have access to a recovery management dashboard:
 ## Enterprise Tier
 
 ### What You Get
+
 - **Dedicated Vault Instance**: Your own HashiCorp Vault cluster
 - **Custom Recovery Procedures**: Tailored to your organisation's policies
 - **Advanced Security**: Custom time delays, multi-party authorization
@@ -407,6 +438,7 @@ Organisation owners have access to a recovery management dashboard:
 ### Custom Features
 
 Work with CheckTick to design:
+
 - Custom identity verification workflows
 - Integration with your existing identity systems
 - Custom audit log retention (5+ years)
@@ -428,6 +460,7 @@ Work with CheckTick to design:
 - Regulatory requirements may mandate data retention
 
 **Platform recovery** balances security with data availability:
+
 - Strong security through verification + dual auth + time delay
 - Accountability through immutable audit trails
 - User notification prevents unauthorized access
@@ -489,6 +522,7 @@ Every recovery action creates audit entries:
 ```
 
 These logs:
+
 - Cannot be deleted or modified
 - Are stored in Vault's audit backend
 - Can be forwarded to external SIEM
@@ -504,6 +538,7 @@ These logs:
 **Q: Do I really need encryption?**
 
 A: If you're collecting:
+
 - Patient names, NHS numbers, or dates of birth
 - Sensitive health information
 - Personal identifiers
@@ -520,6 +555,7 @@ A: Account passwords protect access to CheckTick, but encryption protects the da
 **Q: Is encryption hard to use?**
 
 A: No! For most users (Teams/Organisations with SSO), it's automatic. For individual users, it's just:
+
 1. Choose a password when creating your first survey
 2. Write down your 12-word recovery phrase
 3. Done!
@@ -529,6 +565,7 @@ A: No! For most users (Teams/Organisations with SSO), it's automatic. For indivi
 **Q: How long does platform recovery take?**
 
 A:
+
 - **Identity verification**: 12-48 hours (depending on tier)
 - **Dual authorization**: Usually within 24 hours
 - **Time delay**: 24-48 hours after approval
@@ -541,6 +578,7 @@ A: Pro/Enterprise tiers have faster verification (12-24 hours), but time delays 
 **Q: What if the recovery request wasn't from me?**
 
 A: You'll receive email notifications at each stage. If you didn't request recovery:
+
 1. Click "Report Unauthorized Access" in the email
 2. Recovery is immediately cancelled
 3. Your account is flagged for security review
@@ -559,6 +597,7 @@ A: With platform recovery, you can't lose access permanently (as long as you can
 **Q: Can CheckTick admins access my data without my knowledge?**
 
 A: No. Recovery requires:
+
 - Your request (or your organisation admin's request)
 - Identity verification
 - Dual authorization
@@ -571,6 +610,7 @@ Silent access is not possible.
 **Q: What if my recovery phrase is stolen?**
 
 A: If someone has your recovery phrase, they can access your surveys. This is why:
+
 - Store it securely (password manager + physical backup)
 - Don't share it with anyone
 - Treat it like cash or credit card details
@@ -584,6 +624,7 @@ A: No! Platform recovery is **more secure** than users writing passwords on stic
 **Q: Can my organisation admin access my surveys without asking?**
 
 A: For organisation users:
+
 - **Team surveys**: Yes, team admin has access (this is by design for collaboration)
 - **Personal surveys within org**: Only through recovery process (requires your request or verification you're unavailable)
 - All admin access is logged for audit
@@ -597,6 +638,7 @@ A: Organisation admins can use platform recovery (same process as individual use
 **Q: What encryption does CheckTick use?**
 
 A: AES-256-GCM (Galois/Counter Mode) with authenticated encryption. This is the same encryption used by:
+
 - Signal (secure messaging)
 - WhatsApp (end-to-end encryption)
 - 1Password (password manager)
@@ -605,6 +647,7 @@ A: AES-256-GCM (Galois/Counter Mode) with authenticated encryption. This is the 
 **Q: Where are my encryption keys stored?**
 
 A:
+
 - **Your password/recovery phrase**: Never stored (you remember it)
 - **Encrypted survey keys**: In the database (can only be decrypted with your password/phrase)
 - **Recovery backup keys**: In HashiCorp Vault (encrypted with platform key)
@@ -613,6 +656,7 @@ A:
 **Q: What's HashiCorp Vault?**
 
 A: Vault is industry-leading secrets management software used by:
+
 - Fortune 500 companies
 - Major healthcare organisations
 - Government agencies
@@ -623,6 +667,7 @@ It provides hardened, audited, compliant key storage.
 **Q: Can I see the audit logs for my surveys?**
 
 A:
+
 - **Individual users**: Via support request
 - **Organisation admins**: Via recovery dashboard
 - **Enterprise**: Direct SIEM integration
@@ -662,30 +707,35 @@ A:
 ### Choosing Your Tier
 
 **Choose Individual if:**
+
 - Solo practitioner
 - Personal research
 - Want full control
 - Don't mind managing password + recovery phrase
 
 **Choose Pro if:**
+
 - Need faster recovery
 - Want extended audit logs
 - Need compliance reports
 - High-value data
 
 **Choose Team if:**
+
 - Working in a team
 - Want SSO convenience
 - Need admin recovery
 - Collaborative surveys
 
 **Choose Organisation if:**
+
 - Multiple teams
 - Need centralized management
 - Want recovery dashboard
 - Compliance requirements
 
 **Choose Enterprise if:**
+
 - Large organisation
 - Custom security requirements
 - Need dedicated Vault
@@ -696,18 +746,22 @@ A:
 ## Getting Help
 
 **For encryption questions:**
+
 - See: [Key Management for Administrators](key-management-for-administrators.md)
 - See: [Business Continuity Guide](business-continuity.md)
 
 **For recovery requests:**
+
 - Email: support@checktick.uk
 - Include: Account email, survey name, verification method preference
 
 **For security concerns:**
+
 - Email: security@checktick.uk
 - Report unauthorized recovery attempts immediately
 
 **For technical details:**
+
 - See: [Patient Data Encryption (Technical Spec)](patient-data-encryption.md)
 - See: [Vault Integration](vault.md)
 
