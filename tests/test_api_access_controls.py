@@ -189,3 +189,40 @@ def test_healthcheck_public(client):
     resp = client.get("/api/health")
     assert resp.status_code == 200
     assert resp.json().get("status") == "ok"
+
+
+@pytest.mark.django_db
+def test_org_admin_cannot_remove_self(client):
+    """
+    Verify admin cannot remove their own admin membership (lockout prevention).
+
+    This test ensures that organization admins cannot accidentally lock themselves
+    out by removing their own admin privileges via the API.
+    """
+    admin = User.objects.create_user(
+        username="selfadmin", email="selfadmin@test.com", password=TEST_PASSWORD
+    )
+    org = Organization.objects.create(name="Self-Admin Test Org", owner=admin)
+    membership = OrganizationMembership.objects.create(
+        organization=org, user=admin, role=OrganizationMembership.Role.ADMIN
+    )
+
+    # Admin tries to delete their own admin membership
+    hdrs = auth_hdr(client, "selfadmin", TEST_PASSWORD)
+    resp = client.delete(f"/api/org-memberships/{membership.id}/", **hdrs)
+
+    # Should be forbidden
+    assert resp.status_code == 403
+
+    # Verify error message mentions self-removal
+    error_detail = resp.json().get("detail", "").lower()
+    assert "cannot remove yourself" in error_detail or "yourself" in error_detail
+
+    # Verify membership still exists
+    assert OrganizationMembership.objects.filter(
+        id=membership.id, role=OrganizationMembership.Role.ADMIN
+    ).exists()
+
+    # Verify admin is still an admin
+    membership.refresh_from_db()
+    assert membership.role == OrganizationMembership.Role.ADMIN
