@@ -7,10 +7,8 @@ the custodian component into multiple shares with a threshold for reconstruction
 Based on Adi Shamir's "How to Share a Secret" (1979).
 """
 
-import os
 import secrets
 from typing import List, Tuple
-
 
 # Use a large prime for the field (1024-bit prime to support 64-byte/512-bit secrets)
 # RFC 3526 MODP Group 2 - well-known safe prime

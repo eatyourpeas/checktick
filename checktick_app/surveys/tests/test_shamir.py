@@ -6,14 +6,15 @@ and reconstruction algorithm.
 """
 
 import os
+
 import pytest
 
 from checktick_app.surveys.shamir import (
     PRIME,
-    split_secret,
-    reconstruct_secret,
     _eval_poly,
     _lagrange_interpolate,
+    reconstruct_secret,
+    split_secret,
 )
 
 

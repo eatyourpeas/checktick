@@ -5,14 +5,14 @@ Tests the Django management commands for custodian component splitting
 and emergency platform recovery.
 """
 
-import secrets
 from io import StringIO
+import secrets
 from unittest.mock import MagicMock, patch
 
-import pytest
 from django.contrib.auth import get_user_model
 from django.core.management import CommandError, call_command
 from django.test import TestCase
+import pytest
 
 from checktick_app.surveys.models import RecoveryRequest, Survey
 from checktick_app.surveys.shamir import reconstruct_secret, split_secret
