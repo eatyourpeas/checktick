@@ -224,13 +224,17 @@ Initial Root Token: hvs.xxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ### Step 3: Store Keys Securely
 
+**Vault Unseal Keys** (for Vault infrastructure):
+
 | Key | Storage Location |
 |-----|------------------|
 | Unseal Key 1 | Admin 1's password manager |
 | Unseal Key 2 | Admin 2's password manager |
 | Unseal Key 3 | Physical safe (printed, sealed) |
 | Unseal Key 4 | Encrypted cloud backup |
-| Root Token | Both admins' password managers (temporary) |
+| Root Token | Both admins' password managers (temporary, will be revoked) |
+
+**Note**: Custodian component shares will use the same distribution pattern (see Step 5b).
 
 ### Step 4: Unseal
 
@@ -264,16 +268,45 @@ This creates:
 - KV v2 secrets engine
 - CheckTick policies
 - AppRole authentication
-- Platform master key (split-knowledge)
+- Platform master key (vault component stored in Vault, custodian component outputted)
 
-**Save the output** to your `.env` file:
+**Save the AppRole credentials** to your `.env` file:
 
 ```bash
 VAULT_ADDR=https://your-vault-url:8200
 VAULT_ROLE_ID=<from-setup-output>
 VAULT_SECRET_ID=<from-setup-output>
-PLATFORM_CUSTODIAN_COMPONENT=<from-setup-output>
+# DO NOT add PLATFORM_CUSTODIAN_COMPONENT (see next step)
 ```
+
+### Step 5b: Split Custodian Component
+
+The setup script outputs a custodian component hex string. **Split it into Shamir shares** for security:
+
+```bash
+# Copy the custodian component from setup_vault.py output
+python manage.py split_custodian_component \
+  --custodian-component=<paste-hex-here>
+
+# Output:
+# Share 1: 801-abc123def456...
+# Share 2: 802-xyz789ghi012...
+# Share 3: 803-jkl345mno678...
+# Share 4: 804-pqr901stu234...
+```
+
+**Distribute shares** (aligned with Vault unseal keys):
+
+| Share | Storage Location |
+|-------|------------------|
+| Share 1 | Admin 1's password manager (same person who has Unseal Key 1) |
+| Share 2 | Admin 2's password manager (same person who has Unseal Key 2) |
+| Share 3 | Physical safe (with Unseal Key 3) |
+| Share 4 | Encrypted cloud backup (with Unseal Key 4) |
+
+**Threshold**: Need any 3 of 4 shares to perform platform recovery.
+
+**Security**: Never store custodian shares in application environment variables or database.
 
 ### Step 6: Revoke Root Token
 

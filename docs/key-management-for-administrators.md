@@ -23,7 +23,12 @@ As an administrator, you have elevated privileges that come with responsibilitie
 ```
 Platform Master Key (split-knowledge)
 ├── Vault Component (stored in HashiCorp Vault)
-└── Custodian Component (offline storage)
+└── Custodian Component (Shamir 3-of-4 threshold)
+    │
+    ├── Share 1 (Admin 1) ← Also has Vault Unseal Key 1
+    ├── Share 2 (Admin 2) ← Also has Vault Unseal Key 2
+    ├── Share 3 (Physical Safe) ← Also has Vault Unseal Key 3
+    └── Share 4 (Cloud Backup) ← Also has Vault Unseal Key 4
     │
     ├── Organisation A Master Key
     │   ├── Team 1 Key → Team 1 Surveys
@@ -33,7 +38,10 @@ Platform Master Key (split-knowledge)
         └── Team 3 Key → Team 3 Surveys
 ```
 
-**Key Principle**: Higher-level keys can decrypt lower-level keys, but not vice versa.
+**Key Principle**:
+- Higher-level keys can decrypt lower-level keys, but not vice versa
+- Custodian shares use same distribution as Vault unseal keys (aligned security model)
+- Need any 3 of 4 shares for platform recovery (same threshold as Vault unsealing)
 
 ---
 
@@ -348,14 +356,22 @@ After dual authorization, a mandatory waiting period begins:
 
 After time delay completes:
 
-1. **Platform admin retrieves custodian component**
-   - Stored in secure offline location
-   - Requires physical access (not in database/environment)
-   - Two-person retrieval recommended
+1. **Platform admin gathers custodian shares**
+   - Contact 3 of 4 share custodians
+   - Collect shares (Admin 1, Admin 2, Physical Safe, or Cloud Backup)
+   - Shares retrieved digitally from password managers or physically from safe
 
-2. **Platform master key reconstructed**
-   - Vault component + Custodian component = Platform key
-   - Happens in memory only, never persisted
+2. **Execute recovery via management command**
+   - SSH into production server
+   - Run: `python manage.py execute_platform_recovery <request_id> --custodian-share-1=<share1> --custodian-share-2=<share2> --custodian-share-3=<share3>`
+   - Custodian component reconstructed in memory (never persisted)
+   - Command validates all checks passed
+
+3. **Platform master key reconstructed**
+   - Vault component retrieved from Vault automatically
+   - Custodian component reconstructed from 3 shares
+   - XOR combination happens in memory only
+   - Full platform key exists briefly, then cleared
 
 3. **User's KEK retrieved from Vault**
    - Platform key decrypts the escrowed key
@@ -373,27 +389,79 @@ After time delay completes:
 
 ### Custodian Component Management
 
-The custodian component is the offline portion of the platform master key.
+The custodian component is the offline portion of the platform master key, split into 4 shares using Shamir's Secret Sharing.
 
 #### Storage Requirements
 
-- ✅ Secure physical location (safe, lockbox)
-- ✅ Fireproof and waterproof storage
-- ✅ Limited access (2-3 designated individuals maximum)
-- ✅ Access log maintained
-- ✅ Backup copy in separate secure location
+**Custodian shares are distributed across 4 locations:**
+- ✅ Admin 1's password manager (Share 1)
+- ✅ Admin 2's password manager (Share 2)
+- ✅ Physical safe - fireproof, waterproof (Share 3)
+- ✅ Encrypted cloud backup (Share 4 - spare)
 
-#### Retrieval Procedure
+**Security model:**
+- Need any 3 of 4 shares to reconstruct custodian component
+- Same distribution as Vault unseal keys (aligned security)
+- No single point of failure
+- Shares never stored in application environment
 
-1. **Verify authorization**: Confirm dual-authorized recovery request
-2. **Two-person rule**: Two designated individuals retrieve together
-3. **Log access**: Record date, time, individuals, recovery ticket ID
-4. **Use immediately**: Don't store in digital systems
-5. **Return to storage**: Immediately after use
+#### Initial Setup: Splitting the Custodian Component
+
+When setting up CheckTick for the first time, split the custodian component from `vault/setup_vault.py`:
+
+```bash
+# After running vault/setup_vault.py, you get a custodian component
+# Split it into 4 shares:
+python manage.py split_custodian_component \
+  --custodian-component=<64-byte-hex-from-setup>
+
+# Output:
+# Share 1: 801-abc123def456...
+# Share 2: 802-xyz789ghi012...
+# Share 3: 803-jkl345mno678...
+# Share 4: 804-pqr901stu234...
+```
+
+Securely distribute shares to designated custodians and **remove the original custodian component from your .env file**.
+
+#### Retrieval Procedure for Recovery
+
+When executing platform recovery:
+
+1. **Verify authorization**: Confirm dual-authorized recovery request exists
+2. **Gather shares**: Obtain 3 of 4 shares from custodians
+3. **Execute recovery**: Run management command with shares
+4. **Reconstruct temporarily**: Shares combine in memory only
+5. **Complete recovery**: User regains access, shares cleared from memory
+6. **Return to storage**: Shares remain with custodians (not returned to physical safe)
+
+**Example recovery execution:**
+
+```bash
+# Retrieve 3 shares from custodians
+# Share 1 from Admin 1, Share 2 from Admin 2, Share 3 from physical safe
+
+python manage.py execute_platform_recovery ABC-123-XYZ \
+  --custodian-share-1="801-abc123def456..." \
+  --custodian-share-2="802-xyz789ghi012..." \
+  --custodian-share-3="803-jkl345mno678..." \
+  --executor=admin@checktick.uk
+
+# Custodian component reconstructed in memory
+# Recovery executed
+# Memory cleared immediately
+```
+
+**Security features:**
+- Shares only in memory during execution
+- Never persisted to disk or logs
+- Automatic memory clearing after use
+- Full audit trail of share usage
+- Alerts sent to all admins when shares are used
 
 #### Rotation Schedule
 
-Rotate the custodian component:
+Rotate the custodian shares:
 
 - After any suspected compromise
 - Annually (as part of security review)
@@ -401,11 +469,13 @@ Rotate the custodian component:
 
 **Rotation Process:**
 
-1. Generate new platform master key
-2. Re-encrypt all escrowed keys with new platform key
-3. Securely destroy old custodian component
-4. Store new custodian component in secure location
-5. Update Vault with new vault component
+1. Generate new platform master key (via `vault/setup_vault.py`)
+2. Split new custodian component into 4 shares (`split_custodian_component`)
+3. Re-encrypt all escrowed keys with new platform key (migration script)
+4. Distribute new shares to custodians
+5. Securely destroy old shares (all 4 shares + any backups)
+6. Update Vault with new vault component
+7. Test recovery with new shares
 
 ---
 
@@ -531,12 +601,16 @@ For HIPAA compliance:
 
 ### For Platform Admins
 
-1. **Never bypass time delays**: Even in emergencies
-2. **Always require dual authorization**: No exceptions
-3. **Verify identity thoroughly**: When in doubt, request more evidence
-4. **Log everything**: Actions not logged didn't happen (legally)
-5. **Rotate custodian component**: Follow rotation schedule
-6. **Monitor recovery rates**: Investigate unusual patterns
+1. **Never bypass security controls**: Follow all procedures even in emergencies
+2. **Always require dual authorization**: No exceptions for recovery
+3. **Use management commands**: Never store custodian shares in webapp environment
+4. **Verify identity thoroughly**: When in doubt, request more evidence
+5. **Log everything**: Actions not logged didn't happen (legally)
+6. **Rotate custodian shares**: Follow rotation schedule (annually or after compromise)
+7. **Monitor recovery rates**: Investigate unusual patterns (>1% of users)
+8. **Test recovery process**: Annual dry-run ensures shares work when needed
+9. **Distribute shares wisely**: Align with Vault unseal key custodians
+10. **Clear memory**: Shares should never persist after recovery completes
 
 ---
 
@@ -563,12 +637,23 @@ For HIPAA compliance:
 3. Verify audit backend configuration in Vault
 4. Check network connectivity between services
 
-### Custodian Component Not Working
+### Custodian Shares Not Working
 
-1. Verify component hasn't been rotated
-2. Check component matches current vault component
-3. Ensure correct format (64-byte hex string)
-4. Contact CheckTick support if issues persist
+1. Verify shares are complete and unmodified
+2. Ensure using exactly 3 shares (not 2 or 4)
+3. Check shares match current generation (not rotated)
+4. Confirm using correct share format (starts with 80X-)
+5. Test with `--dry-run` flag first
+6. Contact CheckTick support if issues persist
+
+### Recovery Command Fails
+
+1. Check SSH access to production server
+2. Verify Django application is running
+3. Ensure Vault is unsealed and accessible
+4. Confirm recovery request exists and is approved
+5. Check all 3 shares are provided correctly
+6. Review error logs: `docker logs checktick-web`
 
 ---
 

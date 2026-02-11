@@ -254,14 +254,20 @@ def generate_platform_master_key(client):
         print(f"  ❌ Error storing platform key: {e}")
         sys.exit(1)
 
-    print("\n  📋 Platform Custodian Component (save in secure backup):")
-    print(f"  PLATFORM_CUSTODIAN_COMPONENT={custodian_component.hex()}")
-    print("\n  ⚠️  CRITICAL: Store this custodian component securely!")
-    print("  ⚠️  Options:")
-    print("     1. Encrypted password manager (both admins)")
-    print("     2. Printed copy in physical safe")
-    print("     3. Encrypted backup file in secure cloud storage")
-    print("  ⚠️  Without this, organization recovery is impossible!\n")
+    print("\n  📋 Platform Custodian Component:")
+    print(f"  {custodian_component.hex()}")
+    print("\n  ⚠️  CRITICAL: Split this into Shamir shares before using in production!")
+    print("\n  Next steps:")
+    print("     1. Copy the hex string above")
+    print("     2. Run: python manage.py split_custodian_component \\")
+    print("                --custodian-component=<paste_hex_here>")
+    print("     3. Distribute 4 shares to custodians (need 3 to recover)")
+    print("     4. DO NOT add PLATFORM_CUSTODIAN_COMPONENT to .env")
+    print("     5. Delete this output after splitting shares")
+    print(
+        "\n  ⚠️  For platform recovery, use: python manage.py execute_platform_recovery"
+    )
+    print("  ⚠️  Without custodian shares, platform recovery is impossible!\n")
 
     return vault_component.hex(), custodian_component.hex()
 
@@ -335,17 +341,24 @@ def main():
     print("   VAULT_NAMESPACE=checktick")
     print(f"   VAULT_ROLE_ID={role_id}")
     print(f"   VAULT_SECRET_ID={secret_id}")
-    print(f"   PLATFORM_CUSTODIAN_COMPONENT={custodian_comp}")
 
-    print("\n2. Secure the custodian component:")
-    print("   - Store in password managers (both admins)")
-    print("   - Print and store in physical safe")
-    print("   - Create encrypted backup")
+    print("\n2. Split the custodian component into Shamir shares:")
+    print("   python manage.py split_custodian_component \\")
+    print(f"     --custodian-component={custodian_comp}")
+    print("\n   This creates 4 shares (need 3 to reconstruct).")
+    print("   Distribute to same people who have Vault unseal keys:")
+    print("   - Share 1 → Admin 1's password manager")
+    print("   - Share 2 → Admin 2's password manager")
+    print("   - Share 3 → Physical safe")
+    print("   - Share 4 → Encrypted cloud backup")
 
-    print("\n3. Test Vault connection from CheckTick:")
+    print("\n3. DO NOT add PLATFORM_CUSTODIAN_COMPONENT to .env file!")
+    print("   This is a security measure. Use shares via management command only.")
+
+    print("\n4. Test Vault connection from CheckTick:")
     print("   python manage.py test_vault_connection")
 
-    print("\n4. Revoke root token (recommended after setup):")
+    print("\n5. Revoke root token (recommended after setup):")
     print(f"   vault token revoke {vault_token}")
     print("   (CheckTick will use AppRole credentials instead)")
 
