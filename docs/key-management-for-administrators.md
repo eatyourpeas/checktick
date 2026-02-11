@@ -479,6 +479,201 @@ Rotate the custodian shares:
 
 ---
 
+## Key Rotation Policy
+
+Different keys in CheckTick's security architecture have different rotation requirements. This section clarifies which keys need regular rotation and which don't.
+
+### Keys That Require Regular Rotation
+
+#### 1. VAULT_SECRET_ID (Every 90 Days) ⏰
+
+**What It Is**: AppRole secret ID used by the Django webapp to authenticate to Vault.
+
+**Why Rotate**: Limits exposure window if webapp credentials are compromised.
+
+**How To Rotate**:
+
+```bash
+# 1. Generate new secret ID in Vault
+vault write -f auth/approle/role/checktick-app/secret-id
+
+# 2. Update .env file with new VAULT_SECRET_ID
+# 3. Restart webapp: docker compose restart web
+```
+
+**Frequency**: Every 90 days (set calendar reminder)
+
+**Priority**: **HIGH** - This is your most important regular rotation
+
+---
+
+#### 2. Custodian Component Shares (Annually or After Compromise) 🔐
+
+**What It Is**: The 4 Shamir shares that reconstruct the custodian component (part of platform master key).
+
+**Why Rotate**:
+- After any suspected compromise
+- When designated custodians change
+- Annual security review requirement
+
+**How To Rotate**: See [Rotation Schedule](#rotation-schedule) above for full 7-step process.
+
+**Frequency**:
+- **Mandatory**: After compromise or custodian changes
+- **Recommended**: Annually as part of security audit
+
+**Priority**: **MEDIUM** - Important but less frequent than VAULT_SECRET_ID
+
+---
+
+#### 3. Vault's Internal Encryption Key (Optional - Annually) 🔄
+
+**What It Is**: Vault's "barrier key" that encrypts all data at rest within Vault itself.
+
+**Why Rotate**: Compliance requirements, annual security reviews.
+
+**How To Rotate**:
+
+```bash
+# Vault handles re-encryption automatically
+vault operator rotate
+```
+
+**Requirements**:
+- Vault must be unsealed
+- No impact on application - Vault handles everything internally
+- Does NOT require re-encrypting application data
+- Does NOT require new unseal keys
+
+**Frequency**: Annually (optional, for compliance)
+
+**Priority**: **LOW** - Nice to have for compliance, but Vault handles it transparently
+
+---
+
+### Keys That Rarely Need Rotation
+
+#### 4. Vault Unseal Keys (Only After Major Security Events) ⚠️
+
+**What They Are**: The 4 Shamir-split keys needed to unseal Vault after restart (3 of 4 required).
+
+**When To Rotate**:
+- Custodian leaves organization without proper handover
+- Multiple unseal keys suspected compromised
+- Changing threshold requirements (e.g., 3-of-4 to 4-of-6)
+- Major security incident affecting infrastructure
+
+**How To Rotate**:
+
+```bash
+# REQUIRES ALL CURRENT UNSEAL KEYS
+vault operator rekey
+```
+
+⚠️ **WARNING**: This is disruptive - generates entirely new unseal keys and invalidates all existing ones.
+
+**Frequency**: Only after major security events
+
+**Priority**: **CRITICAL** (when needed) - But rarely needed
+
+---
+
+### Keys That Generally Don't Need Rotation
+
+#### 5. Organization Master Keys ❌ (No Routine Rotation)
+
+**What They Are**: Per-organization encryption keys that encrypt team keys.
+
+**Why Not Rotate**:
+- Encrypted with platform master key (which uses custodian shares)
+- Rotation requires re-encrypting all team keys
+- Only rotate if specific compromise suspected
+
+**Exception**: Rotate only when:
+- Organization key specifically compromised
+- Compliance requires it (rare)
+- Organization security incident
+
+---
+
+#### 6. Team Keys ❌ (No Routine Rotation)
+
+**What They Are**: Team-shared encryption keys for team surveys.
+
+**Why Not Rotate**:
+- SSO-based access control (revoke access by removing from team)
+- Rotation requires re-encrypting all team surveys
+- Operationally disruptive for active teams
+
+**Exception**: Rotate only when:
+- Team member with key access leaves under suspicious circumstances
+- Team-specific security incident
+- Compliance audit requires it
+
+**Alternative**: Instead of rotating, remove compromised user from team (instant revocation).
+
+---
+
+#### 7. Survey KEKs (Key Encryption Keys) ❌ (No Routine Rotation)
+
+**What They Are**: Per-survey encryption keys that encrypt patient data.
+
+**Why Not Rotate**:
+- Each survey already has unique key (isolation by design)
+- Password/recovery phrase protect access
+- Rotation requires re-encrypting all survey responses
+
+**Exception**: Rotate only when:
+- Specific survey's KEK known to be compromised
+- User reports unauthorized access to specific survey
+
+**Alternative**: For unauthorized access concerns, audit logs + investigate rather than blanket rotation.
+
+---
+
+### Summary: Rotation Schedule
+
+| Key Type | Frequency | Method | Priority |
+|----------|-----------|--------|----------|
+| **VAULT_SECRET_ID** | **Every 90 days** | `vault write` + restart | **HIGH** |
+| **Custodian shares** | **Annually** or after compromise | Full re-initialization | **MEDIUM** |
+| **Vault encryption key** | Annually (optional) | `vault operator rotate` | **LOW** |
+| **Vault unseal keys** | Only after major incident | `vault operator rekey` | **CRITICAL*** |
+| Organization keys | Only if compromised | Re-encrypt hierarchy | N/A |
+| Team keys | Only if compromised | Re-encrypt team data | N/A |
+| Survey KEKs | Only if compromised | Re-encrypt survey | N/A |
+
+\* Priority is CRITICAL when needed, but it's rarely needed.
+
+---
+
+### Automation and Reminders
+
+Set up calendar reminders for routine rotations:
+
+- **Every 90 days**: Rotate VAULT_SECRET_ID
+- **Annually (same date each year)**:
+  - Rotate custodian shares
+  - Optionally rotate Vault encryption key
+  - Test custodian share reconstruction
+  - Audit custodian access logs
+
+**Recommended Annual Date**: Choose your organization's security audit date or fiscal year-end.
+
+---
+
+### Rotation Best Practices
+
+1. **Document All Rotations**: Record date, who performed it, and reason in audit log
+2. **Test Before and After**: Always verify functionality after rotation
+3. **Dual Authorization**: Require two administrators for custodian share rotation
+4. **Secure Disposal**: Use cryptographic erasure for old secrets (not just deletion)
+5. **Update Documentation**: Keep custodian lists and distribution records current
+6. **Communication**: Notify relevant administrators before scheduled rotations
+7. **Rollback Plan**: Document how to roll back if rotation causes issues
+
+---
+
 ## SIEM Integration
 
 Security Information and Event Management (SIEM) integration provides centralized logging and alerting.
