@@ -116,7 +116,9 @@ Northflank provides managed container hosting with persistent storage.
 2. Configure:
    - Service name: `vault`
    - Image: `hashicorp/vault:1.21.1`
-   - Port: `8200` (HTTP, Public)
+   - Port: `8200` (HTTP, **Private only** - do NOT make public)
+
+> **Security**: Keep Vault private. Only your CheckTick webapp should access it via Northflank's internal networking.
 
 #### Step 3: Mount Volume
 
@@ -139,7 +141,30 @@ Northflank provides managed container hosting with persistent storage.
 | `SKIP_CHOWN` | `true` |
 | `SKIP_SETCAP` | `true` |
 
-#### Step 6: Deploy and Initialize
+#### Step 6: Network Configuration
+
+**Critical Security Step**: Ensure Vault is only accessible internally.
+
+1. In Vault service settings → **Networking**:
+   - ✅ **Private Port**: 8200 enabled
+   - ❌ **Public Port**: Disabled (or remove public exposure)
+
+2. Note the **internal URL**: `vault.PROJECT_ID.svc.cluster.local:8200`
+
+3. In CheckTick webapp service → **Environment Variables**:
+   ```bash
+   # If you have TLS configured on Vault:
+   VAULT_ADDR=https://vault.PROJECT_ID.svc.cluster.local:8200
+   VAULT_TLS_VERIFY=true  # Verify Vault's TLS certificate
+
+   # If using Northflank's load balancer TLS only:
+   VAULT_ADDR=http://vault.PROJECT_ID.svc.cluster.local:8200
+   VAULT_TLS_VERIFY=false  # Load balancer handles TLS
+   ```
+
+4. Replace `PROJECT_ID` with your actual Northflank project ID (found in project URL)
+
+#### Step 7: Deploy and Initialize
 
 See [Initialization](#initialization) below.
 
