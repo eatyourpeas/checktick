@@ -18,8 +18,8 @@ All users have password: demo123!pass
 All users will need to set up 2FA on first login
 """
 
-import logging
 from datetime import timedelta
+import logging
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
