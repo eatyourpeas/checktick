@@ -107,9 +107,35 @@ class VaultClient:
             logger.error(f"Vault health check failed: {e}")
             return {"initialized": False, "sealed": True, "error": str(e)}
 
+    @staticmethod
+    def xor_bytes(a: bytes, b: bytes) -> bytes:
+        """
+        XOR two byte sequences of equal length.
+
+        Used for reconstructing platform master key from split components:
+        platform_key = vault_component XOR custodian_component
+
+        Args:
+            a: First byte sequence
+            b: Second byte sequence
+
+        Returns:
+            XOR result
+
+        Raises:
+            ValueError: If sequences have different lengths
+        """
+        if len(a) != len(b):
+            raise ValueError(f"XOR inputs must be same length: {len(a)} != {len(b)}")
+
+        return bytes(x ^ y for x, y in zip(a, b))
+
     def get_platform_master_key(self, custodian_component: bytes) -> bytes:
         """
         Reconstruct platform master key from vault and custodian components.
+
+        NOTE: This method retrieves the vault component from Vault's "platform/master-key" path.
+        For version-aware operations, use PlatformKeyVersion model directly.
 
         Args:
             custodian_component: Custodian's component of platform key (64 bytes)
@@ -131,10 +157,8 @@ class VaultClient:
             vault_component_hex = secret["data"]["data"]["vault_component"]
             vault_component = bytes.fromhex(vault_component_hex)
 
-            # Reconstruct full key (XOR)
-            platform_key = bytes(
-                a ^ b for a, b in zip(vault_component, custodian_component)
-            )
+            # Reconstruct full key using XOR
+            platform_key = self.xor_bytes(vault_component, custodian_component)
 
             logger.info("Successfully reconstructed platform master key")
             return platform_key
@@ -411,11 +435,14 @@ class VaultClient:
         platform_custodian_component: bytes,
     ) -> str:
         """
-        Escrow user's survey KEK in Vault for ethical recovery.
+        Escrow user's survey KEK in Vault for ethical recovery with version tracking.
 
         This creates a third copy of the survey KEK (alongside password and
         recovery phrase paths) that can be recovered by platform admins after
         identity verification, preventing permanent data loss.
+
+        The platform key version is recorded in the database, enabling correct
+        version lookup during recovery even after platform key rotation.
 
         Args:
             user_id: User ID
@@ -428,8 +455,21 @@ class VaultClient:
             Vault path where escrowed KEK is stored
         """
         try:
-            # Get platform master key
-            platform_key = self.get_platform_master_key(platform_custodian_component)
+            # Get active platform key version from database
+            from .models import PlatformKeyVersion, UserSurveyKEKEscrow
+
+            platform_version = PlatformKeyVersion.get_active_version()
+            if not platform_version:
+                raise ValueError("No active platform key version configured")
+
+            logger.info(
+                f"Using platform key version {platform_version.version} for escrow"
+            )
+
+            # Reconstruct platform master key from vault + custodian components
+            platform_key = self.xor_bytes(
+                bytes(platform_version.vault_component), platform_custodian_component
+            )
 
             # Derive user-specific recovery key
             user_recovery_key = self.derive_user_recovery_key(user_id, platform_key)
@@ -464,13 +504,14 @@ class VaultClient:
             nonce = os.urandom(12)
             encrypted_kek = aesgcm.encrypt(nonce, survey_kek, None)
 
-            # Store in Vault
+            # Store in Vault with version information
             client = self._get_client()
             client.secrets.kv.v2.create_or_update_secret(
                 path=vault_path,
                 secret={
                     "encrypted_kek": (nonce + encrypted_kek).hex(),
                     "encrypted_email": (email_nonce + encrypted_email).hex(),
+                    "platform_key_version": platform_version.version,  # Track version
                     "created_at": timezone.now().isoformat(),
                     "algorithm": "AES-256-GCM",
                     "requires_verification": True,
@@ -483,8 +524,20 @@ class VaultClient:
                 },
             )
 
+            # Create database metadata record for tracking
+            UserSurveyKEKEscrow.objects.update_or_create(
+                user_id=user_id,
+                survey_id=survey_id,
+                defaults={
+                    "platform_key_version": platform_version,
+                    "vault_path": vault_path,
+                    "email_encrypted": True,
+                },
+            )
+
             logger.info(
-                f"Escrowed survey KEK for user_id={user_id}, survey_id={survey_id}"
+                f"Escrowed survey KEK for user_id={user_id}, survey_id={survey_id} "
+                f"using platform key version {platform_version.version}"
             )
             return vault_path
 
@@ -501,10 +554,13 @@ class VaultClient:
         platform_custodian_component: bytes,
     ) -> bytes:
         """
-        Recover user's survey KEK from Vault escrow (admin operation).
+        Recover user's survey KEK from Vault escrow (admin operation) with version-aware lookup.
 
         This should only be called after thorough identity verification.
         All access is logged for audit compliance.
+
+        Uses database metadata to determine which platform key version was used
+        during escrow, enabling recovery even after platform key rotation.
 
         Args:
             user_id: User ID requesting recovery
@@ -520,10 +576,45 @@ class VaultClient:
             VaultKeyNotFoundError: If KEK not found in escrow
         """
         try:
-            vault_path = f"users/{user_id}/surveys/{survey_id}/recovery-kek"
-            client = self._get_client()
+            from .models import PlatformKeyVersion, User, UserSurveyKEKEscrow
+
+            # Fetch escrow metadata from database to get platform key version
+            try:
+                escrow = UserSurveyKEKEscrow.objects.select_related(
+                    "platform_key_version"
+                ).get(user_id=user_id, survey_id=survey_id)
+                platform_version = escrow.platform_key_version
+                vault_path = escrow.vault_path
+
+                logger.info(
+                    f"Found escrow record for user_id={user_id}, survey_id={survey_id}, "
+                    f"platform_key_version={platform_version.version}"
+                )
+            except UserSurveyKEKEscrow.DoesNotExist:
+                # Fallback: try to read from Vault directly (for legacy escrows created before versioning)
+                vault_path = f"users/{user_id}/surveys/{survey_id}/recovery-kek"
+                logger.warning(
+                    f"No escrow database record found for user_id={user_id}, survey_id={survey_id}. "
+                    f"Attempting legacy Vault-only recovery."
+                )
+
+                client = self._get_client()
+                secret = client.secrets.kv.v2.read_secret_version(path=vault_path)
+                secret_data = secret["data"]["data"]
+
+                # Try to get version from Vault metadata (if it exists)
+                version_id = secret_data.get("platform_key_version")
+                if version_id:
+                    platform_version = PlatformKeyVersion.get_version(version_id)
+                else:
+                    # Very old escrow - assume v1 or get active version
+                    platform_version = PlatformKeyVersion.get_active_version()
+                    logger.warning(
+                        f"Legacy escrow found without version. Using {platform_version.version}"
+                    )
 
             # Read escrowed KEK from Vault
+            client = self._get_client()
             secret = client.secrets.kv.v2.read_secret_version(path=vault_path)
             secret_data = secret["data"]["data"]
             encrypted_kek_hex = secret_data["encrypted_kek"]
@@ -533,8 +624,12 @@ class VaultClient:
             nonce = encrypted_blob[:12]
             ciphertext = encrypted_blob[12:]
 
-            # Get platform master key and derive user recovery key
-            platform_key = self.get_platform_master_key(platform_custodian_component)
+            # Reconstruct platform master key using CORRECT VERSIONED components
+            platform_key = self.xor_bytes(
+                bytes(platform_version.vault_component), platform_custodian_component
+            )
+
+            # Derive user recovery key
             user_recovery_key = self.derive_user_recovery_key(user_id, platform_key)
 
             # Derive decryption key
@@ -550,7 +645,7 @@ class VaultClient:
             aesgcm = AESGCM(decryption_key)
             survey_kek = aesgcm.decrypt(nonce, ciphertext, None)
 
-            # Update audit trail
+            # Update audit trail in Vault
             audit_trail = secret_data.get(
                 "audit_trail", {"accessed_by": [], "access_timestamps": []}
             )
@@ -564,16 +659,22 @@ class VaultClient:
                 path=vault_path, secret=secret_data
             )
 
+            # Update recovery tracking in database
+            if "escrow" in locals():
+                admin_user = User.objects.get(id=admin_id)
+                escrow.record_recovery(admin_user)
+
             logger.warning(
                 f"ADMIN RECOVERY: admin_id={admin_id} recovered survey KEK for "
-                f"user_id={user_id}, survey_id={survey_id}. Verification: {verification_notes}"
+                f"user_id={user_id}, survey_id={survey_id} using platform key "
+                f"version {platform_version.version}. Verification: {verification_notes}"
             )
 
             return survey_kek
 
         except hvac.exceptions.InvalidPath:
             logger.error(
-                f"Escrowed KEK not found for user_id={user_id}, survey_id={survey_id}"
+                f"Escrowed KEK not found in Vault for user_id={user_id}, survey_id={survey_id}"
             )
             raise VaultKeyNotFoundError(
                 f"No escrowed KEK found for user {user_id}, survey {survey_id}"

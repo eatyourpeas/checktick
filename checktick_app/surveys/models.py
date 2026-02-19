@@ -5071,3 +5071,234 @@ class RecoveryAuditEntry(models.Model):
                 "user_agent": self.actor_user_agent,
             },
         }
+
+
+class PlatformKeyVersion(models.Model):
+    """
+    Stores versioned Vault components for platform master key.
+
+    The platform master key is split using XOR into two components:
+    - Vault component (stored here)
+    - Custodian component (stored offline on YubiKeys/paper/USB)
+
+    Platform Master Key = vault_component XOR custodian_component
+
+    Key rotation support:
+    - Old versions remain in database for decrypting old surveys
+    - Only one version is "active" for new escrows
+    - Multiple custodian USB drives needed (one per version) if using Option B rotation
+    - For Option A rotation (Shamir share rotation only), one custodian set at a time
+    """
+
+    version = models.CharField(
+        max_length=20,
+        unique=True,
+        primary_key=True,
+        help_text="Version identifier (e.g., 'v1', 'v2', 'v3')",
+    )
+
+    vault_component = models.BinaryField(
+        help_text="Vault-stored component of the split platform key (32 bytes). "
+        "Useless alone - requires custodian component to reconstruct platform key."
+    )
+
+    created_at = models.DateTimeField(
+        default=timezone.now,
+        help_text="When this version was created",
+    )
+
+    activated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this version became active for new escrows",
+    )
+
+    retired_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this version stopped being used for new escrows. "
+        "Still needed for decrypting old surveys.",
+    )
+
+    shares_last_rotated = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When Shamir shares were last rotated (for Option A: same platform key, new shares)",
+    )
+
+    notes = models.TextField(
+        blank=True,
+        help_text="Administrative notes about this version (e.g., reason for rotation)",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["activated_at"]),
+            models.Index(fields=["retired_at"]),
+        ]
+
+    def __str__(self) -> str:
+        status = (
+            "active"
+            if self.is_active()
+            else "retired" if self.retired_at else "pending"
+        )
+        return f"Platform Key {self.version} ({status})"
+
+    def is_active(self) -> bool:
+        """Check if this version is currently active for new escrows."""
+        return self.activated_at is not None and self.retired_at is None
+
+    def needs_share_rotation(self, rotation_policy_days: int = 730) -> bool:
+        """
+        Check if Shamir shares should be rotated (e.g., every 2 years).
+
+        Args:
+            rotation_policy_days: Number of days before rotation recommended
+
+        Returns:
+            True if shares haven't been rotated within policy period
+        """
+        if not self.shares_last_rotated:
+            # Never rotated - check against creation date
+            if not self.activated_at:
+                return False
+            elapsed = timezone.now() - self.activated_at
+        else:
+            elapsed = timezone.now() - self.shares_last_rotated
+
+        from datetime import timedelta
+
+        return elapsed > timedelta(days=rotation_policy_days)
+
+    @classmethod
+    def get_active_version(cls):
+        """Get the currently active platform key version for new escrows."""
+        return cls.objects.filter(
+            activated_at__isnull=False, retired_at__isnull=True
+        ).first()
+
+    @classmethod
+    def get_version(cls, version_id: str):
+        """Retrieve a specific version for decryption."""
+        return cls.objects.get(version=version_id)
+
+    def activate(self) -> None:
+        """
+        Activate this version for new escrows.
+        Retires any currently active version.
+        """
+        # Retire currently active version
+        current_active = self.get_active_version()
+        if current_active and current_active.version != self.version:
+            current_active.retired_at = timezone.now()
+            current_active.save()
+
+        # Activate this version
+        if not self.activated_at:
+            self.activated_at = timezone.now()
+            self.save()
+
+    def retire(self) -> None:
+        """Retire this version (stop using for new escrows)."""
+        if not self.retired_at:
+            self.retired_at = timezone.now()
+            self.save()
+
+
+class UserSurveyKEKEscrow(models.Model):
+    """
+    Database metadata for user survey KEK escrows stored in Vault.
+
+    The actual encrypted KEK is stored in HashiCorp Vault. This model
+    tracks metadata including which platform key version was used,
+    enabling correct version lookup during recovery.
+
+    Recovery flow:
+    1. Query this model to get platform_key_version
+    2. Fetch corresponding PlatformKeyVersion.vault_component
+    3. Admin provides custodian component (from YubiKeys/USB)
+    4. Reconstruct platform key = vault_component XOR custodian_component
+    5. Decrypt user's KEK from Vault using platform key
+    """
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="survey_kek_escrows",
+        help_text="User whose survey KEK is escrowed",
+    )
+
+    survey = models.ForeignKey(
+        Survey,
+        on_delete=models.CASCADE,
+        related_name="kek_escrows",
+        help_text="Survey whose KEK is escrowed",
+    )
+
+    platform_key_version = models.ForeignKey(
+        PlatformKeyVersion,
+        on_delete=models.PROTECT,  # Cannot delete version while escrows exist
+        related_name="escrows",
+        help_text="Which platform key version was used to encrypt this KEK",
+    )
+
+    vault_path = models.CharField(
+        max_length=500,
+        unique=True,
+        help_text="Path in Vault where encrypted KEK is stored",
+    )
+
+    escrowed_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When the KEK was escrowed",
+    )
+
+    email_encrypted = models.BooleanField(
+        default=True,
+        help_text="Whether user's email was encrypted in Vault for verification",
+    )
+
+    # Recovery tracking
+    recovered_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of times this KEK has been recovered (audit trail)",
+    )
+
+    last_recovered_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this KEK was last recovered",
+    )
+
+    last_recovered_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="recovered_keks",
+        help_text="Admin who last recovered this KEK",
+    )
+
+    class Meta:
+        unique_together = [["user", "survey"]]
+        ordering = ["-escrowed_at"]
+        indexes = [
+            models.Index(fields=["user", "-escrowed_at"]),
+            models.Index(fields=["survey", "-escrowed_at"]),
+            models.Index(fields=["platform_key_version", "-escrowed_at"]),
+            models.Index(fields=["vault_path"]),
+        ]
+        verbose_name = "User Survey KEK Escrow"
+        verbose_name_plural = "User Survey KEK Escrows"
+
+    def __str__(self) -> str:
+        return f"Escrow: User {self.user_id} / Survey {self.survey_id} (Platform Key {self.platform_key_version.version})"
+
+    def record_recovery(self, admin: User) -> None:
+        """Record a recovery operation for audit purposes."""
+        self.recovered_count += 1
+        self.last_recovered_at = timezone.now()
+        self.last_recovered_by = admin
+        self.save()

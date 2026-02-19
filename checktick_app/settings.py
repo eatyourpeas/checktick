@@ -398,7 +398,8 @@ SESSION_COOKIE_SAMESITE = "Lax"
 
 # Forms configuration
 # Set default URL scheme to HTTPS for Django 6.0+ compatibility
-FORMS_URLFIELD_ASSUME_HTTPS = not DEBUG
+# Always True to silence Django 6.0 deprecation warnings and enforce HTTPS assumption
+FORMS_URLFIELD_ASSUME_HTTPS = True
 
 # When running behind a reverse proxy (e.g., Northflank), trust forwarded proto/host
 # so Django correctly detects HTTPS and constructs absolute URLs without redirect loops.
