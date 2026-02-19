@@ -2955,14 +2955,110 @@ reconstructed = reconstruct_secret([
 - Log all recovery operations with full audit trail
 - Test reconstruction annually without using full custodian component
 
+**Platform Key Versioning:**
+
+CheckTick implements platform key versioning to support key rotation without breaking access to existing encrypted surveys. Each platform key version consists of:
+
+- **Version ID**: String identifier (e.g., "v1", "v2", "v3")
+- **Vault Component**: Stored in PostgreSQL `PlatformKeyVersion` table (32 bytes)
+- **Custodian Component**: Stored offline via Shamir shares (32 bytes)
+- **Status**: Created → Active → Retired
+
+When a survey KEK is escrowed in Vault, the platform key version is recorded in the `UserSurveyKEKEscrow` table. During recovery, the system retrieves the correct versioned components from the database, enabling decryption even after platform key rotation.
+
+**Database Schema:**
+
+```python
+class PlatformKeyVersion(models.Model):
+    version = models.CharField(max_length=20, primary_key=True)  # "v1", "v2", etc.
+    vault_component = models.BinaryField()  # 32 bytes
+    created_at = models.DateTimeField()
+    activated_at = models.DateTimeField(null=True)
+    retired_at = models.DateTimeField(null=True)
+    shares_last_rotated = models.DateTimeField(null=True)
+
+class UserSurveyKEKEscrow(models.Model):
+    user = models.ForeignKey(User)
+    survey = models.ForeignKey(Survey)
+    platform_key_version = models.ForeignKey(PlatformKeyVersion)  # Version tracking
+    vault_path = models.CharField(max_length=500)
+    escrowed_at = models.DateTimeField()
+```
+
+**Version-Aware Recovery Flow:**
+
+```python
+def recover_user_survey_kek(user_id, survey_id, admin_id, custodian_component):
+    # 1. Query database for escrow metadata
+    escrow = UserSurveyKEKEscrow.objects.get(user_id=user_id, survey_id=survey_id)
+    
+    # 2. Get the platform key version used during escrow
+    platform_version = escrow.platform_key_version  # e.g., "v1"
+    
+    # 3. Retrieve vault component from database for that version
+    vault_component = platform_version.vault_component
+    
+    # 4. Reconstruct platform key using VERSIONED components
+    platform_key = xor_bytes(vault_component, custodian_component)
+    
+    # 5. Decrypt KEK from Vault using reconstructed platform key
+    # Works correctly even if currently active version is "v2" or "v3"
+```
+
+**Rotation Strategies:**
+
+CheckTick supports two rotation approaches:
+
+**Option A: Rotate Shamir Shares Only (Recommended)**
+
+- Same platform master key, new Shamir shares
+- Use when: custodian leaves company, routine rotation, YubiKey replacement
+- Benefits: Old surveys decrypt automatically, one custodian set at a time
+- Command: `python manage.py rotate_platform_key_shares --version v1`
+
+**Option B: Generate New Platform Key (Maximum Security)**
+
+- Completely new cryptographic material
+- Use when: security incident, algorithm weakness, compliance requirement
+- Trade-off: Must keep multiple custodian share sets (one per version)
+- Command: `python manage.py create_platform_key_version --version v2 --activate`
+
+**Rotation Best Practices:**
+
+1. **Use Option A for routine rotation** (every 2 years)
+2. **Use Option B only when necessary** (security incidents)
+3. **Never delete retired versions** while escrows exist referencing them
+4. **Label custodian shares clearly** with version and date range
+5. **Test recovery with OLD versions** before destroying old shares
+6. **Document rotation in change management system**
+
+**Security Properties:**
+
+- ✓ Old surveys remain decryptable after rotation
+- ✓ No single version compromise affects all surveys
+- ✓ Database lookup prevents version confusion
+- ✓ Audit trail tracks which version was used for each escrow
+- ✓ Rollback possible by reactivating old version
+
 **Rotation:**
 
 If custodian component needs rotation (e.g., custodian leaves organization):
 
-1. Assemble 3 existing shares to reconstruct current component
-2. Use `vault/setup_vault.py` to generate new component (requires full Vault re-initialization)
-3. Split new component and distribute to new custodians
-4. Destroy old shares securely
+**Option A: Rotate Shamir Shares (Recommended)**
+
+1. Assemble 3 existing shares to reconstruct current custodian component
+2. Use `rotate_platform_key_shares` command to generate new vault + custodian components
+3. Platform master key remains the same (old surveys still decryptable)
+4. Split new custodian component and distribute to new custodians/YubiKeys
+5. Destroy old shares securely (wipe YubiKeys, shred paper)
+
+**Option B: New Platform Key (Security Incident)**
+
+1. Use `create_platform_key_version` to generate completely new platform key
+2. Activate new version for future escrows
+3. Old version automatically retired but kept in database
+4. KEEP old custodian shares for decrypting surveys created before rotation
+5. Distribute new shares with clear version labeling
 
 **Defense-in-Depth:**
 

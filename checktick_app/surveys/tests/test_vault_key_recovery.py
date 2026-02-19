@@ -9,6 +9,7 @@ from unittest.mock import Mock, patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.utils import timezone
 import pytest
 
 from checktick_app.surveys.vault_client import VaultClient, VaultKeyNotFoundError
@@ -155,6 +156,12 @@ class TestVaultEscrowAndRecovery(TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
+        from django.contrib.auth import get_user_model
+
+        from checktick_app.surveys.models import PlatformKeyVersion, Survey
+
+        User = get_user_model()
+
         self.mock_hvac, self.storage = create_mock_vault_client()
 
         # Create test platform key
@@ -170,10 +177,41 @@ class TestVaultEscrowAndRecovery(TestCase):
             {"vault_component": self.vault_component.hex()},
         )
 
+        # Create database objects
+        self.user = User.objects.create_user(
+            username="testuser",
+            email="test.user@example.com",
+            password="testpass123",
+        )
+        self.admin_user = User.objects.create_superuser(
+            username="admin",
+            email="admin@example.com",
+            password="adminpass123",
+        )
+        self.survey = Survey.objects.create(
+            owner=self.user,
+            name="Test Survey",
+            slug="test-survey",
+        )
+        self.platform_key_version, _ = PlatformKeyVersion.objects.get_or_create(
+            version="v1",
+            defaults={
+                "vault_component": self.vault_component,
+                "activated_at": timezone.now(),
+                "notes": "Test platform key version",
+            },
+        )
+        # Sync vault_component with mock (in case migration created v1 with different value)
+        if self.platform_key_version.vault_component != self.vault_component:
+            self.platform_key_version.vault_component = self.vault_component
+            if not self.platform_key_version.activated_at:
+                self.platform_key_version.activated_at = timezone.now()
+            self.platform_key_version.save()
+
         # Test data
-        self.user_id = 123
-        self.survey_id = 456
-        self.admin_id = 1
+        self.user_id = self.user.id
+        self.survey_id = self.survey.id
+        self.admin_id = self.admin_user.id
         self.user_email = "test.user@example.com"
         self.survey_kek = os.urandom(32)
 
@@ -298,6 +336,12 @@ class TestEmailVerification(TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
+        from django.contrib.auth import get_user_model
+
+        from checktick_app.surveys.models import PlatformKeyVersion, Survey
+
+        User = get_user_model()
+
         self.mock_hvac, self.storage = create_mock_vault_client()
 
         # Create test platform key
@@ -313,8 +357,34 @@ class TestEmailVerification(TestCase):
             {"vault_component": self.vault_component.hex()},
         )
 
-        self.user_id = 123
-        self.survey_id = 456
+        # Create database objects
+        self.user = User.objects.create_user(
+            username="testuser",
+            email="real.user@example.com",
+            password="testpass123",
+        )
+        self.survey = Survey.objects.create(
+            owner=self.user,
+            name="Test Survey",
+            slug="test-survey",
+        )
+        self.platform_key_version, _ = PlatformKeyVersion.objects.get_or_create(
+            version="v1",
+            defaults={
+                "vault_component": self.vault_component,
+                "activated_at": timezone.now(),
+                "notes": "Test platform key version",
+            },
+        )
+        # Sync vault_component with mock (in case migration created v1 with different value)
+        if self.platform_key_version.vault_component != self.vault_component:
+            self.platform_key_version.vault_component = self.vault_component
+            if not self.platform_key_version.activated_at:
+                self.platform_key_version.activated_at = timezone.now()
+            self.platform_key_version.save()
+
+        self.user_id = self.user.id
+        self.survey_id = self.survey.id
         self.user_email = "real.user@example.com"
         self.survey_kek = os.urandom(32)
 
@@ -660,6 +730,12 @@ class TestFullRecoveryWorkflow(TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
+        from django.contrib.auth import get_user_model
+
+        from checktick_app.surveys.models import PlatformKeyVersion, Survey
+
+        User = get_user_model()
+
         self.mock_hvac, self.storage = create_mock_vault_client()
 
         # Create test platform key
@@ -674,6 +750,37 @@ class TestFullRecoveryWorkflow(TestCase):
             "platform/master-key",
             {"vault_component": self.vault_component.hex()},
         )
+
+        # Create database objects for tests
+        self.user = User.objects.create_user(
+            username="testuser",
+            email="dr.smith@hospital.nhs.uk",
+            password="testpass123",
+        )
+        self.admin_user = User.objects.create_superuser(
+            username="admin",
+            email="admin@example.com",
+            password="adminpass123",
+        )
+        self.survey = Survey.objects.create(
+            owner=self.user,
+            name="Test Survey",
+            slug="test-survey",
+        )
+        self.platform_key_version, _ = PlatformKeyVersion.objects.get_or_create(
+            version="v1",
+            defaults={
+                "vault_component": self.vault_component,
+                "activated_at": timezone.now(),
+                "notes": "Test platform key version",
+            },
+        )
+        # Sync vault_component with mock (in case migration created v1 with different value)
+        if self.platform_key_version.vault_component != self.vault_component:
+            self.platform_key_version.vault_component = self.vault_component
+            if not self.platform_key_version.activated_at:
+                self.platform_key_version.activated_at = timezone.now()
+            self.platform_key_version.save()
 
     @patch("checktick_app.surveys.vault_client.settings")
     def test_complete_individual_user_recovery_flow(self, mock_settings):
@@ -693,8 +800,8 @@ class TestFullRecoveryWorkflow(TestCase):
         client._client = self.mock_hvac
 
         # Step 1 & 2: User creates encrypted survey, KEK is escrowed
-        user_id = 100
-        survey_id = 200
+        user_id = self.user.id
+        survey_id = self.survey.id
         user_email = "dr.smith@hospital.nhs.uk"
         original_kek = os.urandom(32)
 
@@ -718,7 +825,7 @@ class TestFullRecoveryWorkflow(TestCase):
         assert email_verified is True, "Email should be verified"
 
         # Step 5: Admin recovers KEK
-        admin_id = 1
+        admin_id = self.admin_user.id
         recovered_kek = client.recover_user_survey_kek(
             user_id=user_id,
             survey_id=survey_id,
@@ -787,6 +894,8 @@ class TestFullRecoveryWorkflow(TestCase):
     @patch("checktick_app.surveys.vault_client.settings")
     def test_multiple_surveys_same_user(self, mock_settings):
         """Test that multiple surveys for same user can be recovered independently."""
+        from checktick_app.surveys.models import Survey
+
         mock_settings.VAULT_ADDR = "https://vault.example.com"
         mock_settings.VAULT_ROLE_ID = "test-role"
         mock_settings.VAULT_SECRET_ID = "test-secret"
@@ -794,15 +903,18 @@ class TestFullRecoveryWorkflow(TestCase):
         client = VaultClient()
         client._client = self.mock_hvac
 
-        user_id = 42
+        user_id = self.user.id
         user_email = "user@example.com"
 
         # Create multiple surveys with different KEKs
-        survey_keks = {
-            1001: os.urandom(32),
-            1002: os.urandom(32),
-            1003: os.urandom(32),
-        }
+        survey_keks = {}
+        for i in range(3):
+            survey = Survey.objects.create(
+                owner=self.user,
+                name=f"Test Survey {i+1}",
+                slug=f"test-survey-{i+1}",
+            )
+            survey_keks[survey.id] = os.urandom(32)
 
         # Escrow all KEKs
         for survey_id, kek in survey_keks.items():
@@ -819,7 +931,7 @@ class TestFullRecoveryWorkflow(TestCase):
             recovered_kek = client.recover_user_survey_kek(
                 user_id=user_id,
                 survey_id=survey_id,
-                admin_id=1,
+                admin_id=self.admin_user.id,
                 verification_notes=f"Recovery test for survey {survey_id}",
                 platform_custodian_component=self.custodian_component,
             )

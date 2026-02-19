@@ -336,6 +336,49 @@ python manage.py split_custodian_component \
 
 **Security**: Never store custodian shares in application environment variables or database.
 
+### Step 5c: Platform Key Versioning
+
+CheckTick supports platform key versioning, enabling key rotation without breaking access to existing encrypted surveys.
+
+#### How Versioning Works
+
+Each platform key version consists of:
+- **Vault Component**: Stored in PostgreSQL database (`PlatformKeyVersion` model)
+- **Custodian Component**: Stored offline (YubiKeys/paper/USB) via Shamir shares
+- **Version ID**: String identifier (e.g., "v1", "v2", "v3")
+
+When a survey KEK is escrowed, the platform key version is recorded in the database. During recovery, the system uses the correct versioned components to decrypt that specific KEK, even after platform key rotation.
+
+#### Initial Version Setup
+
+The initial setup script creates version "v1". To create subsequent versions:
+
+```bash
+# Option A: Generate NEW platform key (Option B rotation)
+python manage.py create_platform_key_version --version v2 --activate
+
+# Option B: Rotate ONLY Shamir shares (Option A rotation)
+# See "Platform Key Rotation" section below
+```
+
+#### Check Active Version
+
+```bash
+python manage.py shell
+>>> from checktick_app.surveys.models import PlatformKeyVersion
+>>> active = PlatformKeyVersion.get_active_version()
+>>> print(f"Active: {active.version}")
+Active: v1
+```
+
+#### Version Lifecycle
+
+- **Created**: Version exists but not yet active
+- **Active**: Used for new KEK escrows (only one active at a time)
+- **Retired**: No longer used for new escrows, but still needed for decrypting old surveys
+
+**Important**: Never delete retired versions while escrows exist referencing them.
+
 ### Step 6: Revoke Root Token
 
 ```bash
@@ -485,6 +528,158 @@ If organisation owner forgets passphrase:
 3. Platform admins derive org key via emergency process
 4. Owner sets new passphrase
 5. Keys re-derived
+
+---
+
+## Platform Key Rotation
+
+CheckTick supports two platform key rotation strategies:
+
+### Option A: Rotate Shamir Shares Only (Recommended)
+
+**Use when:**
+- Custodian employee leaves company
+- Suspected compromise of physical shares
+- Routine annual/biennial rotation policy
+- YubiKey hardware replacement
+
+**Benefits:**
+- Platform master key remains unchanged
+- Old surveys remain decryptable automatically
+- Only one set of custodian shares needed at a time
+- Simpler operational model
+
+**Workflow:**
+
+```bash
+# Step 1: Reconstruct custodian component from existing shares
+python manage.py reconstruct_custodian_component
+
+# Step 2: Rotate shares (generates NEW vault + custodian components)
+python manage.py rotate_platform_key_shares \
+  --version v1 \
+  --existing-custodian-component platform_custodian_component_v1.bin
+
+# Step 3: Split new custodian component
+python manage.py split_custodian_component \
+  platform_custodian_component_v1_rotated_20260219_143000.bin
+
+# Step 4: Distribute NEW shares to custodians
+# Step 5: DESTROY old physical shares (wipe YubiKeys, shred paper)
+# Step 6: DELETE temporary files (shred -vfz -n 10 *.bin)
+```
+
+**Database Updates:**
+- Vault component updated in `PlatformKeyVersion` table
+- `shares_last_rotated` timestamp updated
+- Version ID remains the same (e.g., "v1")
+
+**Security Notes:**
+- Cryptographic key material never changes
+- Old surveys decrypt with existing database records
+- No need to maintain multiple custodian share sets
+
+### Option B: Generate New Platform Key (Maximum Security)
+
+**Use when:**
+- Cryptographic algorithm weakness discovered
+- Regulatory requirement for key material refresh
+- Complete cryptographic "clean slate" after security incident
+
+**Benefits:**
+- Perfect forward secrecy (old key compromise doesn't affect new surveys)
+- Fresh cryptographic material
+- Clear security boundaries between time periods
+
+**Trade-offs:**
+- Must maintain **multiple custodian share sets** (one per version)
+- More complex custodian management over time
+- Requires careful documentation of which shares work with which surveys
+
+**Workflow:**
+
+```bash
+# Step 1: Create new platform key version with fresh random material
+python manage.py create_platform_key_version --version v2
+
+# Step 2: Split new custodian component
+python manage.py split_custodian_component \
+  platform_custodian_component_v2.bin
+
+# Step 3: Distribute NEW shares to custodians
+# Important: KEEP old v1 shares for decrypting old surveys
+
+# Step 4: Activate new version for new escrows
+python manage.py activate_platform_key_version --version v2
+
+# Step 5: DELETE temporary files (shred -vfz -n 10 *.bin)
+```
+
+**Database Updates:**
+- New row created in `PlatformKeyVersion` table
+- Version "v2" becomes active
+- Version "v1" automatically retired (but kept for old surveys)
+
+**Custodian Share Management:**
+
+| Version | Status | Custodian Shares | Used For |
+|---------|--------|------------------|----------|
+| v1 | Retired | Keep in safe | Decrypting surveys created before rotation |
+| v2 | Active | Distribute now | New KEK escrows |
+
+**Important**: Label custodian share storage clearly:
+- "Platform Key v1 - Surveys before 2026-02-19"
+- "Platform Key v2 - Surveys after 2026-02-19"
+
+### Choosing a Rotation Strategy
+
+| Factor | Option A (Shamir Shares) | Option B (New Key) |
+|--------|--------------------------|---------------------|
+| **Operational Complexity** | ✓ Simple | ✗ Complex |
+| **Custodian Share Sets** | One at a time | Accumulate over time |
+| **Forward Secrecy** | ✗ Same key | ✓ Fresh key |
+| **Old Survey Decryption** | ✓ Automatic | ✓ Requires correct version shares |
+| **Recommended For** | Routine rotation | Security incidents |
+| **Rotation Frequency** | Every 2 years | Only when necessary |
+
+**Recommendation**: Use **Option A** for routine rotation, **Option B** only for security incidents or compliance requirements.
+
+### Rotation Policies
+
+**Recommended Schedule:**
+- **Shamir Shares (Option A)**: Every 2 years
+- **Platform Key Material (Option B)**: Only when required
+
+**Triggers for Immediate Rotation:**
+- Custodian employee termination
+- Suspected physical share compromise
+- YubiKey reported lost/stolen
+- Regulatory audit requirement
+- Security incident involving platform access
+
+**Monitoring Share Health:**
+
+```bash
+python manage.py shell
+>>> from checktick_app.surveys.models import PlatformKeyVersion
+>>> active = PlatformKeyVersion.get_active_version()
+>>> if active.needs_share_rotation(rotation_policy_days=730):
+...     print(f"⚠️  Shares for {active.version} need rotation")
+```
+
+### Rollback Procedure
+
+If a rotation goes wrong:
+
+```bash
+# Reactivate old version
+python manage.py activate_platform_key_version --version v1
+
+# New escrows will use v1 again
+# No data loss - both versions coexist in database
+```
+
+**Note**: This requires reconstructing the old platform key from old custodian shares.
 
 ---
 
