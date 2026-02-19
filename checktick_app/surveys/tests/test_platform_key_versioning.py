@@ -455,9 +455,12 @@ class TestKeyRotationScenarios:
         active = PlatformKeyVersion.get_active_version()
         assert active == platform_key_v2
 
-    def test_multiple_versions_coexist(self):
+    def test_multiple_versions_coexist(self, platform_key_v1):
         """Test that multiple platform key versions can coexist."""
-        # Note: v1 already exists from migration, so start with v4, v5, v6
+        # Retire v1 first so we can test multiple active/retired states
+        platform_key_v1.retired_at = timezone.now() - timedelta(days=400)
+        platform_key_v1.save()
+
         v4 = PlatformKeyVersion.objects.create(
             version="v4",
             vault_component=secrets.token_bytes(64),
@@ -478,7 +481,7 @@ class TestKeyRotationScenarios:
             activated_at=timezone.now(),
         )
 
-        # At least 3 versions exist in database (v1 from migration + v4, v5, v6)
+        # 4 versions exist in database (v1 from fixture + v4, v5, v6)
         assert PlatformKeyVersion.objects.count() >= 4
 
         # Only v6 is active
@@ -486,5 +489,6 @@ class TestKeyRotationScenarios:
         assert active == v6
 
         # Can still retrieve old versions for recovery
+        assert PlatformKeyVersion.get_version("v1") == platform_key_v1
         assert PlatformKeyVersion.get_version("v4") == v4
         assert PlatformKeyVersion.get_version("v5") == v5
