@@ -18,7 +18,7 @@ CheckTick self-hosts critical JavaScript libraries with Subresource Integrity (S
 | Library | Version | File | Purpose |
 |---------|---------|------|---------|
 | HTMX | 1.9.12 | `checktick_app/static/js/htmx.min.js` | Dynamic HTML updates without JavaScript |
-| SortableJS | 1.15.2 | `checktick_app/static/js/sortable.min.js` | Drag-and-drop reordering |
+| SortableJS | 1.15.7 | `checktick_app/static/js/sortable.min.js` | Drag-and-drop reordering |
 | axe-core | 4.11.1 | `checktick_app/static/js/axe-core.min.js` | WCAG accessibility testing |
 | NHS Frontend | 8.1.0 | `checktick_app/static/css/nhsuk-frontend.min.css` | NHS design system styling |
 
@@ -32,10 +32,10 @@ Current SRI hashes (SHA-384):
 sha384-EfwldhYywH4qYH9vU8lMn+pd6pcH0kGpPUVJuwyHnj/5felkkIUVxf1wMAEX7rCY
 ```
 
-### SortableJS 1.15.2
+### SortableJS 1.15.7
 
 ```text
-sha384-x9T5uN6arBCGAt3RJPa+A5l/6KQXb0UC7Eig1DxZI+EekZYlD+5S+EEJ+U2lebod
+sha384-DgmC6Xe2bSN2WjTDXzWYbUbxyhNP+NNkGDR/g78pCXV7E7rcVTGxVg0uIVCUUcBc
 ```
 
 ### axe-core 4.11.1
@@ -79,11 +79,11 @@ curl -o checktick_app/static/js/htmx.min.js https://unpkg.com/htmx.org@1.9.12/di
 #   cp /tmp/package/dist/htmx.min.js checktick_app/static/js/htmx.min.js && rm htmx.org-1.9.12.tgz
 
 # SortableJS
-curl -o checktick_app/static/js/sortable.min.js https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js
+curl -o checktick_app/static/js/sortable.min.js https://cdn.jsdelivr.net/npm/sortablejs@1.15.7/Sortable.min.js
 
 # Alternative: npm pack (recommended for reproducibility)
-# npm pack sortablejs@1.15.2 && tar -xzf sortablejs-1.15.2.tgz -C /tmp && \
-#   cp /tmp/package/Sortable.min.js checktick_app/static/js/sortable.min.js && rm sortablejs-1.15.2.tgz
+# npm pack sortablejs@1.15.7 && tar -xzf sortablejs-1.15.7.tgz -C /tmp && \
+#   cp /tmp/package/Sortable.min.js checktick_app/static/js/sortable.min.js && rm sortablejs-1.15.7.tgz
 
 # axe-core
 curl -o checktick_app/static/js/axe-core.min.js https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.11.1/axe.min.js
