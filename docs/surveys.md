@@ -32,6 +32,8 @@ You’ll become an Admin and can invite others from the User management area.
 
 From the dashboard you can set style/branding, manage members, and build content.
 
+*NOTE* Here you can set custom styles / colours / fonts per survey, but also there is an option to use the standard [NHS brand colours](https://github.com/nhsuk/nhsuk-prototype-kit) with option NHS Logo.
+
 ## Create a copy
 
 You can create a copy of any survey you own or have Creator access to. This is useful for:

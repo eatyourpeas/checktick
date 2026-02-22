@@ -326,7 +326,7 @@
           </div>
           <div class="flex gap-1">
             {% if not export.is_download_url_expired %}
-            <a href="{% url 'surveys:survey_export_download' survey.slug export.id %}" 
+            <a href="{% url 'surveys:survey_export_download' survey.slug export.id %}"
                class="btn btn-xs btn-primary" title="{% trans 'View download link' %}">
               {% include "components/icons/download.html" with classes="h-3 w-3" %}
             </a>
@@ -366,67 +366,104 @@
 {% endif %}
 
 <div class="mt-6">
-  <details class="mb-6">
-  <summary class="cursor-pointer select-none text-lg font-semibold">{% trans "Survey style" %}</summary>
-    <form class="mt-3 grid md:grid-cols-2 gap-3" method="post" action="/surveys/{{ survey.slug }}/style/update">
-      {% csrf_token %}
-      <div>
-        <label class="label">Title override</label>
-        <input class="input input-bordered w-full" name="title" value="{{ survey.style.title }}" placeholder="Defaults to platform title" />
+  <div class="collapse collapse-arrow bg-info text-info-content">
+    <input type="checkbox" checked="checked" />
+    <div class="collapse-title flex items-center gap-3 px-4">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="h-6 w-6 shrink-0 stroke-current">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+      </svg>
+      <div class="flex-1">
+        <div class="font-semibold">{% trans "Survey style" %}</div>
+        <div class="text-sm opacity-90">{% trans "Customize the appearance of your survey including colors, fonts, and NHS branding." %}</div>
       </div>
-      <div>
-        <label class="label">Icon URL</label>
-        <input class="input input-bordered w-full" name="icon_url" value="{{ survey.style.icon_url }}" placeholder="/static/favicon.ico or absolute URL" />
-      </div>
-      <div>
-        <label class="label">Theme name</label>
-        <input class="input input-bordered w-full" name="theme_name" value="{{ survey.style.theme_name }}" placeholder="e.g. checktick, light, dark" />
-      </div>
-      <div>
-        <label class="label">Primary color (hex)</label>
-        <input class="input input-bordered w-full" name="primary_color" value="{{ survey.style.primary_color }}" placeholder="#fac8cd" />
-        <p class="text-xs text-base-content/70 mt-1">Tip: paste a hex like #ff3366 — it will be converted to the correct OKLCH internally.</p>
-      </div>
-      <div>
-        <label class="label">Heading font (CSS stack)</label>
-        <input class="input input-bordered w-full" name="font_heading" value="{{ survey.style.font_heading }}" placeholder="'IBM Plex Sans', ui-sans-serif, ..." />
-      </div>
-      <div>
-        <label class="label">Body font (CSS stack)</label>
-        <input class="input input-bordered w-full" name="font_body" value="{{ survey.style.font_body }}" placeholder="Merriweather, ui-serif, ..." />
-      </div>
-      <div class="md:col-span-2">
-        <label class="label">Font CSS URL (e.g. Google Fonts)</label>
-        <input class="input input-bordered w-full" name="font_css_url" value="{{ survey.style.font_css_url }}" placeholder="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Source+Serif+4:wght@400;700&display=swap" />
-      </div>
-      <div class="md:col-span-2 flex flex-wrap gap-2">
-        <button class="btn btn-primary" type="submit">Save style</button>
-        <button type="button" class="btn btn-outline btn-secondary" id="run-accessibility-test" data-survey-preview-url="{% url 'surveys:preview' slug=survey.slug %}">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          {% trans "Test Accessibility" %}
-        </button>
-      </div>
-    </form>
-
-    {# Accessibility test results container #}
-    <div id="accessibility-results" class="mt-4 hidden">
-      <div class="card bg-base-200 shadow-sm">
-        <div class="card-body">
-          <h4 class="card-title text-base">
+    </div>
+    <div class="collapse-content">
+      <form class="mt-3 grid md:grid-cols-2 gap-3" method="post" action="/surveys/{{ survey.slug }}/style/update" id="survey-style-form">
+        {% csrf_token %}
+        <div class="md:col-span-2">
+          <div class="divider">{% trans "NHS Branding" %}</div>
+        </div>
+        <div class="md:col-span-2" id="nhs-toggle-form">
+          <label class="label cursor-pointer justify-between w-full">
+            <span class="label-text">
+              <span class="font-semibold">{% trans "NHS Styling" %}</span>
+              <span class="text-sm opacity-70 block">{% trans "Enable NHS design system styling for UK healthcare surveys" %}</span>
+            </span>
+            <input type="hidden" name="nhs_styling" value="false" />
+            <input type="checkbox" name="nhs_styling" value="true" class="toggle toggle-primary" id="nhs-styling-toggle" {% if survey.style.nhs_styling %}checked{% endif %} />
+          </label>
+          <div class="mt-2" id="nhs-logo-option">
+            <label class="label cursor-pointer justify-between w-full">
+              <span class="label-text">
+                <span class="font-semibold">{% trans "Show NHS Logo" %}</span>
+                <span class="text-sm opacity-70 block">{% trans "Display the NHS logo in the survey header" %}</span>
+              </span>
+              <input type="hidden" name="nhs_show_logo" value="false" />
+              <input type="checkbox" name="nhs_show_logo" value="true" class="checkbox checkbox-primary" id="nhs-logo-checkbox" {% if survey.style.nhs_show_logo %}checked{% endif %} />
+            </label>
+          </div>
+        </div>
+        <div class="md:col-span-2 grid md:grid-cols-2 gap-3" id="non-nhs-style-fields" {% if survey.style.nhs_styling %}style="display: none;"{% endif %}>
+          <div>
+            <label class="label">Title override</label>
+            <input class="input input-bordered w-full" name="title" value="{{ survey.style.title }}" placeholder="Defaults to platform title" />
+          </div>
+          <div>
+            <label class="label">Icon URL</label>
+            <input class="input input-bordered w-full" name="icon_url" value="{{ survey.style.icon_url }}" placeholder="/static/favicon.ico or absolute URL" />
+          </div>
+          <div>
+            <label class="label">Theme name</label>
+            <input class="input input-bordered w-full" name="theme_name" value="{{ survey.style.theme_name }}" placeholder="e.g. checktick, light, dark" />
+          </div>
+          <div>
+            <label class="label">Primary color (hex)</label>
+            <input class="input input-bordered w-full" name="primary_color" value="{{ survey.style.primary_color }}" placeholder="#fac8cd" />
+            <p class="text-xs text-base-content/70 mt-1">Tip: paste a hex like #ff3366 — it will be converted to the correct OKLCH internally.</p>
+          </div>
+          <div>
+            <label class="label">Heading font (CSS stack)</label>
+            <input class="input input-bordered w-full" name="font_heading" value="{{ survey.style.font_heading }}" placeholder="'IBM Plex Sans', ui-sans-serif, ..." />
+          </div>
+          <div>
+            <label class="label">Body font (CSS stack)</label>
+            <input class="input input-bordered w-full" name="font_body" value="{{ survey.style.font_body }}" placeholder="Merriweather, ui-serif, ..." />
+          </div>
+          <div class="md:col-span-2">
+            <label class="label">Font CSS URL (e.g. Google Fonts)</label>
+            <input class="input input-bordered w-full" name="font_css_url" value="{{ survey.style.font_css_url }}" placeholder="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Source+Serif+4:wght@400;700&display=swap" />
+          </div>
+        </div>
+        <div class="md:col-span-2 flex flex-wrap gap-2" id="style-action-buttons" {% if survey.style.nhs_styling %}style="display: none;"{% endif %}>
+          <button class="btn btn-primary" type="submit">Save style</button>
+          <button type="button" class="btn btn-outline btn-secondary" id="run-accessibility-test" data-survey-preview-url="{% url 'surveys:preview' slug=survey.slug %}">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            {% trans "Accessibility Test Results" %}
-          </h4>
-          <div id="accessibility-results-content" aria-live="polite">
-            {# Results will be inserted here by JavaScript #}
+            {% trans "Test Accessibility" %}
+          </button>
+        </div>
+      </form>
+
+      {# Accessibility test results container #}
+      <div id="accessibility-results" class="mt-4 hidden">
+        <div class="card bg-base-200 shadow-sm">
+          <div class="card-body">
+            <h4 class="card-title text-base">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {% trans "Accessibility Test Results" %}
+            </h4>
+            <div id="accessibility-results-content" aria-live="polite">
+              {# Results will be inserted here by JavaScript #}
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </details>
+  </div>
+</div>
 
   {# Group management is available on the Groups page #}
 
@@ -760,7 +797,64 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
   });
+
+  // NHS styling toggle with auto-submit
+  const nhsStylingToggle = document.getElementById('nhs-styling-toggle');
+  const nhsLogoCheckbox = document.getElementById('nhs-logo-checkbox');
+  const nhsToggleForm = document.getElementById('survey-style-form');
+  const nhsLogoOption = document.getElementById('nhs-logo-option');
+  const nonNhsFields = document.getElementById('non-nhs-style-fields');
+  const styleActionButtons = document.getElementById('style-action-buttons');
+  const nhsToggleInput = nhsStylingToggle;
+
+  function updateNhsVisibility() {
+    if (!nhsToggleInput) {
+      return;
+    }
+    if (nonNhsFields) {
+      nonNhsFields.style.display = nhsToggleInput.checked ? 'none' : '';
+    }
+    if (styleActionButtons) {
+      styleActionButtons.style.display = nhsToggleInput.checked ? 'none' : '';
+    }
+  }
+
+  function submitNhsPreferences() {
+    if (!nhsToggleForm) {
+      return;
+    }
+    fetch(nhsToggleForm.action, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: new FormData(nhsToggleForm)
+    }).catch(error => {
+      console.error('Failed to save NHS styling:', error);
+    });
+  }
+
+  if (nhsStylingToggle) {
+    updateNhsVisibility();
+    nhsStylingToggle.addEventListener('click', function(event) {
+      event.stopPropagation();
+    });
+    nhsStylingToggle.addEventListener('change', function() {
+      updateNhsVisibility();
+      submitNhsPreferences();
+    });
+  }
+  // NHS logo checkbox auto-submit
+  if (nhsLogoCheckbox) {
+    nhsLogoCheckbox.addEventListener('click', function(event) {
+      event.stopPropagation();
+    });
+    nhsLogoCheckbox.addEventListener('change', function() {
+      submitNhsPreferences();
+    });
+  }
 });
+
 </script>
 
 <!-- QR Code Modal -->
@@ -866,6 +960,6 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </dialog>
 
-<script src="{% static 'js/accessibility-test.js' %}"></script>
+<script src="{% static 'js/accessibility-test.js' %}" data-csp-nonce="{{ request.csp_nonce }}"></script>
 
 {% endblock %}

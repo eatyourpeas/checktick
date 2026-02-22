@@ -27,3 +27,5 @@ Data is encrypted and accessible only by those with the correct permissions. A c
 If your workflow prefers API access - there is a full suite of endpoints for survey creation and consumption, all with the same security principles. And if your research demands your own instance, consider self-hosting or talk to us about hosting an instance for you on the enterprise tier. CheckTick can be customised to change themes, logos and colours at platform level, at organisation level, and even at individual survey level.
 
 CheckTick has been designed and built for clinicians working in the NHS. The CheckTick team want to foster a community of users that that are building surveys to learn more about the the services they run and the patients they serve. The documentation is comprehensive but can always be improved. If you have any suggestions, for example features you need, or bugs you have found, or if you want to get involved in making CheckTick better, please see the guidelines on how to contribute.
+
+For NHS tips on survey creation check out this [guidance](https://nhsevaluationtoolkit.net/resources/guide-to-questionnaires-for-service-evaluation/)

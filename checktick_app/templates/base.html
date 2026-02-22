@@ -67,7 +67,7 @@
       {% endif %}
     {% endblock %}
   </head>
-  <body class="min-h-screen bg-base-200"
+  <body class="min-h-screen bg-base-200{% block body_class %}{% endblock %}"
     {% if user.is_authenticated %}
     data-user-id="{{ user.id }}"
     data-user-email="{{ user.email }}"
@@ -223,7 +223,7 @@
     <footer class="mt-10 border-t border-base-300 bg-base-200 print:hidden">
       <div class="container mx-auto px-4 py-6">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-base-content/80">
-          
+
           <!-- Customer Links -->
           <div class="text-center md:text-left">
             <h3 class="font-semibold text-base-content mb-2">{% trans "Information" %}</h3>
@@ -284,6 +284,12 @@
         </div>
       </div>
     </footer>
+    <script nonce="{{ request.csp_nonce }}">
+      // Configure HTMX to use CSP nonce for inline scripts
+      window.htmx = window.htmx || {};
+      window.htmx.config = window.htmx.config || {};
+      window.htmx.config.inlineScriptNonce = "{{ request.csp_nonce }}";
+    </script>
     <script src="{% static 'js/htmx.min.js' %}"
             integrity="sha384-/TgkGk7p307TH7EXJDuUlgG3Ce1UVolAOFopFekQkkXihi5u/6OCvVKyz1W+idaz"
             crossorigin="anonymous"></script>

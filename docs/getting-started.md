@@ -46,6 +46,7 @@ CheckTick offers two account types, each suited to different use cases.
 A personal account for solo users.
 
 **Best for**:
+
 - Individual researchers
 - Solo practitioners
 - Personal projects
@@ -53,6 +54,7 @@ A personal account for solo users.
 - Small-scale surveys
 
 **Features**:
+
 - Create unlimited surveys
 - Collect unlimited responses (subject to server limits)
 - Optional encryption (personal passphrase)
@@ -60,6 +62,7 @@ A personal account for solo users.
 - Export data (CSV, JSON, Excel)
 
 **Limitations**:
+
 - No team collaboration (can't assign other users)
 - Single owner per survey
 - No organisation-level encryption
@@ -75,6 +78,7 @@ A personal account for solo users.
 A team account for groups, organisations, or institutions.
 
 **Best for**:
+
 - Healthcare organisations
 - Research teams
 - Educational institutions
@@ -82,6 +86,7 @@ A team account for groups, organisations, or institutions.
 - Multi-user projects
 
 **Features**:
+
 - Everything in Individual accounts, plus:
 - **Team collaboration**: Multiple users with different roles
 - **Organisation-level encryption**: Centralized data protection
@@ -266,6 +271,7 @@ CheckTick uses **API tokens** for authentication.
 **Example token**: `ct_1234567890abcdef1234567890abcdef`
 
 **Security notes**:
+
 - Never commit tokens to git
 - Don't share tokens
 - Rotate tokens periodically
@@ -408,6 +414,7 @@ GET /api/v1/surveys/{survey_slug}/export/?format=csv
 ```
 
 **Parameters**:
+
 - `format`: `csv`, `json`, or `xlsx`
 - `purpose`: Required - reason for export
 
@@ -601,6 +608,7 @@ If rate limit exceeded:
 ### API Versioning
 
 CheckTick uses URL versioning:
+
 - Current version: `/api/v1/`
 - Future versions will use `/api/v2/`, etc.
 
@@ -609,6 +617,7 @@ Old API versions are supported for at least 12 months after new version release.
 ### API Documentation
 
 Full API documentation available at:
+
 - **Interactive docs**: `https://checktick.example.com/api/docs/`
 - **OpenAPI spec**: `https://checktick.example.com/api/schema/`
 - **PDF guide**: See [API Documentation](api.md)
@@ -726,6 +735,7 @@ Want to run CheckTick on your own infrastructure?
 ### Can I use CheckTick for clinical data?
 
 Yes, CheckTick is designed for healthcare:
+
 - Meets NHS Data Security and Protection Toolkit requirements
 - Supports Caldicott Principles
 - GDPR-compliant
@@ -737,6 +747,7 @@ Yes, CheckTick is designed for healthcare:
 ### Can I migrate from SurveyMonkey/Google Forms/etc.?
 
 Yes! While there's no automatic migration tool:
+
 1. Export your old survey questions
 2. Recreate survey structure in CheckTick
 3. Import historical data via API (if needed)
@@ -744,6 +755,7 @@ Yes! While there's no automatic migration tool:
 ### Can I customize the look of surveys?
 
 Yes:
+
 - Custom themes (colors, fonts, logos)
 - Custom CSS (for self-hosted instances)
 - White-label options
@@ -754,6 +766,7 @@ See [Themes Guide](themes.md)
 ### Does CheckTick work on mobile?
 
 Yes, fully responsive:
+
 - Surveys work on any device
 - Touch-friendly interfaces
 - QR code scanning
@@ -762,6 +775,7 @@ Yes, fully responsive:
 ### Can I schedule survey availability?
 
 Yes:
+
 - Set start and end dates
 - Schedule automatic publication
 - Automatic closure after end date
@@ -770,6 +784,7 @@ Yes:
 ### What languages are supported?
 
 CheckTick supports 13 languages:
+
 - English, Arabic, Chinese, Welsh, German, Spanish, French, Hindi, Italian, Polish, Portuguese, Urdu
 
 See [Internationalisation Guide](i18n.md)
@@ -779,6 +794,7 @@ See [Internationalisation Guide](i18n.md)
 ## Summary
 
 You now know:
+
 - ✅ The difference between Individual and Organisation accounts
 - ✅ How to create your first survey
 - ✅ How to collect and export data

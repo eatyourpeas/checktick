@@ -4231,8 +4231,9 @@ def survey_style_update(request: HttpRequest, slug: str) -> HttpResponse:
     survey = get_object_or_404(Survey, slug=slug)
     require_can_edit(request.user, survey)
     style = survey.style or {}
-    # Accept simple fields; ignore if blank to allow fallback to platform defaults
-    for key in (
+
+    # Check if this is the full form submission (has any style fields) or just NHS toggle
+    style_fields = (
         "title",
         "icon_url",
         "theme_name",
@@ -4240,13 +4241,44 @@ def survey_style_update(request: HttpRequest, slug: str) -> HttpResponse:
         "font_body",
         "primary_color",
         "font_css_url",
-    ):
-        val = (request.POST.get(key) or "").strip()
-        if val:
-            style[key] = val
-        elif key in style:
-            # allow clearing by leaving blank
-            style.pop(key)
+    )
+    is_full_form = any(key in request.POST for key in style_fields)
+
+    if is_full_form:
+        # Accept simple fields; ignore if blank to allow fallback to platform defaults
+        for key in style_fields:
+            val = (request.POST.get(key) or "").strip()
+            if val:
+                style[key] = val
+            elif key in style:
+                # allow clearing by leaving blank
+                style.pop(key)
+
+    # Handle NHS styling toggle (can be standalone or part of full form)
+    if "nhs_styling" in request.POST:
+        nhs_styling_val = request.POST.get("nhs_styling", "").strip().lower()
+        if nhs_styling_val == "true":
+            style["nhs_styling"] = True
+        elif nhs_styling_val == "false":
+            style["nhs_styling"] = False
+        elif nhs_styling_val:  # Handle checkbox being checked (value="on" or "1")
+            style["nhs_styling"] = True
+        else:  # Checkbox unchecked means field not in POST
+            style["nhs_styling"] = False
+
+    # Handle NHS logo checkbox (only relevant when NHS styling is enabled)
+    if "nhs_show_logo" in request.POST:
+        nhs_show_logo_val = request.POST.get("nhs_show_logo", "").strip().lower()
+        if nhs_show_logo_val == "true":
+            style["nhs_show_logo"] = True
+        elif nhs_show_logo_val:  # Handle checkbox being checked
+            style["nhs_show_logo"] = True
+        else:
+            style["nhs_show_logo"] = False
+    else:
+        # Keep existing logo preference if not explicitly posted
+        style["nhs_show_logo"] = style.get("nhs_show_logo", False)
+
     survey.style = style
     survey.save(update_fields=["style"])
     messages.success(request, "Style updated.")

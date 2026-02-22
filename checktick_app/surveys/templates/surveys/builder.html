@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load i18n %}
+{% load static %}
 {% block head_theme_overrides %}
   {% if survey.style.theme_css_light or survey.style.theme_css_dark %}
   <style>
@@ -18,8 +19,8 @@
   {% if survey.style.font_css_url %}
     <link href="{{ survey.style.font_css_url }}" rel="stylesheet" />
   {% endif %}
+
 {% endblock %}
-{% load static %}
 {% block title %}{% trans "Question Group Builder" %} - {{ survey.name }}{% endblock %}
 {% block content %}
 <div class="flex flex-col gap-6">
