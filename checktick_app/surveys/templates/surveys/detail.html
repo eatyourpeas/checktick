@@ -1,4 +1,8 @@
 {% extends is_preview|default:False|yesno:'base.html,base_minimal.html' %}
+{% load survey_extras %}
+{% load static %}
+{% load i18n %}
+{% block body_class %}{% if survey.style.nhs_styling %} nhs-theme{% endif %}{% endblock %}
 {% block head_theme_overrides %}
   {% if survey.style.theme_css_light or survey.style.theme_css_dark %}
   <style>
@@ -17,10 +21,188 @@
   {% if survey.style.font_css_url %}
     <link href="{{ survey.style.font_css_url }}" rel="stylesheet" />
   {% endif %}
+  {% if survey.style.nhs_styling %}
+    {# NHS Frontend Styling - https://github.com/nhsuk/nhsuk-frontend #}
+    <link href="{% static 'css/nhsuk-frontend.min.css' %}"
+          integrity="sha384-qWZYzCDfWOMmbbg+HoBYKha59es/145h5uc93F1rxBFwJVruD2lcomcIwUlCwPDF"
+          crossorigin="anonymous"
+          rel="stylesheet" />
+    <style>
+      /* NHS styling integration - comprehensive overrides */
+      body.nhs-theme {
+        --nhs-blue: #005eb8;
+        --nhs-blue-dark: #003d7a;
+        --nhs-text: #212b32;
+      }
+
+      /* Apply NHS font globally */
+      body.nhs-theme, body.nhs-theme .card, body.nhs-theme .alert, body.nhs-theme .btn,
+      body.nhs-theme h1, body.nhs-theme h2, body.nhs-theme h3, body.nhs-theme h4,
+      body.nhs-theme h5, body.nhs-theme h6, body.nhs-theme p, body.nhs-theme div,
+      body.nhs-theme span, body.nhs-theme input, body.nhs-theme textarea, body.nhs-theme select {
+        font-family: "Frutiger W01", Arial, sans-serif !important;
+      }
+
+      /* NHS headings */
+      body.nhs-theme h1, body.nhs-theme h2, body.nhs-theme h3, body.nhs-theme h4,
+      body.nhs-theme h5, body.nhs-theme h6, body.nhs-theme .card-title {
+        font-weight: 600 !important;
+        color: var(--nhs-text) !important;
+      }
+
+      /* NHS primary colored sections (headers/footers) */
+      body.nhs-theme .bg-primary, body.nhs-theme .card.bg-primary {
+        background-color: var(--nhs-blue) !important;
+      }
+      body.nhs-theme .bg-primary h1, body.nhs-theme .bg-primary h2, body.nhs-theme .bg-primary h3,
+      body.nhs-theme .bg-primary .card-title, body.nhs-theme .bg-primary p {
+        color: white !important;
+      }
+
+      /* NHS breadcrumbs in primary sections */
+      body.nhs-theme .bg-primary .breadcrumbs a,
+      body.nhs-theme .bg-primary .breadcrumbs span,
+      body.nhs-theme .bg-primary .breadcrumbs li {
+        color: white !important;
+        opacity: 0.9;
+      }
+      body.nhs-theme .bg-primary .breadcrumbs a:hover {
+        opacity: 1 !important;
+        text-decoration: underline !important;
+      }
+      body.nhs-theme .bg-primary .breadcrumbs svg {
+        stroke: white !important;
+        fill: white !important;
+      }
+      /* Fix breadcrumb alignment */
+      body.nhs-theme .bg-primary .breadcrumbs li > span {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 0.25rem !important;
+      }
+
+      /* Prevent title wrapping */
+      body.nhs-theme .card-body {
+        display: flex !important;
+        flex-direction: column !important;
+      }
+      body.nhs-theme #survey-title {
+        flex-wrap: nowrap !important;
+        overflow: hidden !important;
+      }
+      body.nhs-theme #survey-title span {
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+      }
+      body.nhs-theme #survey-title svg {
+        flex-shrink: 0 !important;
+      }
+
+      /* NHS logo styling */
+      body.nhs-theme .nhs-logo-container {
+        position: absolute !important;
+        top: 1rem !important;
+        right: 1rem !important;
+        width: 100px !important;
+        height: 40px !important;
+      }
+      body.nhs-theme .nhs-logo-container svg {
+        fill: white !important;
+      }
+      @media (max-width: 640px) {
+        body.nhs-theme .nhs-logo-container {
+          width: 80px !important;
+          height: 32px !important;
+        }
+      }
+
+      /* NHS primary buttons */
+      body.nhs-theme .btn-primary {
+        background-color: var(--nhs-blue) !important;
+        border-color: var(--nhs-blue) !important;
+        color: white !important;
+      }
+      body.nhs-theme .btn-primary:hover, body.nhs-theme .btn-primary:focus {
+        background-color: var(--nhs-blue-dark) !important;
+        border-color: var(--nhs-blue-dark) !important;
+      }
+
+      /* NHS form inputs */
+      body.nhs-theme .input, body.nhs-theme .textarea, body.nhs-theme .select {
+        border-color: #4c6272 !important;
+      }
+      body.nhs-theme .input:focus, body.nhs-theme .textarea:focus, body.nhs-theme .select:focus {
+        border-color: var(--nhs-blue) !important;
+        outline: 3px solid #ffeb3b !important;
+        outline-offset: 0 !important;
+        box-shadow: none !important;
+      }
+
+      body.nhs-theme .label {
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+        padding: 0.25rem 0 !important;
+      }
+      body.nhs-theme .label-text {
+        line-height: 1.4 !important;
+      }
+      body.nhs-theme .card-body .input,
+      body.nhs-theme .card-body .select,
+      body.nhs-theme .card-body .textarea {
+        width: 100% !important;
+        box-sizing: border-box !important;
+      }
+      body.nhs-theme .card-body .input,
+      body.nhs-theme .card-body .select {
+        min-height: 2.75rem !important;
+      }
+      body.nhs-theme .card-body .grid {
+        align-items: start !important;
+      }
+
+      /* NHS links */
+      body.nhs-theme a, body.nhs-theme .link {
+        color: var(--nhs-blue) !important;
+      }
+      body.nhs-theme a:hover, body.nhs-theme .link:hover {
+        color: var(--nhs-blue-dark) !important;
+      }
+
+      /* NHS cards/fieldsets (question groups) */
+      body.nhs-theme .card, body.nhs-theme fieldset {
+        border: 1px solid #aeb7bd !important;
+      }
+
+      /* Question group titles */
+      body.nhs-theme .card-title, body.nhs-theme fieldset .card-title, body.nhs-theme legend {
+        font-size: 1.5rem !important;
+        font-weight: 600 !important;
+        color: var(--nhs-text) !important;
+      }
+      body.nhs-theme #survey-form h2 svg {
+        display: none !important;
+      }
+      body.nhs-theme #survey-form h2 span .text-sm {
+        font-size: 1rem !important;
+        opacity: 1 !important;
+      }
+      body.nhs-theme .nhs-likert-scale-labels {
+        display: flex !important;
+        justify-content: space-between !important;
+        gap: 0.5rem !important;
+      }
+      body.nhs-theme .nhs-likert-scale-labels span {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        font-size: 1rem !important;
+        opacity: 0.9 !important;
+      }
+    </style>
+  {% endif %}
 {% endblock %}
-{% load survey_extras %}
-{% load static %}
-{% load i18n %}
 {% block title %}{{ survey.name }} - CheckTick{% endblock %}
 {% block content %}
 
@@ -39,10 +221,15 @@
 <a href="#survey-form" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:bg-primary focus:text-primary-content focus:px-4 focus:py-2 focus:rounded">{% trans "Skip to survey questions" %}</a>
 
 <div class="card bg-primary image-full min-w-full shadow-sm">
-    <div class="card-body">
-        <h2 id="survey-title" class="card-title inline-flex items-center gap-2">
-          {% include "components/icons/clipboard.html" with classes="w-6 h-6" aria_hidden="true" %}
-          <span>{{ survey.name }}</span>
+    <div class="card-body" style="position: relative;">
+        {% if survey.style.nhs_styling and survey.style.nhs_show_logo %}
+        <div class="nhs-logo-container">
+          {% include "components/icons/nhs_logo.html" with classes="" %}
+        </div>
+        {% endif %}
+        <h2 id="survey-title" class="card-title" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: nowrap; max-width: calc(100% - 100px);">
+          {% include "components/icons/checktick_your_surveys.html" with classes="w-6 h-6 flex-shrink-0" aria_hidden="true" %}
+          <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ survey.name }}</span>
         </h2>
         <p class="opacity-70">{{ survey.description }}</p>
     {% if user.is_authenticated and user == survey.owner %}
@@ -92,15 +279,15 @@
     {# Open a group card when this is the first item of the group #}
     {% if q.group_start %}
       <fieldset class="card bg-base-100 shadow-sm mt-8">
-        <legend class="card-body py-3">
-          <span class="card-title text-base inline-flex items-center gap-2">
+        <div class="card-body py-3">
+          <div class="card-title text-base inline-flex items-center gap-2">
             {% include "components/icons/documents.html" with classes="w-5 h-5" aria_hidden="true" %}
             <span>{{ q.group.name }}</span>
-          </span>
+          </div>
           {% if q.group.description %}
-            <span class="text-sm opacity-70 block">{{ q.group.description }}</span>
+            <p class="text-sm opacity-70 mt-1">{{ q.group.description }}</p>
           {% endif %}
-        </legend>
+        </div>
         <div class="card-body pt-0">
     {% endif %}
 
@@ -202,7 +389,7 @@
                   {% with min_val=meta.min|default:1 max_val=meta.max|default:5 %}
                     {% widthratio min_val|add:max_val 2 1 as mid_val %}
                     <input type="range" class="range range-primary w-full" min="{{ min_val }}" max="{{ max_val }}" step="1" value="{{ mid_val }}" name="q_{{ q.id }}" id="range_q_{{ q.id }}" aria-labelledby="q_label_{{ q.id }}{% if meta.left %} range_left_{{ q.id }}{% endif %}{% if meta.right %} range_right_{{ q.id }}{% endif %}" aria-valuemin="{{ min_val }}" aria-valuemax="{{ max_val }}" aria-valuenow="{{ mid_val }}"{% if q.required %} aria-required="true"{% endif %} />
-                    <div class="flex justify-between text-[11px] opacity-70 mt-1" aria-hidden="true">
+                    <div class="flex justify-between text-[11px] opacity-70 mt-1 nhs-likert-scale-labels" aria-hidden="true">
                       <span>{{ min_val }}</span>
                       <span id="range_value_q_{{ q.id }}" class="font-semibold text-primary">{{ mid_val }}</span>
                       <span>{{ max_val }}</span>
@@ -439,7 +626,7 @@
     <div class="mt-4">
       <div class="h-captcha" data-sitekey="{{ settings.HCAPTCHA_SITEKEY }}"></div>
     </div>
-    <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+    <script src="https://js.hcaptcha.com/1/api.js" async defer nonce="{{ request.csp_nonce }}"></script>
   {% endif %}
 
   {% if is_preview %}

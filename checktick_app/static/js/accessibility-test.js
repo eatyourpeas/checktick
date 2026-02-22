@@ -21,16 +21,23 @@
 
       // Get the base URL from existing static file references
       const existingScript = document.querySelector(
-        'script[src*="/static/js/"]'
+        'script[src*="/static/js/"]',
       );
       let basePath = "/static/js/";
+      let nonce = null;
       if (existingScript) {
         const match = existingScript.src.match(/(.+\/static\/js\/)/);
         if (match) basePath = match[1];
+        // Get CSP nonce from data attribute
+        nonce = existingScript.dataset.cspNonce;
       }
 
       const script = document.createElement("script");
       script.src = basePath + "axe-core.min.js";
+      // Apply nonce if available for CSP compliance
+      if (nonce) {
+        script.setAttribute("nonce", nonce);
+      }
       script.onload = () => resolve(window.axe);
       script.onerror = () => reject(new Error("Failed to load axe-core"));
       document.head.appendChild(script);
@@ -129,8 +136,8 @@
           </svg>
           <div>
             <h3 class="font-bold">${totalIssues} accessibility issue${
-        totalIssues !== 1 ? "s" : ""
-      } found</h3>
+              totalIssues !== 1 ? "s" : ""
+            } found</h3>
             <p class="text-sm">Please review the issues below to improve accessibility.</p>
           </div>
         </div>
@@ -154,8 +161,8 @@
                 violation.impact === "critical"
                   ? "badge-error"
                   : violation.impact === "serious"
-                  ? "badge-warning"
-                  : "badge-info"
+                    ? "badge-warning"
+                    : "badge-info"
               } mr-2">${violation.impact}</span>
               ${escapeHtml(violation.help)}
               <span class="text-sm opacity-70 ml-2">(${
@@ -172,8 +179,8 @@
                   .map(
                     (node) =>
                       `<div class="mb-1">${escapeHtml(
-                        node.html.substring(0, 200)
-                      )}${node.html.length > 200 ? "..." : ""}</div>`
+                        node.html.substring(0, 200),
+                      )}${node.html.length > 200 ? "..." : ""}</div>`,
                   )
                   .join("")}
               </div>
@@ -187,13 +194,13 @@
     if (incomplete.length > 0) {
       const incompleteCount = incomplete.reduce(
         (sum, i) => sum + i.nodes.length,
-        0
+        0,
       );
       html += `
         <div class="mt-4">
           <h5 class="font-semibold text-sm mb-2">${incompleteCount} item${
-        incompleteCount !== 1 ? "s" : ""
-      } need manual review:</h5>
+            incompleteCount !== 1 ? "s" : ""
+          } need manual review:</h5>
           <ul class="text-sm list-disc list-inside opacity-70">
             ${incomplete
               .map((item) => `<li>${escapeHtml(item.help)}</li>`)
@@ -210,8 +217,8 @@
           window.axe ? window.axe.version : "N/A"
         }</p>
         <p>${passCount} rules passed • ${
-      violations.length
-    } rules with issues • ${incomplete.length} rules need review</p>
+          violations.length
+        } rules with issues • ${incomplete.length} rules need review</p>
       </div>
     `;
 

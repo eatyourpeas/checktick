@@ -20,6 +20,7 @@ CheckTick self-hosts critical JavaScript libraries with Subresource Integrity (S
 | HTMX | 1.9.12 | `checktick_app/static/js/htmx.min.js` | Dynamic HTML updates without JavaScript |
 | SortableJS | 1.15.2 | `checktick_app/static/js/sortable.min.js` | Drag-and-drop reordering |
 | axe-core | 4.11.1 | `checktick_app/static/js/axe-core.min.js` | WCAG accessibility testing |
+| NHS Frontend | 8.1.0 | `checktick_app/static/css/nhsuk-frontend.min.css` | NHS design system styling |
 
 ## SRI Hashes
 
@@ -41,6 +42,12 @@ sha384-x9T5uN6arBCGAt3RJPa+A5l/6KQXb0UC7Eig1DxZI+EekZYlD+5S+EEJ+U2lebod
 
 ```text
 sha384-CEnpkh+ndCKp9F6zlTFMCy3ebmIfIj+HyBbO4hxQz4bVQNq+Id1MPxPF6cZ4QzPA
+```
+
+### NHS Frontend 8.1.0
+
+```text
+sha384-qWZYzCDfWOMmbbg+HoBYKha59es/145h5uc93F1rxBFwJVruD2lcomcIwUlCwPDF
 ```
 
 ## Automatic Updates
@@ -84,12 +91,21 @@ curl -o checktick_app/static/js/axe-core.min.js https://cdnjs.cloudflare.com/aja
 # Alternative: npm pack (recommended)
 # npm pack axe-core@4.11.1 && tar -xzf axe-core-4.11.1.tgz -C /tmp && \
 #   cp /tmp/package/dist/axe.min.js checktick_app/static/js/axe-core.min.js && rm axe-core-4.11.1.tgz
+
+# NHS Frontend
+curl -o checktick_app/static/css/nhsuk-frontend.min.css https://cdn.jsdelivr.net/npm/nhsuk-frontend@8.1.0/dist/nhsuk.min.css
+
+# Alternative: npm pack (recommended)
+# npm pack nhsuk-frontend@8.1.0 && tar -xzf nhsuk-frontend-8.1.0.tgz -C /tmp && \
+#   cp /tmp/package/dist/nhsuk.min.css checktick_app/static/css/nhsuk-frontend.min.css && rm nhsuk-frontend-8.1.0.tgz
 ```
 
 ### 2. Generate SRI Hash
 
 ```bash
 openssl dgst -sha384 -binary FILE.js | openssl base64 -A
+# For CSS files:
+openssl dgst -sha384 -binary FILE.css | openssl base64 -A
 ```
 
 ### 3. Update Templates
@@ -116,7 +132,19 @@ Update the `integrity` attribute in the relevant templates:
         integrity="sha384-NEW_HASH_HERE"
         crossorigin="anonymous"></script>
 ```
+**NHS Frontend** - Survey templates with NHS styling enabled:
 
+- `checktick_app/surveys/templates/surveys/detail.html`
+- `checktick_app/surveys/templates/surveys/builder.html`
+- `checktick_app/surveys/templates/surveys/groups.html`
+- `checktick_app/surveys/templates/surveys/dashboard.html`
+
+```html
+<link href="{% static 'css/nhsuk-frontend.min.css' %}"
+      integrity="sha384-NEW_HASH_HERE"
+      crossorigin="anonymous"
+      rel="stylesheet" />
+```
 ### 4. Test
 
 Before deploying:
@@ -156,7 +184,8 @@ If a library fails to load with "SRI mismatch":
 
 ### CDN Unavailable
 
-Since files are self-hosted, CDN outages don't affect the application. If you need to re-download:
+Since files are self-hosted, CDN outages don't
+| NHS Frontend | jsdelivr.net | unpkg.com |affect the application. If you need to re-download:
 
 1. Check CDN status (unpkg, jsDelivr)
 2. Try alternative CDN source
