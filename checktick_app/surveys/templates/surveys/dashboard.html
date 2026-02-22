@@ -76,7 +76,7 @@
       <span class="ml-1 text-xs">({% if survey.status == 'published' %}{% trans "Published" %}{% else %}{% trans "Draft" %}{% endif %})</span>
     </button>
 
-    {# Other translations - clickable with primary color #}
+    {# Other translations - clickable with primary colour #}
     {% for trans in available_translations %}
       <a href="/surveys/{{ trans.slug }}/dashboard/"
          class="btn join-item btn-sm"
@@ -366,7 +366,7 @@
 {% endif %}
 
 <div class="mt-6">
-  <div class="collapse collapse-arrow bg-neutral text-base-content">
+  <div class="collapse collapse-arrow bg-base-100 text-base-content">
     <input type="checkbox" id="survey-style-collapse" aria-label="{% trans "Toggle survey style panel" %}" checked="checked" />
     <div class="collapse-title flex items-center gap-3 px-4">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="h-6 w-6 shrink-0 stroke-current">
@@ -374,7 +374,7 @@
       </svg>
       <div class="flex-1">
         <div class="font-semibold text-base-content">{% trans "Survey style" %}</div>
-        <div class="text-sm opacity-90 text-base-content">{% trans "Customize the appearance of your survey including colors, fonts, and NHS branding." %}</div>
+        <div class="text-sm opacity-90 text-base-content">{% trans "Customize the appearance of your survey including colours, fonts, and NHS branding." %}</div>
       </div>
     </div>
     <div class="collapse-content text-base-content">
@@ -404,33 +404,36 @@
           </div>
         </div>
         <div class="md:col-span-2 grid md:grid-cols-2 gap-3" id="non-nhs-style-fields" {% if survey.style.nhs_styling %}style="display: none;"{% endif %}>
+          <div class="md:col-span-2">
+            <div class="divider">{% trans "Custom Branding" %}</div>
+          </div>
           <div>
-            <label class="label">Title override</label>
+            <label class="label text-base-content">Title override</label>
             <input class="input input-bordered w-full" name="title" value="{{ survey.style.title }}" placeholder="Defaults to platform title" />
           </div>
           <div>
-            <label class="label">Icon URL</label>
+            <label class="label text-base-content">Icon URL</label>
             <input class="input input-bordered w-full" name="icon_url" value="{{ survey.style.icon_url }}" placeholder="/static/favicon.ico or absolute URL" />
           </div>
           <div>
-            <label class="label">Theme name</label>
+            <label class="label text-base-content">Theme name</label>
             <input class="input input-bordered w-full" name="theme_name" value="{{ survey.style.theme_name }}" placeholder="e.g. checktick, light, dark" />
           </div>
           <div>
-            <label class="label">Primary color (hex)</label>
+            <label class="label text-base-content">Primary colour (hex)</label>
             <input class="input input-bordered w-full" name="primary_color" value="{{ survey.style.primary_color }}" placeholder="#fac8cd" />
             <p class="text-xs text-base-content/70 mt-1">Tip: paste a hex like #ff3366 — it will be converted to the correct OKLCH internally.</p>
           </div>
           <div>
-            <label class="label">Heading font (CSS stack)</label>
+            <label class="label text-base-content">Heading font (CSS stack)</label>
             <input class="input input-bordered w-full" name="font_heading" value="{{ survey.style.font_heading }}" placeholder="'IBM Plex Sans', ui-sans-serif, ..." />
           </div>
           <div>
-            <label class="label">Body font (CSS stack)</label>
+            <label class="label text-base-content">Body font (CSS stack)</label>
             <input class="input input-bordered w-full" name="font_body" value="{{ survey.style.font_body }}" placeholder="Merriweather, ui-serif, ..." />
           </div>
           <div class="md:col-span-2">
-            <label class="label">Font CSS URL (e.g. Google Fonts)</label>
+            <label class="label text-base-content">Font CSS URL (e.g. Google Fonts)</label>
             <input class="input input-bordered w-full" name="font_css_url" value="{{ survey.style.font_css_url }}" placeholder="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Source+Serif+4:wght@400;700&display=swap" />
           </div>
         </div>
