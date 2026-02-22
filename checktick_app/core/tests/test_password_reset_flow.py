@@ -26,24 +26,6 @@ class TestPasswordResetFlow:
         )
         resp = client.post(reverse("password_reset"), {"email": user.email})
         # Redirect to done
-        if resp.status_code != 302:
-            # Helpful debug output for CI-local discrepancy: show body and any form errors
-            body = (
-                resp.content.decode(errors="replace")
-                if hasattr(resp, "content")
-                else ""
-            )
-            form_errors = None
-            try:
-                form = (
-                    resp.context.get("form") if getattr(resp, "context", None) else None
-                )
-                form_errors = form.errors if form is not None else None
-            except Exception:
-                form_errors = None
-            print("DEBUG: password_reset POST returned", resp.status_code)
-            print("DEBUG: form.errors:", form_errors)
-            print("DEBUG: resp.body snippet:\n", body[:1000])
         assert resp.status_code == 302
         assert resp.url == reverse("password_reset_done")
         # Email sent
